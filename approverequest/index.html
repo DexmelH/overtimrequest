@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Overtime Approval</title>
+
+    <link rel="stylesheet" href="approval.css" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="card header-card">
+        <div class="header-left">
+          <h2>Overtime Approval Dashboard</h2>
+          <div class="muted">
+            Select your leader identity and group, then review requests.
+          </div>
+        </div>
+
+        <div class="header-controls">
+          <label class="small-label">Leader</label>
+          <select
+            id="leaderSelect"
+            class="control-select"
+            aria-label="Select leader"
+          >
+            <option value="leader1">Leader 1</option>
+            <option value="leader2">Leader 2</option>
+            <option value="leader3">Leader 3</option>
+            <option value="leader4">Leader 4</option>
+          </select>
+
+          <label class="small-label">Group</label>
+          <select
+            id="groupSelect"
+            class="control-select"
+            aria-label="Select group"
+          >
+            <option value="all">All groups</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card main-card">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="toReview">To Review</button>
+          <button class="tab-btn" data-tab="pending">All Pending</button>
+          <button class="tab-btn" data-tab="all">All Requests</button>
+        </div>
+
+        <div class="filters-row">
+          <div class="muted">
+            Showing:
+            <span id="currentFilterLabel"
+              >To Review (requested yesterday or later)</span
+            >
+          </div>
+          <div class="counts muted" id="countsSummary"></div>
+        </div>
+
+        <div
+          id="requestList"
+          class="request-list"
+          role="list"
+          aria-live="polite"
+        >
+          <!-- items injected here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div
+      id="approvalModal"
+      class="modal"
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="modal-backdrop" id="modalBackdrop"></div>
+      <div
+        class="modal-panel"
+        role="document"
+        tabindex="-1"
+        aria-labelledby="modalTitle"
+      >
+        <header class="modal-header">
+          <h3 id="modalTitle">Request Details</h3>
+          <button class="modal-close" id="modalClose" aria-label="Close">
+            &times;
+          </button>
+        </header>
+
+        <div class="modal-body" id="modalBody">
+          <div class="details-row">
+            <div>
+              <div class="details-label">Date:</div>
+              <div class="details-value" id="am_date"></div>
+            </div>
+            <div>
+              <div class="details-label">Group</div>
+              <div class="details-value" id="am_group"></div>
+            </div>
+          </div>
+
+          <div class="details-row">
+            <div>
+              <div class="details-label">Location</div>
+              <div class="details-value" id="am_location"></div>
+            </div>
+            <div>
+              <div class="details-label">Project</div>
+              <div class="details-value" id="am_project"></div>
+            </div>
+          </div>
+
+          <div class="details-row">
+            <div style="flex: 1">
+              <div class="details-label">Item of Works</div>
+              <div class="details-value" id="am_item"></div>
+            </div>
+            <div style="min-width: 120px">
+              <div class="details-label">Hours</div>
+              <div class="details-value" id="am_hours"></div>
+            </div>
+          </div>
+
+          <div style="margin-top: 8px">
+            <div class="details-label">Job Description</div>
+            <div
+              class="details-value"
+              id="am_jobdesc"
+              style="font-weight: 500"
+            ></div>
+          </div>
+
+          <div style="margin-top: 8px">
+            <div class="details-label">Remarks</div>
+            <div class="details-value" id="am_remarks"></div>
+          </div>
+
+          <div style="margin-top: 12px">
+            <div class="details-label">Approvals</div>
+            <div id="am_approvals" class="approvals-list"></div>
+
+            <div class="approval-progress" aria-hidden="false">
+              <div class="progress-bar-bg">
+                <div
+                  class="progress-approvals"
+                  id="progressApprovals"
+                  style="width: 0%"
+                ></div>
+                <div
+                  class="progress-declines"
+                  id="progressDeclines"
+                  style="width: 0%"
+                ></div>
+              </div>
+              <div class="progress-labels">
+                <span id="progressText">0 approvals · 0 declines</span>
+                <span class="muted">Threshold: 2 approvals to accept</span>
+              </div>
+            </div>
+          </div>
+
+          <div
+            style="
+              margin-top: 12px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
+            <div id="am_statusBadge"></div>
+            <div class="muted" style="font-size: 13px">
+              Request ID: <span id="am_id"></span>
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <div class="modal-actions">
+            <button class="btn approve" id="approveBtn">Approve</button>
+            <button class="btn decline" id="declineBtn">Decline</button>
+          </div>
+          <button class="btn secondary" id="modalCloseBtn">Close</button>
+        </footer>
+      </div>
+    </div>
+
+    <script src="approval.js"></script>
+  </body>
+</html>

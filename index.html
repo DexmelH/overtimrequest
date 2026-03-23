@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Overtime Request</title>
+
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  </head>
+  <body>
+    <div
+      id="toastContainer"
+      class="toast-container"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
+    <div class="container">
+      <!-- Left: Form -->
+      <div class="card" id="formCard">
+        <div class="form-title">
+          <h2>Overtime Request</h2>
+          <small class="muted">Fill details and submit</small>
+        </div>
+
+        <form id="overtimeForm" autocomplete="off">
+          <div class="form-grid">
+            <div>
+              <label for="date"><strong>Date</strong></label>
+              <input type="date" id="date" required />
+            </div>
+
+            <div>
+              <label for="group"><strong>Group</strong></label>
+              <select id="group" required>
+                <option value="">Select group</option>
+                <option>Operations</option>
+                <option>Maintenance</option>
+                <option>Engineering</option>
+                <option>QA</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="location"><strong>Location</strong></label>
+              <select id="location" required>
+                <option value="">Select location</option>
+                <option>Operations</option>
+                <option>Maintenance</option>
+                <option>Engineering</option>
+                <option>QA</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="project"><strong>Project</strong></label>
+              <select id="project" disabled required>
+                <option value="">Select project</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="item"><strong>Item of Works</strong></label>
+              <select id="item" disabled required>
+                <option value="">Select item of works</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="jobdesc"><strong>Job Description</strong></label>
+              <select id="jobdesc" disabled required>
+                <option value="">Select job description</option>
+              </select>
+            </div>
+
+            <div class="hours-row">
+              <label for="hours"><strong>Number of hours</strong></label>
+
+              <div
+                class="time-inputs"
+                role="group"
+                aria-label="Overtime duration"
+              >
+                <div class="time-field">
+                  <input
+                    type="number"
+                    id="hours"
+                    step="1"
+                    min="0"
+                    placeholder="HH"
+                    required
+                    aria-label="Hours"
+                  />
+                  <div class="time-unit">hrs</div>
+                </div>
+
+                <div class="time-field">
+                  <input
+                    type="number"
+                    id="minutes"
+                    min="0"
+                    max="59"
+                    step="15"
+                    placeholder="MM"
+                    required
+                    aria-label="Minutes"
+                  />
+                  <div class="time-unit">min</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="full-row">
+              <label for="remarks"><strong>Remarks</strong></label>
+              <textarea
+                type="text"
+                id="remarks"
+                placeholder="Optional notes"
+                rows="3"
+              ></textarea>
+            </div>
+
+            <div class="full-row">
+              <small class="muted"
+                >All fields marked required must be filled before
+                submitting.</small
+              >
+            </div>
+          </div>
+
+          <div class="submit-row">
+            <div style="display: flex; gap: 8px">
+              <button type="button" class="btn secondary" id="resetBtn">
+                Clear
+              </button>
+              <button type="submit" class="btn" id="submitBtn">
+                Submit Overtime
+              </button>
+            </div>
+            <div class="muted">
+              Status will be <strong>Pending</strong> until reviewed
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Right: History -->
+      <div class="card" id="historyCard">
+        <div class="history-header">
+          <div>
+            <h3 style="margin: 0">Overtime History</h3>
+            <div class="muted" style="margin-top: 6px">
+              Click an item to view details
+            </div>
+          </div>
+
+          <div class="filters" aria-hidden="false">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="pending">Pending</button>
+            <button class="filter-btn" data-filter="approved">Approved</button>
+            <button class="filter-btn" data-filter="denied">Denied</button>
+          </div>
+        </div>
+
+        <div class="history-list" id="historyList" role="list"></div>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div
+      id="detailModal"
+      class="modal"
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="modal-backdrop" id="modalBackdrop"></div>
+      <div
+        class="modal-panel"
+        role="document"
+        tabindex="-1"
+        aria-labelledby="modalTitle"
+      >
+        <header class="modal-header">
+          <h3 id="modalTitle">Request Details</h3>
+          <button class="modal-close" id="modalClose" aria-label="Close">
+            &times;
+          </button>
+        </header>
+
+        <div class="modal-body" id="modalBody">
+          <div class="details-row">
+            <div>
+              <div class="details-label">Date</div>
+              <div class="details-value" id="m_date"></div>
+            </div>
+          </div>
+
+          <div class="details-row">
+            <div>
+              <div class="details-label">Group</div>
+              <div class="details-value" id="m_group"></div>
+            </div>
+          </div>
+
+          <div class="details-row">
+            <div>
+              <div class="details-label">Location</div>
+              <div class="details-value" id="m_location"></div>
+            </div>
+          </div>
+
+          <div class="details-row">
+            <div>
+              <div class="details-label">Project</div>
+              <div class="details-value" id="m_project"></div>
+            </div>
+          </div>
+
+          <div class="details-row">
+            <div style="flex: 1">
+              <div class="details-label">Item of Works</div>
+              <div class="details-value" id="m_item"></div>
+            </div>
+            <div style="min-width: 120px">
+              <div class="details-label">Hours</div>
+              <div class="details-value" id="m_hours"></div>
+            </div>
+          </div>
+
+          <div style="margin-top: 8px">
+            <div class="details-label">Job Description</div>
+            <div
+              class="details-value"
+              id="m_jobdesc"
+              style="font-weight: 500"
+            ></div>
+          </div>
+
+          <div style="margin-top: 8px">
+            <div class="details-label">Remarks</div>
+            <div class="details-value" id="m_remarks"></div>
+          </div>
+
+          <div
+            style="
+              margin-top: 12px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
+            <div id="m_statusBadge"></div>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button class="btn secondary" id="modalCloseBtn">Close</button>
+        </footer>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
