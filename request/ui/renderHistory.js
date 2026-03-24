@@ -1,4 +1,9 @@
-export function renderHistory(filter) {
+import { history } from "../services/state.js";
+import { statusClass, statusText } from "../components/status.js";
+import { openModal } from "../components/modal.js";
+import { filter } from "../services/state.js";
+
+export function renderHistory() {
   const $list = $("#historyList").empty();
   const items = history;
   const filterText =
@@ -18,7 +23,7 @@ export function renderHistory(filter) {
           <div class="history-left">
             <div class="dot">${item.request_date ? item.request_date.slice(5) : ""}</div>
             <div>
-              <div class="history-meta">${item.item_name} <span style="color:var(--muted); font-weight:600; font-size:12px;"> — ${item.project_name}</span></div>
+              <div class="history-meta">${item.group_name} <span style="color:var(--muted); font-weight:600; font-size:12px;"> — ${item.project_name}</span></div>
               <div class="history-sub">${item.request_date} · ${item.duration} hrs · ${item.location_name}</div>
             </div>
           </div>

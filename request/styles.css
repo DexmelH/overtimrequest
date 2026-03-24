@@ -262,6 +262,19 @@ textarea {
   z-index: 2;
   outline: 0;
 }
+#m_statusBadge {
+  position: absolute;
+  left: 20px; /* distance from left edge of modal */
+  bottom: 20px; /* distance from bottom edge of modal */
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+}
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -287,9 +300,9 @@ textarea {
 }
 .modal-footer {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
 }
 
 .hours-row {
@@ -309,36 +322,41 @@ textarea {
 /* Container for the two inputs */
 .time-inputs {
   display: flex;
-  gap: 8px;
-  align-items: center;
+  gap: 12px;
+  align-items: flex-end;
 }
 
-/* Each input + unit */
+.type-field select {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  min-width: 180px;
+}
+
 .time-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.hours-input-wrap {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #fff;
-  border: 1px solid #e6e9ef;
-  padding: 6px 8px;
-  border-radius: 8px;
 }
 
-/* Inputs styling */
-.time-field input[type="number"] {
-  width: 64px; /* compact width */
-  padding: 6px 8px;
-  border: 0;
-  outline: none;
-  font-size: 14px;
-  background: transparent;
+.hours-input-wrap input[type="number"] {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  width: 100px;
 }
 
-/* Unit label */
 .time-unit {
-  font-size: 13px;
   color: var(--muted);
-  white-space: nowrap;
+  font-size: 13px;
 }
 
 /* Toast */

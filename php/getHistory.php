@@ -12,13 +12,15 @@ function getHistory($userID) {
                    l.fldLocation AS location_name,
                    p.fldProject AS project_name,
                    i.fldItem AS item_name,
-                   j.fldTOW AS job_description
+                   j.fldJob AS job_desc, 
+                   w.fldTOW AS work
                    FROM `overtime_request` orq
                    LEFT JOIN kdtphdb_new.`group_list` gl ON orq.group_id = gl.id
                    LEFT JOIN `dispatch_locations` l ON orq.location_id = l.fldID
                    LEFT JOIN `projectstable` p ON orq.project_id = p.fldID
-                   LEFT JOIN `itemofworkstable` i ON orq.item_id = i.fldID
-                   LEFT JOIN `typesofworktable` j ON orq.job_id = j.fldID
+                   LEFT JOIN `itemofworkstable` i ON orq.item_id = i.fldID 
+                   LEFT JOIN `drawingreference` j ON orq.job_id = j.fldID 
+                   LEFT JOIN `typesofworktable` w ON orq.tow_id = w.fldID
                    WHERE orq.user_id = :userID ORDER BY orq.date_created DESC";
     $stmt = $connjmr->prepare($getHistory);
     $stmt->execute(['userID' => $userID]);

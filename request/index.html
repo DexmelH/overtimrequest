@@ -34,10 +34,6 @@
               <label for="group"><strong>Group</strong></label>
               <select id="group" required>
                 <option value="">Select group</option>
-                <option>Operations</option>
-                <option>Maintenance</option>
-                <option>Engineering</option>
-                <option>QA</option>
               </select>
             </div>
 
@@ -45,10 +41,6 @@
               <label for="location"><strong>Location</strong></label>
               <select id="location" required>
                 <option value="">Select location</option>
-                <option>Operations</option>
-                <option>Maintenance</option>
-                <option>Engineering</option>
-                <option>QA</option>
               </select>
             </div>
 
@@ -73,40 +65,28 @@
               </select>
             </div>
 
-            <div class="hours-row">
+            <div>
+              <label for="work"><strong>Type of works</strong></label>
+              <div class="type-field">
+                <select disabled id="work" required>
+                  <option value="">Select type</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
               <label for="hours"><strong>Number of hours</strong></label>
-
-              <div
-                class="time-inputs"
-                role="group"
-                aria-label="Overtime duration"
-              >
-                <div class="time-field">
-                  <input
-                    type="number"
-                    id="hours"
-                    step="1"
-                    min="0"
-                    placeholder="HH"
-                    required
-                    aria-label="Hours"
-                  />
-                  <div class="time-unit">hrs</div>
-                </div>
-
-                <div class="time-field">
-                  <input
-                    type="number"
-                    id="minutes"
-                    min="0"
-                    max="59"
-                    step="15"
-                    placeholder="MM"
-                    required
-                    aria-label="Minutes"
-                  />
-                  <div class="time-unit">min</div>
-                </div>
+              <div class="hours-input-wrap">
+                <input
+                  type="number"
+                  id="hours"
+                  step="1"
+                  min="0"
+                  placeholder="HH"
+                  required
+                  aria-label="Number of hours"
+                />
+                <div class="time-unit">hrs</div>
               </div>
             </div>
 
@@ -218,23 +198,28 @@
           </div>
 
           <div class="details-row">
-            <div style="flex: 1">
+            <div>
               <div class="details-label">Item of Works</div>
               <div class="details-value" id="m_item"></div>
+            </div>
+          </div>
+
+          <div class="details-row">
+            <div>
+              <div class="details-label">Job Description</div>
+              <div class="details-value" id="m_jobdesc"></div>
+            </div>
+          </div>
+
+          <div class="details-row">
+            <div style="flex: 1">
+              <div class="details-label">Type of Works</div>
+              <div class="details-value" id="m_work"></div>
             </div>
             <div style="min-width: 120px">
               <div class="details-label">Hours</div>
               <div class="details-value" id="m_hours"></div>
             </div>
-          </div>
-
-          <div style="margin-top: 8px">
-            <div class="details-label">Job Description</div>
-            <div
-              class="details-value"
-              id="m_jobdesc"
-              style="font-weight: 500"
-            ></div>
           </div>
 
           <div style="margin-top: 8px">
@@ -255,11 +240,14 @@
         </div>
 
         <footer class="modal-footer">
-          <button class="btn secondary" id="modalCloseBtn">Close</button>
+          <div id="m_statusBadge"></div>
+          <div style="margin-left: auto">
+            <button class="btn secondary" id="modalCloseBtn">Close</button>
+          </div>
         </footer>
       </div>
     </div>
 
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
   </body>
 </html>
