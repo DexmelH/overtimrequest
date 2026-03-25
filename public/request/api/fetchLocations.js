@@ -18,7 +18,7 @@ export async function fetchLocations({ showLoading = true } = {}) {
     const response = await retryFetch(
       () =>
         fetchWithTimeout(
-          "../php/getLocations.php",
+          "../api/locations",
           {
             method: "GET",
             credentials: "same-origin",

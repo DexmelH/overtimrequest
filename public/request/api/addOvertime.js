@@ -16,7 +16,7 @@ export async function addOvertimeRequest(formData) {
   newFormData.append("hours", formData.hours);
 
   try {
-    const response = await fetch("../php/addOvertime.php", {
+    const response = await fetch("../api/addovertime", {
       method: "POST",
       credentials: "same-origin",
       body: newFormData,
@@ -24,9 +24,9 @@ export async function addOvertimeRequest(formData) {
     if (!response.ok)
       throw new Error("Network response was not ok" + response.status);
     const payload = await response.json();
-    if (payload && payload.requestID) {
+    if (payload && payload.data) {
       await fetchHistory();
-      openModal(parseInt(payload.requestID));
+      openModal(parseInt(payload.data));
       showToast("Overtime request submitted successfully.", {
         type: "success",
       });

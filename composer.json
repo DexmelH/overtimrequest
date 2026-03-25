@@ -1,0 +1,11 @@
+{
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  },
+  "require": {
+    "ext-pdo": "*",
+    "nikic/fast-route": "^1.3"
+  }
+}

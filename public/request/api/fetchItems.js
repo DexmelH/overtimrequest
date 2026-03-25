@@ -5,8 +5,8 @@ import {
 } from "../components/utilities.js";
 import { populateSelect } from "../ui/populateSelect.js";
 
-export async function fetchWorks({ showLoading = true } = {}) {
-  const $sel = $("#work");
+export async function fetchItems({ showLoading = true } = {}) {
+  const $sel = $("#item");
   if ($sel.length && showLoading) {
     $sel.prop("disabled", true);
     const prev = $sel.data("prev") || null;
@@ -14,11 +14,13 @@ export async function fetchWorks({ showLoading = true } = {}) {
     $sel.empty().append('<option value="">Loading...</option>');
   }
 
+  const project = $("#project").val();
+
   try {
     const response = await retryFetch(
       () =>
         fetchWithTimeout(
-          "../php/getWorks.php",
+          "../api/items?project=" + encodeURIComponent(project),
           {
             method: "GET",
             credentials: "same-origin",
@@ -33,18 +35,16 @@ export async function fetchWorks({ showLoading = true } = {}) {
     if (!response.ok)
       throw new Error("Network response was not ok" + response.status);
     const json = await response.json();
-    const works = normalizePayload(json);
-    if (works.length) {
-      populateSelect(works, "work");
+    const items = normalizePayload(json);
+    if (items.length) {
+      populateSelect(items, "item");
     } else {
-      populateSelect([], "work");
+      populateSelect([], "item");
     }
   } catch (error) {
-    console.error("Failed to fetch type of work:", error);
+    console.error("Failed to fetch items:", error);
     if ($sel.length) {
-      $sel
-        .empty()
-        .append('<option value="">Failed to load type of work</option>');
+      $sel.empty().append('<option value="">Failed to load items</option>');
     }
     return [];
   } finally {
