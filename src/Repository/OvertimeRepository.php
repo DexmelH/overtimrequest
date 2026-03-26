@@ -12,6 +12,27 @@ class OvertimeRepository
         $this->pdo = $pdo;
     }
 
+    public function getPdo(): PDO
+    {
+        return $this->pdo;
+    }
+
+    public function findRequestById(string $requestID): array
+    {
+        $sql = "SELECT el.`surname`, gl.`abbreviation`, pt.`fldProject`, orq.`remarks`, 
+                    orq.`duration`, orq.`request_date`, orq.`date_created` 
+                FROM `overtime_request` orq 
+                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = orq.`user_id` 
+                LEFT JOIN kdtphdb_new.`group_list` gl ON gl.`id` = orq.`group_id` 
+                LEFT JOIN `projectstable` pt ON pt.`fldID` = orq.`project_id` 
+                WHERE orq.`id` = :requestID";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([":requestID" => $requestID]);
+        $data = $stmt->fetch();
+
+        return $data ? $data : [];
+    }
+
     public function findHistoryByUserId(string $userID): array
     {
         $sql = "SELECT orq.id, orq.duration, orq.remarks, orq.request_date, orq.status,
@@ -59,5 +80,17 @@ class OvertimeRepository
         $lastId = $this->pdo->lastInsertId();
 
         return $lastId;
+    }
+
+    public function insertEmailQueue(array $payload): bool
+    {
+        $sql = "INSERT INTO `email_queue` (`email_to`, `approver_name`, `overtime_id`)
+                VALUES (:emailTo, :approverName, :overtimeID)";
+        $stmt = $this->pdo->prepare($sql);
+        return (bool)$stmt->execute([
+            ":emailTo" => $payload["email_to"],
+            ":approverName" => $payload["approver_name"],
+            ":overtimeID" => $payload["overtime_id"]
+        ]);
     }
 }

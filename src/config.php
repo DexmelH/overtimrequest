@@ -33,4 +33,10 @@ return [
       ],
     ],
   ],
+  'mail' => [
+    'host'       => 'mail01.khi.co.jp',
+    'port'       => 25,
+    'from_email' => 'kdt-ph_overtime@global.kawasaki.com',
+    'from_name'  => 'Overtime Request App',
+],
 ];

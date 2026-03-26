@@ -12,13 +12,31 @@ class UserRepository
         $this->pdo = $pdo;
     }
 
-    public function findIdByHash(string $userHash): int
+    public function findIdByHash(string $userHash): array
     {
-        $sql = "SELECT `fldEmployeeNum` FROM `kdtlogin` WHERE `fldUserHash` = :userHash";
+        $sql = "SELECT el.`id`, gl.`abbreviation` 
+                FROM `kdtlogin` kl 
+                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = kl.`fldEmployeeNum` 
+                LEFT JOIN kdtphdb_new.`group_list` gl ON gl.`id` = el.`group_id` 
+                WHERE kl.`fldUserHash` = :userHash";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([":userHash" => $userHash]);
         $data = $stmt->fetch();
 
-        return $data ? $data["fldEmployeeNum"] : null;
+        return $data ? $data : [];
+    }
+
+    public function findApprover(string $group): array
+    {
+        $sql = "SELECT el.`surname`, el.`email` 
+                FROM kdtphdb_new.`employee_list` el
+                LEFT JOIN `formspic` fp ON fp.`fldEmployeeNum` = el.`id` 
+                LEFT JOIN kdtphdb_new.`group_list` gl ON gl.`id` = el.`group_id` 
+                WHERE fp.`fldGroups` LIKE '%$group%'";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute();
+        $data = $stmt->fetchAll();
+
+        return $data ? $data : [];
     }
 }

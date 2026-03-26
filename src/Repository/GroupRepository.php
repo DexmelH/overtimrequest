@@ -24,4 +24,16 @@ class GroupRepository
         
         return $data ? $data : [];
     }
+
+    public function findGroupById(string $groupID): array
+    {
+        $sql = "SELECT `id`, `abbreviation`, `name`
+                FROM `group_list` 
+                WHERE `id` = :groupID";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([":groupID" => $groupID]);
+        $data = $stmt->fetch();
+
+        return $data ? $data : [];
+    }
 }

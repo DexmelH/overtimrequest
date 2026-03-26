@@ -26,10 +26,6 @@ if ($uri[0] !== '/') {
     $uri = '/' . $uri;
 }
 
-// debug: remove after testing
-error_log('REQUEST_URI: ' . $_SERVER['REQUEST_URI']);
-error_log('Normalized URI: ' . $uri);
-
 // --- build dispatcher ---
 $dispatcher = simpleDispatcher(function(RouteCollector $r) {
     $r->addRoute('GET', '/api/groups', ['App\Controller\GroupController', 'getGroupsByUserId']);

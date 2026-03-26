@@ -3,6 +3,7 @@ namespace App\Controller;
 
 use App\Repository\OvertimeRepository;
 use App\Repository\UserRepository;
+use App\Repository\GroupRepository;
 use PDO;
 
 class OvertimeController
@@ -19,7 +20,8 @@ class OvertimeController
     public function getUserHistory(): array
     {
         $userHash = isset($_COOKIE['userID']) ? $_COOKIE['userID'] : '';
-        $userID = $this->userRepo->findIdByHash($userHash);
+        $user = $this->userRepo->findIdByHash($userHash);
+        $userID = $user['id'];
         $history = $this->overtimeRepo->findHistoryByUserId($userID);
 
         return $history;
@@ -28,7 +30,8 @@ class OvertimeController
     public function addOvertime(): int
     {
         $userHash = isset($_COOKIE['userID']) ? $_COOKIE['userID'] : '';
-        $userID = $this->userRepo->findIdByHash($userHash);
+        $user = $this->userRepo->findIdByHash($userHash);
+        $userID = $user['id'];
         $groupID = isset($_POST['group']) ? $_POST['group'] : 0;
         $locationID = isset($_POST['location']) ? $_POST['location'] : 0;
         $projectID = isset($_POST['project']) ? $_POST['project'] : 0;
@@ -52,8 +55,32 @@ class OvertimeController
             "request_date" => $requestDate
         ];
 
-        $id = $this->overtimeRepo->addOvertime($payload);
+        $pdo = $this->overtimeRepo->getPdo();
 
-        return $id;
+        try {
+            $pdo->beginTransaction();
+
+            $id = $this->overtimeRepo->addOvertime($payload);
+            $approver = $this->userRepo->findApprover($user["abbreviation"]);
+            foreach ($approver as $app) {
+                $payload = [
+                    'email_to' => $app['email'],
+                    'approver_name' => $app['surname'],
+                    'overtime_id' => $id
+                ];
+                $this->overtimeRepo->insertEmailQueue($payload);
+            }
+
+            $pdo->commit();
+
+            return $id;
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('Add overtime failed: ' . $e->getMessage());
+            throw $e;
+        }
+        
     }
 }

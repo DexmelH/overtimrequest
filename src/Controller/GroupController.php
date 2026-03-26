@@ -20,7 +20,8 @@ class GroupController
     {
         $userHash = $_COOKIE['userID'] ?? '';
 
-        $userID = $this->userRepo->findIdByHash($userHash);
+        $user = $this->userRepo->findIdByHash($userHash);
+        $userID = $user['id'];
 
         return $this->groupRepo->findByUserId($userID);
     }

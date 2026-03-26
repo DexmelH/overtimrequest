@@ -1,0 +1,257 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Overtime Request Notification</title>
+  </head>
+  <body style="margin: 0; padding: 0; background-color: #f4f4f4">
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center">
+          <table
+            width="600"
+            cellpadding="0"
+            cellspacing="0"
+            style="
+              margin: 20px auto;
+              background-color: #ffffff;
+              border-radius: 8px;
+              box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            "
+          >
+            <tr>
+              <td
+                style="
+                  padding: 30px 40px;
+                  font-family: &quot;Helvetica Neue&quot;, Arial, sans-serif;
+                "
+              >
+                <!-- Header -->
+                <h1 style="margin: 0; font-size: 24px; color: #333333">
+                  New Overtime Request Submitted
+                </h1>
+
+                <!-- Greeting -->
+                <p
+                  style="
+                    font-size: 16px;
+                    color: #555555;
+                    line-height: 1.5;
+                    margin-top: 15px;
+                  "
+                >
+                  Hi <strong>{{approver_name}}</strong>,
+                </p>
+
+                <!-- Intro -->
+                <p style="font-size: 16px; color: #555555; line-height: 1.5">
+                  An overtime request has been submitted. Summary and details
+                  are below.
+                </p>
+
+                <!-- Meta pill -->
+                <p style="margin: 12px 0 18px 0">
+                  <span
+                    style="
+                      display: inline-block;
+                      background: #eef5ff;
+                      color: #0b6efd;
+                      padding: 6px 10px;
+                      border-radius: 999px;
+                      font-size: 13px;
+                      font-weight: 600;
+                    "
+                  >
+                    Date submitted: <strong>{{submitted_at}}</strong>
+                  </span>
+                </p>
+
+                <!-- Details table -->
+                <table
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                  style="border-collapse: collapse; margin-bottom: 18px"
+                >
+                  <tr>
+                    <td
+                      style="
+                        width: 160px;
+                        padding: 12px 0;
+                        font-weight: 700;
+                        color: #666;
+                      "
+                    >
+                      Requestor
+                    </td>
+                    <td style="padding: 12px 0; color: #222">
+                      {{requestor_name}}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        width: 160px;
+                        padding: 12px 0;
+                        font-weight: 700;
+                        color: #666;
+                      "
+                    >
+                      Group
+                    </td>
+                    <td style="padding: 12px 0; color: #222">{{group_name}}</td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        width: 160px;
+                        padding: 12px 0;
+                        font-weight: 700;
+                        color: #666;
+                      "
+                    >
+                      Project
+                    </td>
+                    <td style="padding: 12px 0; color: #222">
+                      {{project_name}}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        width: 160px;
+                        padding: 12px 0;
+                        font-weight: 700;
+                        color: #666;
+                      "
+                    >
+                      Date
+                    </td>
+                    <td style="padding: 12px 0; color: #222">{{date}}</td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        width: 160px;
+                        padding: 12px 0;
+                        font-weight: 700;
+                        color: #666;
+                      "
+                    >
+                      Hours
+                    </td>
+                    <td style="padding: 12px 0; color: #222">{{hours}}</td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        width: 160px;
+                        padding: 12px 0;
+                        font-weight: 700;
+                        color: #666;
+                        vertical-align: top;
+                      "
+                    >
+                      Remarks
+                    </td>
+                    <td
+                      style="
+                        padding: 12px 0;
+                        color: #222;
+                        white-space: pre-wrap;
+                      "
+                    >
+                      {{remarks}}
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Call-to-Action Button -->
+                <p align="center" style="margin: 20px 0 10px 0">
+                  <a
+                    href="{{approval_url}}"
+                    style="
+                      display: inline-block;
+                      background-color: #3498db;
+                      color: #ffffff !important;
+                      text-decoration: none;
+                      padding: 12px 26px;
+                      font-size: 16px;
+                      border-radius: 6px;
+                    "
+                  >
+                    View / Approve Request
+                  </a>
+                </p>
+
+                <!-- Fallback Link -->
+                <p
+                  style="
+                    font-size: 14px;
+                    color: #888888;
+                    line-height: 1.4;
+                    text-align: center;
+                  "
+                >
+                  If the button doesn't work, copy and paste this link into your
+                  browser:
+                </p>
+                <p
+                  style="
+                    font-size: 14px;
+                    color: #3498db;
+                    word-break: break-all;
+                    line-height: 1.4;
+                    text-align: center;
+                    margin-top: 5px;
+                  "
+                >
+                  {{approval_url}}
+                </p>
+
+                <hr
+                  style="
+                    border: none;
+                    border-top: 1px solid #eeeeee;
+                    margin: 30px 0;
+                  "
+                />
+
+                <!-- Footer Greeting -->
+                <p style="font-size: 16px; color: #555555; line-height: 1.5">
+                  Best regards,<br />
+                  KDTDev Team
+                </p>
+
+                <!-- Footer Note -->
+                <p
+                  style="
+                    font-size: 12px;
+                    color: #999999;
+                    line-height: 1.4;
+                    margin-top: 10px;
+                  "
+                >
+                  This is an automated message—please do not reply.
+                </p>
+              </td>
+            </tr>
+          </table>
+
+          <!-- Bottom Disclaimer -->
+          <p
+            style="
+              font-size: 12px;
+              color: #aaaaaa;
+              margin-top: 10px;
+              font-family: &quot;Helvetica Neue&quot;, Arial, sans-serif;
+            "
+          >
+            &copy; {{year}} KHI Design & Technical Service, Inc. All rights
+            reserved.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
