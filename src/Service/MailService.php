@@ -6,6 +6,13 @@ class MailService
     private $mailer;
     private $htmlTemplate;
 
+    private function normalizeDate($date): string
+    {
+        $dt = new \DateTime($date);
+
+        return $dt->format('F j, Y');
+    }
+
     public function __construct($mailer, string $htmlTemplate)
     {
         $this->mailer = $mailer;
@@ -23,7 +30,14 @@ class MailService
         }
 
         $map = [
-            "{{approver_name}}" => $payload["approver_name"]
+            "{{approver_name}}" => $payload["approver_name"],
+            "{{submitted_at}}" => $this->normalizeDate($payload["date_created"]),
+            "{{requestor_name}}" => $payload["surname"],
+            "{{group_name}}" => $payload["abbreviation"],
+            "{{project_name}}" => $payload["fldProject"],
+            "{{date}}" => $this->normalizeDate($payload["request_date"]),
+            "{{hours}}" => $payload["duration"],
+            "{{remarks}}" => $payload["remarks"]
         ];
         $html = strtr($this->htmlTemplate, $map);
 

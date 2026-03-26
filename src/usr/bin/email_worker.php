@@ -1,4 +1,7 @@
 <?php
+
+use App\Service\Mailer;
+
 require __DIR__ . '/../../../vendor/autoload.php';
 
 $config = require __DIR__ . '/../../config.php';
@@ -8,31 +11,15 @@ $htmlTemplate = file_get_contents($htmlPath);
 $dbManager = new \App\Database($config['connections'] ?? $config);
 $mailRepo = $dbManager->getConnection("webjmr");
 
+$mailer = new Mailer($config["mail"]);
 
 
-$mailService = new \App\Service\MailService($mailRepo, $htmlTemplate);
+
+$mailService = new \App\Service\MailService($mailer, $htmlTemplate);
 $overtimeRepo = new \App\Repository\OvertimeRepository($mailRepo);
 
 $maxAttempts = 5;
 $baseSleep = 2;
-
-// function normalizeRecordToArray($record): array
-//     {
-//         if (is_array($record)) {
-//             return $record;
-//         }
-
-//         if (is_object($record)) {
-//             if (method_exists($record, 'toArray')) {
-//                 return (array) $record->toArray();
-//             }
-//             // deep convert (works for stdClass and entities without toArray)
-//             return json_decode(json_encode($record), true) ?: [];
-//         }
-
-//         // fallback: scalar -> wrap it
-//         return ['value' => (string) $record];
-//     }
 
 while (true) {
     try {
