@@ -30,8 +30,13 @@ export async function fetchGroups({ showLoading = true } = {}) {
       300,
     );
 
-    if (!response.ok)
+    if (!response.ok) {
+      if (response.status === 401) {
+        const rootFolder = `//${document.location.hostname}`;
+        window.location.href = rootFolder + "/KDTPortalLogin";
+      }
       throw new Error("Network response was not ok" + response.status);
+    }
     const json = await response.json();
     const groups = normalizePayload(json);
     if (groups.length) {

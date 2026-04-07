@@ -23,6 +23,12 @@ class UserRepository
         $stmt->execute([":userHash" => $userHash]);
         $data = $stmt->fetch();
 
+        if (!$data) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'errors' => ['Unauthorized']]);
+            exit;
+        }
+
         return $data ? $data : [];
     }
 
