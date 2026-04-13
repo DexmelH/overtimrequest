@@ -1,0 +1,67 @@
+/* Base */
+body {
+  background: #f7f9fc;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial;
+}
+
+/* Cards and layout */
+.card {
+  box-shadow: 0 6px 18px rgba(20, 30, 60, 0.06);
+  border: none;
+}
+.small-muted {
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+.nowrap {
+  white-space: nowrap;
+}
+
+/* Approval visuals */
+.approval-list .badge {
+  margin-right: 6px;
+  margin-bottom: 6px;
+}
+.manager-badge {
+  cursor: pointer;
+}
+.timestamp {
+  font-size: 0.78rem;
+  color: #495057;
+}
+
+/* Buttons */
+.manager-btn {
+  min-width: 96px;
+}
+
+/* Table tweaks */
+.table thead th {
+  vertical-align: middle;
+}
+
+/* Modal tweaks */
+.modal .card {
+  background: #fff;
+}
+
+/* Viewed state */
+.viewed-label {
+  font-size: 0.9rem;
+  color: #6c757d;
+  font-weight: 600;
+}
+
+/* Make rows look clickable */
+.clickable-row {
+  cursor: pointer;
+}
+.clickable-row:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
