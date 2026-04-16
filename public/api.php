@@ -36,6 +36,8 @@ $dispatcher = simpleDispatcher(function(RouteCollector $r) {
     $r->addRoute('GET', '/api/works', ['App\Controller\WorkController', 'getWorks']);
     $r->addRoute('GET', '/api/overtimehistory', ['App\Controller\OvertimeController', 'getUserHistory']);
     $r->addRoute('POST', '/api/addovertime', ['App\Controller\OvertimeController', 'addOvertime']);
+    $r->addRoute('GET', '/api/overtimetoapprove', ['App\Controller\OvertimeController', 'getOvertimeToApprove']);
+    $r->addRoute('POST', '/api/approveovertime', ['App\Controller\OvertimeController', 'approveOvertime']);
     // include other routes or require route files here
 });
 

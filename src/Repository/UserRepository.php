@@ -32,15 +32,15 @@ class UserRepository
         return $data ? $data : [];
     }
 
-    public function findApprover(string $group): array
+    public function findApprover(string $group, string $userID): array
     {
-        $sql = "SELECT el.`surname`, el.`email` 
+        $sql = "SELECT el.`id`, el.`surname`, el.`email` 
                 FROM kdtphdb_new.`employee_list` el
                 LEFT JOIN `formspic` fp ON fp.`fldEmployeeNum` = el.`id` 
                 LEFT JOIN kdtphdb_new.`group_list` gl ON gl.`id` = el.`group_id` 
-                WHERE fp.`fldGroups` LIKE '%$group%'";
+                WHERE fp.`fldGroups` LIKE '%$group%' AND el.`id` != :userID";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute();
+        $stmt->execute([":userID" => $userID]);
         $data = $stmt->fetchAll();
 
         return $data ? $data : [];

@@ -61,14 +61,15 @@ class OvertimeController
             $pdo->beginTransaction();
 
             $id = $this->overtimeRepo->addOvertime($payload);
-            $approver = $this->userRepo->findApprover($user["abbreviation"]);
+            $approver = $this->userRepo->findApprover($user["abbreviation"], $userID);
             foreach ($approver as $app) {
                 $payload = [
                     'email_to' => $app['email'],
                     'approver_name' => $app['surname'],
-                    'overtime_id' => $id
+                    'overtime_id' => $id,
                 ];
                 $this->overtimeRepo->insertEmailQueue($payload);
+                $this->overtimeRepo->addAcceptance($id, $app['id']);
             }
 
             $pdo->commit();
@@ -82,5 +83,31 @@ class OvertimeController
             throw $e;
         }
         
+    }
+
+    public function getOvertimeToApprove(): array
+    {
+        $userHash = isset($_COOKIE['userID']) ? $_COOKIE['userID'] : '';
+        $user = $this->userRepo->findIdByHash($userHash);
+        $approverID = $user['id'];
+        $overtimeToApprove = $this->overtimeRepo->findOvertimeToApprove($approverID);
+
+        foreach ($overtimeToApprove as &$request) {
+            $request['approver_details'] = $this->overtimeRepo->findApproverDetails($request['id']);
+        }
+
+        return $overtimeToApprove;
+    }
+
+    public function approveOvertime(): bool
+    {
+        $overtimeID = isset($_POST['overtimeID']) ? $_POST['overtimeID'] : 0;
+        $remarks = isset($_POST['remarks']) ? $_POST['remarks'] : '';
+        $approved = isset($_POST['status']) ? $_POST['status'] : NULL;
+
+        $userHash = isset($_COOKIE['userID']) ? $_COOKIE['userID'] : '';
+        $user = $this->userRepo->findIdByHash($userHash);
+        $approverID = $user['id'];
+        return $this->overtimeRepo->approveRequest($overtimeID, $approverID, $remarks, $approved);
     }
 }

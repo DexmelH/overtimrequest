@@ -93,4 +93,70 @@ class OvertimeRepository
             ":overtimeID" => $payload["overtime_id"]
         ]);
     }
+
+    public function addAcceptance(int $overtime, int $approverID): bool
+    {
+        $sql = "INSERT INTO `overtime_accept` (`overtime_id`, `approver_id`) VALUES (:overtimeID, :approverID)";
+        $stmt = $this->pdo->prepare($sql);
+        return (bool)$stmt->execute([
+            ":overtimeID" => $overtime,
+            ":approverID" => $approverID
+        ]);
+    }
+
+    public function findOvertimeToApprove(int $approverID): array
+    {
+        $sql = "SELECT orq.id, orq.duration, orq.remarks, orq.request_date, orq.status,
+                   el.id AS employee_id,
+                   el.surname AS employee_name,
+                   gl.abbreviation AS group_name,
+                   l.fldLocation AS location_name,
+                   p.fldProject AS project_name,
+                   i.fldItem AS item_name,
+                   j.fldJob AS job_desc, 
+                   w.fldTOW AS work
+                FROM `overtime_accept` oa
+                LEFT JOIN `overtime_request` orq ON oa.overtime_id = orq.id
+                LEFT JOIN kdtphdb_new.`group_list` gl ON orq.group_id = gl.id
+                LEFT JOIN `dispatch_locations` l ON orq.location_id = l.fldID
+                LEFT JOIN `projectstable` p ON orq.project_id = p.fldID
+                LEFT JOIN `itemofworkstable` i ON orq.item_id = i.fldID 
+                LEFT JOIN `drawingreference` j ON orq.job_id = j.fldID 
+                LEFT JOIN `typesofworktable` w ON orq.tow_id = w.fldID
+                LEFT JOIN kdtphdb_new.`employee_list` el ON el.id = orq.user_id
+                WHERE oa.approver_id = :approverID ORDER BY orq.date_created DESC";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ":approverID" => $approverID
+        ]);
+        $data = $stmt->fetchAll();
+
+        return $data ? $data : [];
+    }
+
+    public function findApproverDetails(int $overtimeID): array
+    {
+        $sql = "SELECT `approver_id`, `status`, `remarks`, `date_accepted` 
+                FROM `overtime_accept` WHERE `overtime_id` = :overtimeID";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ":overtimeID" => $overtimeID
+        ]);
+        $data = $stmt->fetchAll();
+
+        return $data ? $data : [];
+    }
+
+    public function approveRequest(int $overtimeID, int $approverID, string $remarks, int $approved): bool
+    {
+        $sql = "UPDATE `overtime_accept` SET `status` = :approved, `remarks` = :remarks, `date_accepted` = NOW() 
+                WHERE `overtime_id` = :overtimeID AND `approver_id` = :approverID";
+        $stmt = $this->pdo->prepare($sql);
+        return (bool)$stmt->execute([
+            ":remarks" => $remarks,
+            ":overtimeID" => $overtimeID,
+            ":approverID" => $approverID,
+            ":approved" => $approved
+        ]);
+    }
 }
