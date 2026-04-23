@@ -136,8 +136,12 @@ class OvertimeRepository
 
     public function findApproverDetails(int $overtimeID): array
     {
-        $sql = "SELECT `approver_id`, `status`, `remarks`, `date_accepted` 
-                FROM `overtime_accept` WHERE `overtime_id` = :overtimeID";
+        $sql = "SELECT oa.`approver_id`, el.`surname`, dl.`name` as `role`, 
+                    oa.`status`, oa.`remarks`, oa.`date_accepted` 
+                FROM `overtime_accept` oa
+                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = oa.`approver_id` 
+                LEFT JOIN kdtphdb_new.`designation_list` dl ON dl.`id` = el.`designation` 
+                WHERE oa.`overtime_id` = :overtimeID";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
             ":overtimeID" => $overtimeID

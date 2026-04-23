@@ -1,7 +1,18 @@
-/* Base */
-body {
-  background: #f7f9fc;
+/* ---------- Theme variables ---------- */
+:root {
+  --bg: #f4f6fb;
+  --card: #ffffff;
+  --accent: #2b7cff;
+  --muted: #6b7280;
+  --success: #16a34a;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --shadow: 0 6px 18px rgba(20, 24, 40, 0.06);
+  --max-content-width: 1100px;
+  --radius: 10px;
   font-family:
+    Inter,
+    ui-sans-serif,
     system-ui,
     -apple-system,
     "Segoe UI",
@@ -10,81 +21,375 @@ body {
     Arial;
 }
 
-/* Cards and layout */
-.card {
-  box-shadow: 0 6px 18px rgba(20, 30, 60, 0.06);
+/* ---------- Base ---------- */
+html,
+body {
+  height: 100%;
+  background: linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+  font-family: var(--mono);
+  color: #1f2937;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.45;
+}
+.container {
+  max-width: var(--max-content-width);
+}
+
+/* ---------- Header ---------- */
+.d-flex.align-items-center.mb-3 h3 {
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  color: #0f1724;
+}
+.small-muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* ---------- Cards ---------- */
+.card,
+.info-card {
+  background: var(--card);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
   border: none;
 }
-.small-muted {
-  font-size: 0.85rem;
-  color: #6c757d;
-}
-.nowrap {
-  white-space: nowrap;
+.card.p-3 {
+  padding: 1.25rem;
 }
 
-/* Approval visuals */
-.info-card {
-  background: #ffffff;
-  border-radius: 0.5rem;
-  box-shadow: 0 6px 18px rgba(20, 30, 60, 0.04);
-}
-.info-label {
-  font-size: 0.78rem;
-  color: #6c757d;
-  margin-bottom: 0.25rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.info-value {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #212529;
-}
-.approval-list .badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-right: 6px;
-  margin-bottom: 6px;
-  padding: 0.45rem 0.6rem;
-}
-.manager-row {
-  padding: 0.45rem 0.25rem;
-  border-radius: 0.375rem;
-}
-.manager-row:hover {
-  background: rgba(0, 0, 0, 0.02);
-}
-.manager-name {
-  font-weight: 600;
-}
-.manager-meta {
-  font-size: 0.82rem;
-  color: #6c757d;
-}
-.manager-actions {
-  min-width: 110px;
-}
-.timestamp {
-  font-size: 0.78rem;
-  color: #495057;
+/* ---------- Table ---------- */
+.table-responsive {
   display: block;
-  margin-top: 0.25rem;
+  overflow-x: auto;
+  padding: 0.25rem 0;
 }
-.modal .modal-header {
-  border-top-left-radius: 0.375rem;
-  border-top-right-radius: 0.375rem;
+#requestsTable {
+  margin: 0 auto;
+  width: 100%;
+  max-width: 1000px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: transparent;
 }
-.small-muted {
-  color: #6c757d;
-  font-size: 0.88rem;
+#requestsTable thead th {
+  border-top: none;
+  border-bottom: 1px solid rgba(15, 23, 36, 0.06);
+  background: linear-gradient(
+    180deg,
+    rgba(250, 250, 252, 0.9),
+    rgba(245, 247, 250, 0.9)
+  );
+  color: #0b1220;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.9rem 1rem;
+  vertical-align: middle;
 }
-
-/* Make rows look clickable */
-.clickable-row {
+#requestsTable tbody tr {
+  background: #fff;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
   cursor: pointer;
 }
-.clickable-row:hover {
-  background: rgba(0, 0, 0, 0.02);
+#requestsTable tbody tr:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(20, 30, 50, 0.06);
+}
+#requestsTable tbody tr:nth-child(odd) td {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.98),
+    rgba(250, 251, 253, 0.98)
+  );
+}
+#requestsTable td {
+  padding: 0.85rem 1rem;
+  vertical-align: middle;
+  border-top: 1px solid rgba(15, 23, 36, 0.04);
+  color: #1f2937;
+  font-size: 0.95rem;
+}
+.cell-meta {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.approval-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  background: linear-gradient(
+    90deg,
+    rgba(13, 110, 253, 0.08),
+    rgba(11, 92, 215, 0.04)
+  );
+  color: var(--accent);
+  border: 1px solid rgba(11, 92, 215, 0.08);
+}
+#requestsTable .employee {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e9eefc, #f3f7ff);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 6px rgba(11, 92, 215, 0.06);
+}
+
+/* ---------- Modal layout: left details / right approvals ---------- */
+/* Keep modal row aligned and prevent wrapping on wide screens */
+.modal-body .row {
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: nowrap;
+}
+
+/* Column sizing for desktop */
+@media (min-width: 768px) {
+  .modal-body .col-md-7 {
+    flex: 0 0 58.333333%;
+    max-width: 58.333333%;
+    order: 1;
+  }
+  .modal-body .col-md-5 {
+    flex: 0 0 41.666667%;
+    max-width: 41.666667%;
+    order: 2;
+  }
+}
+
+/* Right card stretch */
+.col-md-5 > .card.p-3.mb-3 {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  justify-content: flex-start;
+}
+
+/* Top meta inside left column */
+#requestDetailsLeft {
+  justify-content: flex-start;
+  gap: 1rem;
+}
+#requestDetailsLeft .rd-meta {
+  text-align: center;
+  min-width: 72px;
+}
+.rd-date-badge,
+.rd-hours-badge {
+  background: rgba(13, 110, 253, 0.08);
+  color: var(--accent);
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  font-weight: 600;
+  min-width: 64px;
+  text-align: center;
+}
+
+/* Info cards left-aligned */
+.info-card .info-label,
+.info-card .info-value {
+  text-align: left;
+}
+
+/* Approvals list styling (right column) */
+.approvals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.approver {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  box-shadow: 0 4px 12px rgba(20, 30, 50, 0.04);
+  border: 1px solid rgba(15, 23, 36, 0.03);
+}
+.mgr-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.avatar.small {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  font-size: 0.85rem;
+}
+.mgr-name {
+  font-weight: 600;
+  color: #0f1724;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mgr-role {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* Status column fixed and right-aligned */
+.mgr-status {
+  flex: 0 0 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+.status-badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 12px;
+}
+.status-pending {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--warning);
+  border: 1px solid rgba(245, 158, 11, 0.12);
+}
+.status-approved {
+  background: rgba(16, 185, 129, 0.08);
+  color: var(--success);
+  border: 1px solid rgba(16, 185, 129, 0.08);
+}
+.status-denied {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.08);
+}
+.status-date {
+  text-align: right;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+/* Action buttons compact */
+.mgr-action {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: 0.5rem;
+  flex: 0 0 auto;
+}
+
+/* Approval summary left-aligned inside right column */
+.approval-list {
+  text-align: left;
+  margin-top: 0.25rem;
+}
+
+/* Modal polish */
+.modal-content {
+  border-radius: 14px;
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+}
+.modal-body {
+  padding: 1.25rem;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.98),
+    rgba(250, 251, 253, 0.98)
+  );
+}
+.modal-footer {
+  gap: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+@media (min-width: 720px) {
+  .modal-footer {
+    flex-direction: row;
+  }
+  .modal-footer .btn {
+    width: auto;
+    flex: 1 1 auto;
+  }
+}
+
+/* Responsive stacking */
+@media (max-width: 767px) {
+  .modal-body .row {
+    flex-wrap: wrap;
+  }
+  .col-md-5 > .card.p-3.mb-3 {
+    order: 2;
+  }
+  .col-md-7 {
+    order: 1;
+  }
+  #requestDetailsLeft {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  #requestDetailsLeft .rd-meta {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+#modalFooter {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+}
+#modalFooter .row {
+  width: 100%;
+  max-width: 520px; /* adjust to taste */
+  margin: 0;
+  display: flex;
+  gap: 0.5rem; /* <-- small space between the two columns/buttons */
+  align-items: stretch;
+}
+
+/* Make each column a flex container so the button fills the column */
+#modalFooter .col-12.col-md-6 {
+  display: flex;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Buttons fill their column and keep equal width */
+#modalFooter .btn {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* On very small screens keep full-width stacking with a tiny vertical gap */
+@media (max-width: 575px) {
+  #modalFooter .row {
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 100%;
+  }
+  #modalFooter .col-12.col-md-6 {
+    width: 100%;
+  }
 }

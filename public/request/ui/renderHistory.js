@@ -7,12 +7,12 @@ export function renderHistory() {
   const $list = $("#historyList").empty();
   const items = history;
   const filterText =
-    filter === "pending"
-      ? 2
-      : filter === "approved"
-        ? 1
-        : filter === "denied"
-          ? 0
+    filter === "approved"
+      ? 1
+      : filter === "denied"
+        ? 0
+        : filter === "pending"
+          ? null
           : "all";
 
   items.forEach((item) => {

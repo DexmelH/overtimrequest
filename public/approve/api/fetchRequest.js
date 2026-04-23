@@ -1,5 +1,5 @@
 import { setOvertime } from "../services/state.js";
-import { renderOvertime } from "../ui/renderOvertime.js";
+import { renderTable } from "../ui/renderOvertime.js";
 
 export async function fetchRequest() {
   try {
@@ -17,7 +17,7 @@ export async function fetchRequest() {
 
     setOvertime(incoming);
 
-    renderOvertime();
+    renderTable(incoming);
   } catch (error) {
     console.log("Failed to fetch overtime requests:", error);
   }
