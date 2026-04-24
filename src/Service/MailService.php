@@ -4,7 +4,6 @@ namespace App\Service;
 class MailService
 {
     private $mailer;
-    private $htmlTemplate;
 
     private function normalizeDate($date): string
     {
@@ -13,13 +12,12 @@ class MailService
         return $dt->format('F j, Y');
     }
 
-    public function __construct($mailer, string $htmlTemplate)
+    public function __construct($mailer)
     {
         $this->mailer = $mailer;
-        $this->htmlTemplate = $htmlTemplate;
     }
 
-    public function sendOvertimeEmail(array $payload): bool
+    public function sendOvertimeEmail(array $payload, string $htmlTemplate): bool
     {
         $recipientEmail = "hernandez-kdt@global.kawasaki.com";
         $recipientName = "Dexmel";
@@ -39,7 +37,7 @@ class MailService
             "{{hours}}" => $payload["duration"],
             "{{remarks}}" => $payload["remarks"]
         ];
-        $html = strtr($this->htmlTemplate, $map);
+        $html = strtr($htmlTemplate, $map);
 
         $subject = "Overtime request";
         

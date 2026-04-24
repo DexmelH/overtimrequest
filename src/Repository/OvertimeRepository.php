@@ -163,4 +163,58 @@ class OvertimeRepository
             ":approved" => $approved
         ]);
     }
+
+    public function checkIfAlreadyApproved(int $overtimeID, int $approverID): bool
+    {
+        $sql = "SELECT COUNT(*) FROM `overtime_accept` WHERE `overtime_id` = :overtimeID AND `approver_id` = :approverID
+                AND `status` IS NOT NULL";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ":overtimeID" => $overtimeID,
+            ":approverID" => $approverID
+        ]);
+        $count = $stmt->fetchColumn();
+
+        $sql2 = "SELECT COUNT(*) FROM `overtime_request` WHERE `id` = :overtimeID AND `status` IS NOT NULL";
+        $stmt2 = $this->pdo->prepare($sql2);
+        $stmt2->execute([":overtimeID" => $overtimeID]);
+        $count2 = $stmt2->fetchColumn();
+
+        return $count > 0 || $count2 > 0;
+    }
+
+    public function checkIfFullyApproved(int $overtimeID): bool
+    {
+        $sql = "SELECT `status` FROM `overtime_request` WHERE `id` = :overtimeID";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ":overtimeID" => $overtimeID
+        ]);
+        $req = $stmt->fetchColumn();
+
+        return $req !== NULL;
+    }
+
+    public function checkIfForApproval(int $overtimeID, string $ostatus): bool
+    {
+        $sql = "SELECT COUNT(*) FROM `overtime_accept` WHERE `overtime_id` = :overtimeID AND `status` = :ostatus";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ":overtimeID" => $overtimeID,
+            ":ostatus" => $ostatus
+        ]);
+        $count = $stmt->fetchColumn();
+
+        return $count == 1;
+    }
+
+    public function updateOvertimeStatus(int $overtimeID, string $ostatus): bool
+    {
+        $sql = "UPDATE `overtime_request` SET `status` = :ostatus WHERE `id` = :overtimeID";
+        $stmt = $this->pdo->prepare($sql);
+        return (bool)$stmt->execute([
+            ":ostatus" => $ostatus,
+            ":overtimeID" => $overtimeID
+        ]);
+    }
 }

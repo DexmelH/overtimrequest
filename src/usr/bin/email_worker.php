@@ -15,7 +15,7 @@ $mailer = new Mailer($config["mail"]);
 
 
 
-$mailService = new \App\Service\MailService($mailer, $htmlTemplate);
+$mailService = new \App\Service\MailService($mailer);
 $overtimeRepo = new \App\Repository\OvertimeRepository($mailRepo);
 
 $maxAttempts = 5;
@@ -40,7 +40,7 @@ while (true) {
         $payload = $overtimeRepo->findRequestById($row['overtime_id'] ?? null);
         $payload['email_to'] = $row['email_to'];
         $payload['approver_name'] = $row['approver_name'];
-        $ok = $mailService->sendOvertimeEmail($payload);
+        $ok = $mailService->sendOvertimeEmail($payload, $htmlTemplate);
 
         if ($ok) {
             $mailRepo->prepare("UPDATE email_queue SET status='sent', attempts = attempts + 1 WHERE id = ?")->execute([$row['id']]);

@@ -93,13 +93,14 @@ class OvertimeController
         $overtimeToApprove = $this->overtimeRepo->findOvertimeToApprove($approverID);
 
         foreach ($overtimeToApprove as &$request) {
+            $request['is_approved'] = $this->overtimeRepo->checkIfAlreadyApproved($request['id'], $approverID);
             $request['approver_details'] = $this->overtimeRepo->findApproverDetails($request['id']);
         }
 
         return $overtimeToApprove;
     }
 
-    public function approveOvertime(): bool
+    public function approveOvertime(): array
     {
         $overtimeID = isset($_POST['overtimeID']) ? $_POST['overtimeID'] : 0;
         $remarks = isset($_POST['remarks']) ? $_POST['remarks'] : '';
@@ -108,6 +109,16 @@ class OvertimeController
         $userHash = isset($_COOKIE['userID']) ? $_COOKIE['userID'] : '';
         $user = $this->userRepo->findIdByHash($userHash);
         $approverID = $user['id'];
-        return $this->overtimeRepo->approveRequest($overtimeID, $approverID, $remarks, $approved);
+        $ifApproved = $this->overtimeRepo->checkIfFullyApproved($overtimeID);
+        if ($ifApproved) {
+            return ['success' => false, 'message' => "This request has already been fully approved."];
+        }
+        $this->overtimeRepo->approveRequest($overtimeID, $approverID, $remarks, $approved);
+
+        $confirmApproval = $this->overtimeRepo->checkIfForApproval($overtimeID, $approved);
+        if ($confirmApproval) {
+            $this->overtimeRepo->updateOvertimeStatus($overtimeID, $approved);
+        }
+        return ['success' => true, 'message' => "Overtime request updated successfully."];
     }
 }

@@ -111,7 +111,13 @@ export function renderManagers(managers) {
     $badge.text(badgeText(m.status));
     const $date = $("<div>")
       .addClass("status-date")
-      .text(m.date_accepted ? formatDateISO(m.date_accepted) : "No action yet");
+      .text(
+        m.status !== null
+          ? m.date_accepted
+            ? formatDateISO(m.date_accepted)
+            : "No action yet"
+          : "No action yet",
+      );
     $statusWrap.append($badge, $date);
 
     $row.append($info, $statusWrap);

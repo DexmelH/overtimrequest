@@ -1,0 +1,327 @@
+<!-- Modern Overtime Request Details Email -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Overtime Request Details</title>
+    <style>
+      body,
+      table,
+      td,
+      a {
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }
+      table,
+      td {
+        mso-table-lspace: 0pt;
+        mso-table-rspace: 0pt;
+      }
+      img {
+        -ms-interpolation-mode: bicubic;
+        border: 0;
+        height: auto;
+        line-height: 100%;
+        outline: none;
+        text-decoration: none;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100% !important;
+        background-color: #f4f6f8;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #0f1724;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 680px;
+        margin: 28px auto;
+        background: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 6px 24px rgba(15, 23, 36, 0.06);
+      }
+
+      .header {
+        padding: 20px 28px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid #eef2f6;
+      }
+      .brand {
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #4f46e5, #06b6d4);
+        display: inline-block;
+        text-align: center;
+        line-height: 44px;
+        color: #fff;
+        font-weight: 700;
+        font-size: 18px;
+      }
+      .title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #0f1724;
+      }
+
+      .body {
+        padding: 22px 28px;
+      }
+      .greeting {
+        font-size: 15px;
+        margin: 0 0 12px 0;
+        color: #0f1724;
+      }
+      .intro {
+        font-size: 14px;
+        color: #334155;
+        margin: 0 0 16px 0;
+      }
+
+      .details-card {
+        background: #f8fafc;
+        border: 1px solid #eef2f6;
+        border-radius: 10px;
+        padding: 16px;
+        display: block;
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+      }
+      .label {
+        width: 140px;
+        min-width: 120px;
+        color: #64748b;
+        font-size: 13px;
+      }
+      .value {
+        color: #0f1724;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .full-row {
+        width: 100%;
+        display: block;
+      }
+      .remarks {
+        background: #fff;
+        border: 1px solid #e6eef2;
+        border-radius: 8px;
+        padding: 12px;
+        color: #334155;
+        font-size: 14px;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 13px;
+        color: #fff;
+      }
+      .status-approved {
+        background: #16a34a;
+      }
+      .status-rejected {
+        background: #dc2626;
+      }
+      .status-pending {
+        background: #f59e0b;
+        color: #08121a;
+      }
+
+      .actions {
+        margin-top: 18px;
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        text-decoration: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 14px;
+        display: inline-block;
+      }
+      .btn-primary {
+        background: #0ea5a4;
+        color: #fff;
+      }
+      .btn-outline {
+        background: transparent;
+        color: #0f1724;
+        border: 1px solid #e6eef2;
+      }
+
+      .footer {
+        padding: 16px 28px;
+        font-size: 12px;
+        color: #94a3b8;
+        border-top: 1px solid #eef2f6;
+        text-align: center;
+      }
+
+      @media (max-width: 520px) {
+        .header,
+        .body,
+        .footer {
+          padding-left: 16px;
+          padding-right: 16px;
+        }
+        .label {
+          width: 120px;
+        }
+        .row {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .actions {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <center style="width: 100%; background: #f4f6f8; padding: 28px 12px">
+      <table
+        role="presentation"
+        width="100%"
+        cellspacing="0"
+        cellpadding="0"
+        border="0"
+        align="center"
+      >
+        <tr>
+          <td align="center">
+            <div class="container" role="article" aria-roledescription="email">
+              <!-- Header -->
+              <div class="header">
+                <div class="brand">OT</div>
+                <div class="title">Overtime Request Details</div>
+              </div>
+
+              <!-- Body -->
+              <div class="body">
+                <p class="greeting">
+                  Hello <strong>{{recipient_name}}</strong>,
+                </p>
+                <p class="intro">
+                  Below are the details for the overtime request. Use the button
+                  to view the full request or respond if action is required.
+                </p>
+
+                <!-- Summary / Status -->
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 12px;
+                    margin-bottom: 14px;
+                    flex-wrap: wrap;
+                  "
+                >
+                  <div style="font-size: 13px; color: #475569">
+                    Submitted:
+                    <strong style="color: #0f1724">{{date_submitted}}</strong>
+                  </div>
+                  <div style="text-align: right">
+                    <!-- Set class to status-approved / status-rejected / status-pending server-side -->
+                    <span class="status-badge {{status_class}}"
+                      >{{status_label}}</span
+                    >
+                  </div>
+                </div>
+
+                <!-- Details card -->
+                <div
+                  class="details-card"
+                  role="group"
+                  aria-label="Overtime request information"
+                >
+                  <div class="row">
+                    <div class="label">Requestor</div>
+                    <div class="value">{{requestor_name}}</div>
+                  </div>
+
+                  <div class="row">
+                    <div class="label">Group</div>
+                    <div class="value">{{group_name}}</div>
+                  </div>
+
+                  <div class="row">
+                    <div class="label">Project</div>
+                    <div class="value">{{project_name}}</div>
+                  </div>
+
+                  <div class="row">
+                    <div class="label">Date</div>
+                    <div class="value">{{overtime_date}}</div>
+                  </div>
+
+                  <div class="row">
+                    <div class="label">Hours</div>
+                    <div class="value">{{hours}}</div>
+                  </div>
+
+                  <div class="row full-row" style="margin-top: 8px">
+                    <div class="label">Remarks</div>
+                    <div class="value remarks">{{remarks}}</div>
+                  </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="actions">
+                  <a
+                    href="{{details_url}}"
+                    class="btn btn-primary"
+                    target="_blank"
+                    rel="noopener"
+                    >View Full Request</a
+                  >
+                  <a
+                    href="{{approve_url}}"
+                    class="btn btn-outline"
+                    target="_blank"
+                    rel="noopener"
+                    >Approve</a
+                  >
+                  <a
+                    href="{{reject_url}}"
+                    class="btn btn-outline"
+                    target="_blank"
+                    rel="noopener"
+                    >Reject</a
+                  >
+                </div>
+              </div>
+
+              <!-- Footer -->
+              <div class="footer">
+                <div>Company Name • 123 Business Rd • City, Country</div>
+                <div style="margin-top: 6px">
+                  If you have questions about this request, contact HR or your
+                  manager.
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </center>
+  </body>
+</html>

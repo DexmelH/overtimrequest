@@ -96,11 +96,11 @@ switch ($routeInfo[0]) {
             }
 
             $result = call_user_func_array([$controller, $method], $vars);
-            jsonResponse(200, ['success' => true, 'data' => $result]);
+            jsonResponse(200, $result);
 
         } catch (Throwable $e) {
             error_log($e->getMessage() . "\n" . $e->getTraceAsString());
-            jsonResponse(500, ['success' => false, 'errors' => ['Server error']]);
+            jsonResponse(500, ['success' => false, 'errors' => $e->getMessage()]);
         }
         break;
 }

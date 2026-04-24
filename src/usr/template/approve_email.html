@@ -1,0 +1,282 @@
+<!-- Modern Overtime Request Notification -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Overtime Request Status</title>
+    <style>
+      /* Basic reset for email clients */
+      body,
+      table,
+      td,
+      a {
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }
+      table,
+      td {
+        mso-table-lspace: 0pt;
+        mso-table-rspace: 0pt;
+      }
+      img {
+        -ms-interpolation-mode: bicubic;
+        border: 0;
+        height: auto;
+        line-height: 100%;
+        outline: none;
+        text-decoration: none;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100% !important;
+        -webkit-font-smoothing: antialiased;
+        background-color: #f4f6f8;
+        font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+        color: #0f1724;
+      }
+
+      /* Container */
+      .email-wrap {
+        width: 100%;
+        max-width: 680px;
+        margin: 28px auto;
+        background: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 6px 24px rgba(15, 23, 36, 0.08);
+      }
+
+      /* Header */
+      .header {
+        padding: 20px 28px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid #eef2f6;
+      }
+      .brand {
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #4f46e5, #06b6d4);
+        display: inline-block;
+        text-align: center;
+        line-height: 44px;
+        color: #fff;
+        font-weight: 700;
+        font-size: 18px;
+      }
+      .title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #0f1724;
+      }
+
+      /* Body */
+      .body {
+        padding: 24px 28px;
+      }
+      .greeting {
+        font-size: 15px;
+        margin-bottom: 12px;
+      }
+      .card {
+        background: #f8fafc;
+        border: 1px solid #eef2f6;
+        border-radius: 10px;
+        padding: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+      .meta {
+        font-size: 13px;
+        color: #475569;
+      }
+      .request-info {
+        font-size: 14px;
+        color: #0f1724;
+        font-weight: 600;
+      }
+
+      /* Status badge */
+      .badge {
+        display: inline-block;
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 13px;
+        color: #fff;
+      }
+      .badge-approved {
+        background: #16a34a;
+      } /* green */
+      .badge-rejected {
+        background: #dc2626;
+      } /* red */
+
+      /* Buttons */
+      .actions {
+        margin-top: 18px;
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        text-decoration: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        display: inline-block;
+      }
+      .btn-primary {
+        background: #0ea5a4;
+        color: #fff;
+      }
+      .btn-outline {
+        background: transparent;
+        color: #0f1724;
+        border: 1px solid #e6eef2;
+      }
+
+      /* Footer */
+      .footer {
+        padding: 18px 28px;
+        font-size: 12px;
+        color: #94a3b8;
+        border-top: 1px solid #eef2f6;
+        text-align: center;
+      }
+
+      /* Responsive */
+      @media (max-width: 520px) {
+        .header,
+        .body,
+        .footer {
+          padding-left: 16px;
+          padding-right: 16px;
+        }
+        .card {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+        }
+        .actions {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <center style="width: 100%; background: #f4f6f8; padding: 28px 12px">
+      <table
+        role="presentation"
+        width="100%"
+        cellspacing="0"
+        cellpadding="0"
+        border="0"
+        align="center"
+      >
+        <tr>
+          <td align="center">
+            <div class="email-wrap" role="article" aria-roledescription="email">
+              <!-- Header -->
+              <div class="header">
+                <div class="brand">OT</div>
+                <div class="title">Overtime Request Notification</div>
+              </div>
+
+              <!-- Body -->
+              <div class="body">
+                <p class="greeting">
+                  Hello <strong>{{requester_name}}</strong>,
+                </p>
+
+                <div
+                  class="card"
+                  role="group"
+                  aria-label="Overtime request summary"
+                >
+                  <div>
+                    <div class="request-info">
+                      Overtime Request for
+                      <span style="font-weight: 700">{{date_range}}</span>
+                    </div>
+                    <div class="meta">
+                      Submitted: {{submitted_at}} • Approver(s) responded:
+                      {{responded_count}} / 4
+                    </div>
+                  </div>
+
+                  <!-- Status badge: set class to badge-approved or badge-rejected -->
+                  <div style="text-align: right">
+                    <span class="badge {{badge_class}}">{{status_label}}</span>
+                  </div>
+                </div>
+
+                <p style="margin-top: 16px; color: #334155; font-size: 14px">
+                  Your overtime request has been
+                  <strong>{{status_label_lower}}</strong>. Please review the
+                  details below or open the request to see approver comments.
+                </p>
+
+                <!-- Details block -->
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellspacing="0"
+                  cellpadding="0"
+                  border="0"
+                  style="margin-top: 12px"
+                >
+                  <tr>
+                    <td
+                      style="
+                        padding: 12px;
+                        background: #ffffff;
+                        border-radius: 8px;
+                        border: 1px solid #eef2f6;
+                      "
+                    >
+                      <div style="font-size: 13px; color: #475569">
+                        <strong>Request ID:</strong> {{request_id}}<br />
+                        <strong>Hours requested:</strong> {{hours}}<br />
+                        <strong>Reason:</strong> {{reason_short}}
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Actions -->
+                <div class="actions">
+                  <a
+                    href="{{details_url}}"
+                    class="btn btn-primary"
+                    target="_blank"
+                    rel="noopener"
+                    >View Request</a
+                  >
+                  <a href="{{help_url}}" class="btn btn-outline"
+                    >Help & Support</a
+                  >
+                </div>
+              </div>
+
+              <!-- Footer -->
+              <div class="footer">
+                <div>Company Name • 123 Business Rd • City, Country</div>
+                <div style="margin-top: 6px">
+                  If you believe this is an error, contact HR or your manager.
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </center>
+  </body>
+</html>
