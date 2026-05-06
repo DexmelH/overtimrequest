@@ -1,7 +1,7 @@
 RewriteEngine On
 # rewrite /overtime/request/* to /overtime/public/request/*
-RewriteRule ^request(/.*)?$ public/request$1 [L,QSA]
-RewriteRule ^approve(/.*)?$ public/approve$1 [L,QSA]
+# RewriteRule ^request(/.*)?$ public/request$1 [L,QSA]
+# RewriteRule ^approve(/.*)?$ public/approve$1 [L,QSA]
 # route /overtime/api/... to public/api.php
 RewriteRule ^api/(.*)$ public/api.php?r=$1 [L,QSA]
 

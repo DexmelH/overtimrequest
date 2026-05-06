@@ -43,7 +43,19 @@ $("#jobdesc").on("change", function () {
 /// DATA
 let history = [];
 
-fetchHistory({ full: true }).catch(() => {});
+function onVisibilityChange() {
+  if (document.visibilityState === "visible") {
+    fetchHistory().catch(() => {});
+  }
+}
+
+$(window).on("focus", fetchHistory);
+// document.addEventListener("visibilitychange", onVisibilityChange);
+// $(window).on("pageshow", function (event) {
+//   fetchHistory().catch(() => {});
+// });
+
+fetchHistory().catch(() => {});
 fetchLocations().catch(() => {});
 fetchGroups().catch(() => {});
 

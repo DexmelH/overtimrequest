@@ -24,15 +24,15 @@ export async function addOvertimeRequest(formData) {
     if (!response.ok)
       throw new Error("Network response was not ok" + response.status);
     const payload = await response.json();
-    if (payload && payload.data) {
+    if (payload && payload.success) {
       await fetchHistory();
-      openModal(parseInt(payload.data));
+      openModal(parseInt(payload.id));
       showToast("Overtime request submitted successfully.", {
         type: "success",
       });
     } else {
-      console.warn("No requestID in payload, not opening modal.");
-      showToast("Request submitted but no request ID returned.", {
+      console.warn("Request submission failed.");
+      showToast("Failed to submit request.", {
         type: "warning",
       });
     }

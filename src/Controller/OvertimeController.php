@@ -27,7 +27,7 @@ class OvertimeController
         return $history;
     }
 
-    public function addOvertime(): int
+    public function addOvertime(): array
     {
         $userHash = isset($_COOKIE['userID']) ? $_COOKIE['userID'] : '';
         $user = $this->userRepo->findIdByHash($userHash);
@@ -74,13 +74,13 @@ class OvertimeController
 
             $pdo->commit();
 
-            return $id;
+            return ["success" => true, "id" => $id];
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             error_log('Add overtime failed: ' . $e->getMessage());
-            throw $e;
+            return ["success" => false, "message" => "Failed to add overtime request. Please try again."];
         }
         
     }
