@@ -17,15 +17,15 @@ export async function approveOvertimeRequest(requestID, status) {
       throw new Error("Network response was not ok: " + response.status);
     }
     const payload = await response.json();
-    if (payload && payload.data.success) {
+    if (payload && payload.success) {
       await fetchRequest();
-      showToast(`Overtime request processed successfully. (${requestID})`, {
+      showToast(`Overtime request processed successfully.`, {
         type: "success",
       });
     } else {
       throw new Error(
         "Failed to approve overtime request: " +
-          (payload.data.message || "Unknown error"),
+          (payload.message || "Unknown error"),
       );
     }
   } catch (error) {

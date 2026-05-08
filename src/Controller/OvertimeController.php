@@ -97,7 +97,7 @@ class OvertimeController
             $request['approver_details'] = $this->overtimeRepo->findApproverDetails($request['id']);
         }
 
-        return $overtimeToApprove;
+        return ["success" => true, "data" => $overtimeToApprove];
     }
 
     public function approveOvertime(): array
