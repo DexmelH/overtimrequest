@@ -1,19 +1,36 @@
-import { capitalizeFirst } from "../components/utilities.js";
+const LABELS = {
+  group: "Group",
+  location: "Location",
+  project: "Project",
+  item: "Item",
+  jobdesc: "Job Description",
+  work: "Work Type",
+};
 
-export function populateSelect(locations, text, { preserveValue = true } = {}) {
-  const $sel = $(`#${text}`);
-  if ($sel.length === 0) return;
-  const current = preserveValue ? $sel.val() : null;
-  console.log(current);
-  $sel.empty();
-  $sel.append(
-    `<option selected disabled value="">Select ${capitalizeFirst(text)}</option>`,
-  );
-  locations.forEach((loc) => {
-    const opt = $("<option>").attr("value", loc.id).text(loc.name);
-    $sel.append(opt);
+export function populateSelect(items, fieldId, { preserveValue = false } = {}) {
+  const $sel = $(`#${fieldId}`);
+  if (!$sel.length) return;
+
+  const current = preserveValue ? $sel.val() : "";
+  const label = LABELS[fieldId] || fieldId;
+
+  $sel.empty().append(`<option value="">Select ${label}</option>`);
+
+  (items || []).forEach((item) => {
+    $sel.append($("<option>").attr("value", item.id).text(item.name));
   });
-  if (preserveValue && current) {
-    if ($sel.find(`option[value="${current}"]`).length) $sel.val(current);
+
+  if (preserveValue && current && $sel.find(`option[value="${current}"]`).length) {
+    $sel.val(current);
   }
+}
+
+export function resetSelect(fieldId, disabled = true) {
+  const $sel = $(`#${fieldId}`);
+  if (!$sel.length) return;
+  const label = LABELS[fieldId] || fieldId;
+  $sel
+    .empty()
+    .append(`<option value="">Select ${label}</option>`)
+    .prop("disabled", disabled);
 }

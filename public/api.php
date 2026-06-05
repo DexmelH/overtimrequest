@@ -69,18 +69,32 @@ switch ($routeInfo[0]) {
 
         try {
             // controller factory: map controllers to the PDO they need
+            $webjmrPdo = $dbManager->getConnection('webjmr');
+            $kdtphPdo = $dbManager->getConnection('kdtph');
+            $kdtphNewPdo = $dbManager->getConnection('kdtphnew');
+
             $controllerFactory = [
-                'App\Controller\GroupController' => function() use ($dbManager) {
-                    $groupPDO = $dbManager->getConnection('kdtphnew');
-                    $userPDO = $dbManager->getConnection('kdtph');
-                    return new \App\Controller\GroupController($groupPDO, $userPDO);
+                'App\Controller\GroupController' => function() use ($kdtphNewPdo, $kdtphPdo) {
+                    return new \App\Controller\GroupController($kdtphNewPdo, $kdtphPdo);
                 },
-                'App\Controller\OvertimeController' => function() use ($dbManager) {
-                    $overtimePDO = $dbManager->getConnection('webjmr');
-                    $userPDO = $dbManager->getConnection('kdtph');
-                    return new \App\Controller\OvertimeController($overtimePDO, $userPDO);
+                'App\Controller\OvertimeController' => function() use ($webjmrPdo, $kdtphPdo) {
+                    return new \App\Controller\OvertimeController($webjmrPdo, $kdtphPdo);
                 },
-                // add other controllers here...
+                'App\Controller\LocationController' => function() use ($webjmrPdo) {
+                    return new \App\Controller\LocationController($webjmrPdo);
+                },
+                'App\Controller\ProjectController' => function() use ($webjmrPdo) {
+                    return new \App\Controller\ProjectController($webjmrPdo);
+                },
+                'App\Controller\ItemController' => function() use ($webjmrPdo) {
+                    return new \App\Controller\ItemController($webjmrPdo);
+                },
+                'App\Controller\JobController' => function() use ($webjmrPdo) {
+                    return new \App\Controller\JobController($webjmrPdo);
+                },
+                'App\Controller\WorkController' => function() use ($webjmrPdo) {
+                    return new \App\Controller\WorkController($webjmrPdo);
+                },
             ];
 
             if (isset($controllerFactory[$class])) {

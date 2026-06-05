@@ -2,252 +2,316 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="api-base" content="/overtime/api" />
     <title>Overtime Request</title>
 
-    <link rel="stylesheet" href="styles.css" />
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+      rel="stylesheet"
+    />
+    <link href="../shared/css/theme.css" rel="stylesheet" />
+    <link href="styles.css" rel="stylesheet" />
   </head>
   <body>
     <div
       id="toastContainer"
-      class="toast-container"
+      class="ot-toast-container"
       aria-live="polite"
       aria-atomic="true"
     ></div>
-    <div class="container">
-      <!-- Left: Form -->
-      <div class="card" id="formCard">
-        <div class="form-title">
-          <h2>Overtime Request</h2>
-          <small class="muted">Fill details and submit</small>
-        </div>
 
-        <form id="overtimeForm" autocomplete="off">
-          <div class="form-grid">
-            <div>
-              <label for="date"><strong>Date</strong></label>
-              <input type="date" id="date" required />
-            </div>
-
-            <div>
-              <label for="group"><strong>Group</strong></label>
-              <select id="group" required>
-                <option value="">Select Group</option>
-              </select>
-            </div>
-
-            <div>
-              <label for="location"><strong>Location</strong></label>
-              <select id="location" required>
-                <option value="">Select Location</option>
-              </select>
-            </div>
-
-            <div>
-              <label for="project"><strong>Project</strong></label>
-              <select id="project" disabled required>
-                <option value="">Select Project</option>
-              </select>
-            </div>
-
-            <div>
-              <label for="item"><strong>Item of Works</strong></label>
-              <select id="item" disabled required>
-                <option value="">Select Item</option>
-              </select>
-            </div>
-
-            <div>
-              <label for="jobdesc"><strong>Job Description</strong></label>
-              <select id="jobdesc" disabled required>
-                <option value="">Select JobDesc</option>
-              </select>
-            </div>
-
-            <div>
-              <label for="work"><strong>Type of works</strong></label>
-              <div class="type-field">
-                <select disabled id="work" required>
-                  <option value="">Select Work</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label for="hours"><strong>Number of hours</strong></label>
-              <div class="hours-input-wrap">
-                <input
-                  type="number"
-                  id="hours"
-                  step="1"
-                  min="0"
-                  placeholder="HH"
-                  required
-                  aria-label="Number of hours"
-                />
-                <div class="time-unit">hrs</div>
-              </div>
-            </div>
-
-            <div class="full-row">
-              <label for="remarks"><strong>Remarks</strong></label>
-              <textarea
-                type="text"
-                id="remarks"
-                placeholder="Optional notes"
-                rows="3"
-              ></textarea>
-            </div>
-
-            <div class="full-row">
-              <small class="muted"
-                >All fields marked required must be filled before
-                submitting.</small
-              >
-            </div>
+    <header class="ot-app-header">
+      <div class="container">
+        <div class="ot-brand">
+          <div class="ot-brand-icon" aria-hidden="true">
+            <i class="bi bi-clock-history"></i>
           </div>
-
-          <div class="submit-row">
-            <div style="display: flex; gap: 8px">
-              <button type="button" class="btn secondary" id="resetBtn">
-                Clear
-              </button>
-              <button type="submit" class="btn" id="submitBtn">
-                Submit Overtime
-              </button>
-            </div>
-            <div class="muted">
-              Status will be <strong>Pending</strong> until reviewed
-            </div>
-          </div>
-        </form>
-      </div>
-
-      <!-- Right: History -->
-      <div class="card" id="historyCard">
-        <div class="history-header">
           <div>
-            <h3 style="margin: 0">Overtime History</h3>
-            <div class="muted" style="margin-top: 6px">
-              Click an item to view details
-            </div>
+            <h1>Overtime Request</h1>
+            <p>Submit new requests and track your history</p>
           </div>
+        </div>
+        <div class="ms-auto d-none d-md-block">
+          <span class="badge rounded-pill text-bg-light border">
+            <i class="bi bi-info-circle me-1"></i>Status starts as Pending
+          </span>
+        </div>
+      </div>
+    </header>
 
-          <div class="filters" aria-hidden="false">
-            <button class="filter-btn active" data-filter="all">All</button>
-            <button class="filter-btn" data-filter="pending">Pending</button>
-            <button class="filter-btn" data-filter="approved">Approved</button>
-            <button class="filter-btn" data-filter="denied">Denied</button>
+    <main class="container py-4">
+      <div class="row g-4">
+        <!-- Request form -->
+        <div class="col-lg-7">
+          <div class="ot-card h-100">
+            <div class="ot-card-header">
+              <div>
+                <h2>New Overtime Request</h2>
+                <p class="ot-muted mb-0">Complete all required fields below</p>
+              </div>
+            </div>
+            <div class="ot-card-body">
+              <form id="overtimeForm" novalidate autocomplete="off">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label" for="date">Date</label>
+                    <input
+                      type="date"
+                      class="form-control"
+                      id="date"
+                      required
+                    />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="hours">Hours</label>
+                    <div class="input-group">
+                      <input
+                        type="number"
+                        class="form-control"
+                        id="hours"
+                        min="1"
+                        step="1"
+                        placeholder="0"
+                        required
+                      />
+                      <span class="input-group-text">hrs</span>
+                    </div>
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label" for="group">Group</label>
+                    <select class="form-select" id="group" required>
+                      <option value="">Select group</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="location">Location</label>
+                    <select class="form-select" id="location" required>
+                      <option value="">Select location</option>
+                    </select>
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label" for="project">Project</label>
+                    <select class="form-select" id="project" disabled required>
+                      <option value="">Select project</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="item">Item of Work</label>
+                    <select class="form-select" id="item" disabled required>
+                      <option value="">Select item</option>
+                    </select>
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label" for="jobdesc"
+                      >Job Description</label
+                    >
+                    <select class="form-select" id="jobdesc" disabled required>
+                      <option value="">Select job description</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="work">Type of Work</label>
+                    <select class="form-select" id="work" disabled required>
+                      <option value="">Select work type</option>
+                    </select>
+                  </div>
+
+                  <div class="col-12">
+                    <label class="form-label" for="remarks">Remarks</label>
+                    <textarea
+                      class="form-control"
+                      id="remarks"
+                      rows="3"
+                      placeholder="Optional notes for approvers"
+                    ></textarea>
+                  </div>
+                </div>
+
+                <div
+                  class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-4 pt-3 border-top"
+                >
+                  <div class="d-flex gap-2">
+                    <button
+                      type="button"
+                      class="ot-btn ot-btn-secondary"
+                      id="resetBtn"
+                    >
+                      <i class="bi bi-arrow-counterclockwise"></i> Clear
+                    </button>
+                    <button
+                      type="submit"
+                      class="ot-btn ot-btn-primary"
+                      id="submitBtn"
+                    >
+                      <i class="bi bi-send"></i> Submit Request
+                    </button>
+                  </div>
+                  <small class="ot-muted">Required fields must be filled</small>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
 
-        <div class="history-list" id="historyList" role="list"></div>
+        <!-- History -->
+        <div class="col-lg-5">
+          <div class="ot-card h-100 d-flex flex-column">
+            <div class="ot-card-header flex-wrap">
+              <div>
+                <h2>Your History</h2>
+                <p class="ot-muted mb-0">Click a row to view details</p>
+              </div>
+              <div class="d-flex flex-column align-items-end gap-2">
+                <button
+                  type="button"
+                  class="ot-btn ot-btn-secondary btn-sm"
+                  id="refreshHistoryBtn"
+                  title="Refresh history"
+                >
+                  <i class="bi bi-arrow-repeat"></i>
+                </button>
+                <div
+                  class="ot-filter-group"
+                  role="group"
+                  aria-label="Filter history"
+                >
+                  <button
+                    class="ot-filter-btn active"
+                    data-filter="all"
+                    type="button"
+                  >
+                    All
+                  </button>
+                  <button
+                    class="ot-filter-btn"
+                    data-filter="pending"
+                    type="button"
+                  >
+                    Pending
+                  </button>
+                  <button
+                    class="ot-filter-btn"
+                    data-filter="approved"
+                    type="button"
+                  >
+                    Approved
+                  </button>
+                  <button
+                    class="ot-filter-btn"
+                    data-filter="denied"
+                    type="button"
+                  >
+                    Denied
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="ot-card-body flex-grow-1 d-flex flex-column p-0">
+              <div class="px-3 pt-2 pb-2 border-bottom">
+                <input
+                  type="search"
+                  class="form-control form-control-sm"
+                  id="historySearch"
+                  placeholder="Search group, project, location..."
+                  aria-label="Search history"
+                />
+              </div>
+              <div
+                class="history-list flex-grow-1"
+                id="historyList"
+                role="list"
+              ></div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </main>
 
-    <!-- Modal -->
+    <!-- Detail modal -->
     <div
+      class="modal fade"
       id="detailModal"
-      class="modal"
+      tabindex="-1"
+      aria-labelledby="modalTitle"
       aria-hidden="true"
-      role="dialog"
-      aria-modal="true"
     >
-      <div class="modal-backdrop" id="modalBackdrop"></div>
-      <div
-        class="modal-panel"
-        role="document"
-        tabindex="-1"
-        aria-labelledby="modalTitle"
-      >
-        <header class="modal-header">
-          <h3 id="modalTitle">Request Details</h3>
-          <button class="modal-close" id="modalClose" aria-label="Close">
-            &times;
-          </button>
-        </header>
-
-        <div class="modal-body" id="modalBody">
-          <div class="details-row">
-            <div>
-              <div class="details-label">Date</div>
-              <div class="details-value" id="m_date"></div>
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+          <div class="modal-header border-0 pb-0">
+            <h5 class="modal-title fw-bold" id="modalTitle">Request Details</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body pt-2">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span id="m_statusBadge"></span>
+            </div>
+            <div class="detail-grid">
+              <div class="detail-item">
+                <div class="label">Date</div>
+                <div class="value" id="m_date">—</div>
+              </div>
+              <div class="detail-item">
+                <div class="label">Hours</div>
+                <div class="value" id="m_hours">—</div>
+              </div>
+              <div class="detail-item">
+                <div class="label">Group</div>
+                <div class="value" id="m_group">—</div>
+              </div>
+              <div class="detail-item">
+                <div class="label">Location</div>
+                <div class="value" id="m_location">—</div>
+              </div>
+              <div class="detail-item">
+                <div class="label">Project</div>
+                <div class="value" id="m_project">—</div>
+              </div>
+              <div class="detail-item">
+                <div class="label">Item of Work</div>
+                <div class="value" id="m_item">—</div>
+              </div>
+              <div class="detail-item">
+                <div class="label">Job Description</div>
+                <div class="value" id="m_jobdesc">—</div>
+              </div>
+              <div class="detail-item">
+                <div class="label">Type of Work</div>
+                <div class="value" id="m_work">—</div>
+              </div>
+              <div class="detail-item full">
+                <div class="label">Remarks</div>
+                <div class="value" id="m_remarks">—</div>
+              </div>
             </div>
           </div>
-
-          <div class="details-row">
-            <div>
-              <div class="details-label">Group</div>
-              <div class="details-value" id="m_group"></div>
-            </div>
-          </div>
-
-          <div class="details-row">
-            <div>
-              <div class="details-label">Location</div>
-              <div class="details-value" id="m_location"></div>
-            </div>
-          </div>
-
-          <div class="details-row">
-            <div>
-              <div class="details-label">Project</div>
-              <div class="details-value" id="m_project"></div>
-            </div>
-          </div>
-
-          <div class="details-row">
-            <div>
-              <div class="details-label">Item of Works</div>
-              <div class="details-value" id="m_item"></div>
-            </div>
-          </div>
-
-          <div class="details-row">
-            <div>
-              <div class="details-label">Job Description</div>
-              <div class="details-value" id="m_jobdesc"></div>
-            </div>
-          </div>
-
-          <div class="details-row">
-            <div style="flex: 1">
-              <div class="details-label">Type of Works</div>
-              <div class="details-value" id="m_work"></div>
-            </div>
-            <div style="min-width: 120px">
-              <div class="details-label">Hours</div>
-              <div class="details-value" id="m_hours"></div>
-            </div>
-          </div>
-
-          <div style="margin-top: 8px">
-            <div class="details-label">Remarks</div>
-            <div class="details-value" id="m_remarks"></div>
-          </div>
-
-          <div
-            style="
-              margin-top: 12px;
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-            "
-          >
-            <div id="m_statusBadge"></div>
+          <div class="modal-footer border-0">
+            <button
+              type="button"
+              class="ot-btn ot-btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
           </div>
         </div>
-
-        <footer class="modal-footer">
-          <div id="m_statusBadge"></div>
-          <div style="margin-left: auto">
-            <button class="btn secondary" id="modalCloseBtn">Close</button>
-          </div>
-        </footer>
       </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="app.js"></script>
   </body>
 </html>

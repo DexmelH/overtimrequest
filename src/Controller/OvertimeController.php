@@ -68,6 +68,7 @@ class OvertimeController
                     'approver_name' => $app['surname'],
                     'overtime_id' => $id,
                 ];
+                $payload['email_type'] = 'new_request';
                 $this->overtimeRepo->insertEmailQueue($payload);
                 $this->overtimeRepo->addAcceptance($id, $app['id']);
             }
@@ -118,7 +119,35 @@ class OvertimeController
         $confirmApproval = $this->overtimeRepo->checkIfForApproval($overtimeID, $approved);
         if ($confirmApproval) {
             $this->overtimeRepo->updateOvertimeStatus($overtimeID, $approved);
+            $this->queueRequestorStatusEmail(
+                (int) $overtimeID,
+                (int) $approved,
+                (string) ($user['surname'] ?? 'Approver')
+            );
         }
         return ['success' => true, 'message' => "Overtime request updated successfully."];
+    }
+
+    /**
+     * Queue an email to the requestor when their overtime is approved or rejected.
+     */
+    private function queueRequestorStatusEmail(int $overtimeID, int $decision, string $actorName): void
+    {
+        $requestor = $this->overtimeRepo->findRequestorByOvertimeId($overtimeID);
+        $email = trim((string) ($requestor['email'] ?? ''));
+
+        if ($email === '') {
+            error_log("Overtime {$overtimeID}: no requestor email; status notification skipped.");
+            return;
+        }
+
+        $this->overtimeRepo->insertEmailQueue([
+            'email_to' => $email,
+            'approver_name' => $requestor['surname'] ?? 'Employee',
+            'overtime_id' => $overtimeID,
+            'email_type' => 'status_update',
+            'decision' => $decision,
+            'actor_name' => $actorName,
+        ]);
     }
 }

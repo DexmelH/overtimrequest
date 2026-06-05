@@ -1,55 +1,21 @@
-import {
-  retryFetch,
-  fetchWithTimeout,
-  normalizePayload,
-} from "../components/utilities.js";
+import { apiUrl } from "../../shared/js/api.js";
+import { apiGet, normalizePayload } from "../../shared/js/http.js";
 import { populateSelect } from "../ui/populateSelect.js";
 
-export async function fetchItems({ showLoading = true } = {}) {
+export async function fetchItems() {
   const $sel = $("#item");
-  if ($sel.length && showLoading) {
-    $sel.prop("disabled", true);
-    const prev = $sel.data("prev") || null;
-    $sel.data("prev-text", prev);
-    $sel.empty().append('<option value="">Loading...</option>');
-  }
-
   const project = $("#project").val();
+  $sel.prop("disabled", true).empty().append('<option value="">Loading...</option>');
 
   try {
-    const response = await retryFetch(
-      () =>
-        fetchWithTimeout(
-          "../api/items?project=" + encodeURIComponent(project),
-          {
-            method: "GET",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
-          },
-          8000,
-        ),
-      3,
-      300,
+    const json = await apiGet(
+      apiUrl("/items") + "?project=" + encodeURIComponent(project),
     );
-
-    if (!response.ok)
-      throw new Error("Network response was not ok" + response.status);
-    const json = await response.json();
-    const items = normalizePayload(json);
-    if (items.length) {
-      populateSelect(items, "item");
-    } else {
-      populateSelect([], "item");
-    }
+    populateSelect(normalizePayload(json), "item");
   } catch (error) {
     console.error("Failed to fetch items:", error);
-    if ($sel.length) {
-      $sel.empty().append('<option value="">Failed to load items</option>');
-    }
-    return [];
+    $sel.empty().append('<option value="">Failed to load items</option>');
   } finally {
-    if ($sel.length) {
-      $sel.prop("disabled", false);
-    }
+    $sel.prop("disabled", false);
   }
 }

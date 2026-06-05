@@ -1,39 +1,28 @@
-import { showToast } from "../components/toast.js";
+import { apiUrl } from "../../shared/js/api.js";
+import { apiPost } from "../../shared/js/http.js";
+import { showToast } from "../../shared/js/toast.js";
 import { fetchRequest } from "./fetchRequest.js";
-import { renderTable } from "../ui/renderOvertime.js";
 
-export async function approveOvertimeRequest(requestID, status) {
-  const newFormData = new FormData();
-  newFormData.append("overtimeID", requestID);
-  newFormData.append("status", status);
+export async function approveOvertimeRequest(requestID, status, remarks = "") {
+  const body = new FormData();
+  body.append("overtimeID", requestID);
+  body.append("status", status);
+  body.append("remarks", remarks);
 
   try {
-    const response = await fetch("../api/approveovertime", {
-      method: "POST",
-      credentials: "same-origin",
-      body: newFormData,
-    });
-    if (!response.ok) {
-      throw new Error("Network response was not ok: " + response.status);
-    }
-    const payload = await response.json();
-    if (payload && payload.success) {
+    const payload = await apiPost(apiUrl("/approveovertime"), body);
+    if (payload?.success) {
       await fetchRequest();
-      showToast(`Overtime request processed successfully.`, {
+      showToast(payload.message || "Request updated successfully.", {
         type: "success",
       });
-    } else {
-      throw new Error(
-        "Failed to approve overtime request: " +
-          (payload.message || "Unknown error"),
-      );
+      return payload;
     }
+    showToast(payload?.message || "Could not update request.", { type: "warning" });
+    return payload;
   } catch (error) {
-    renderTable();
     console.error("Error approving overtime request:", error);
-    showToast(error, {
-      type: "error",
-    });
+    showToast("Failed to process request. Please try again.", { type: "error" });
     throw error;
   }
 }

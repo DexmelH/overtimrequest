@@ -6,118 +6,140 @@ import { fetchItems } from "./api/fetchItems.js";
 import { fetchJobs } from "./api/fetchJobs.js";
 import { fetchWorks } from "./api/fetchWorks.js";
 import { addOvertimeRequest } from "./api/addOvertime.js";
-import { openModal, closeModal } from "./components/modal.js";
 import { renderHistory } from "./ui/renderHistory.js";
-import { setFilter } from "./services/state.js";
+import { setFilter, setSearchQuery } from "./services/state.js";
+import { resetDependentFields, enableField } from "./ui/selectCascade.js";
+import { showToast } from "../shared/js/toast.js";
 
-// Close handlers
-$("#modalClose, #modalCloseBtn, #modalBackdrop").on("click", function () {
-  closeModal();
-});
+function setDefaultDate() {
+  const today = new Date().toISOString().slice(0, 10);
+  $("#date").val(today);
+}
 
-$(document).on("keydown", function (e) {
-  if (e.key === "Escape" && $("#detailModal").attr("aria-hidden") === "false") {
-    closeModal();
-  }
-});
-
-$("#group").on("change", function () {
-  $("#project").disabled = false;
-  fetchProjects().catch(() => {});
-});
-
-$("#project").on("change", function () {
-  $("#item").disabled = false;
-  fetchItems().catch(() => {});
-});
-
-$("#item").on("change", function () {
-  $("#jobdesc").disabled = false;
-  fetchJobs().catch(() => {});
-});
-
-$("#jobdesc").on("change", function () {
-  fetchWorks().catch(() => {});
-});
-
-/// DATA
-let history = [];
-
-function onVisibilityChange() {
-  if (document.visibilityState === "visible") {
-    fetchHistory().catch(() => {});
+function setSubmitLoading(loading) {
+  const $btn = $("#submitBtn");
+  if (loading) {
+    $btn
+      .prop("disabled", true)
+      .html('<span class="ot-spinner"></span> Submitting...');
+  } else {
+    $btn
+      .prop("disabled", false)
+      .html('<i class="bi bi-send"></i> Submit Request');
   }
 }
 
-$(window).on("focus", fetchHistory);
-// document.addEventListener("visibilitychange", onVisibilityChange);
-// $(window).on("pageshow", function (event) {
-//   fetchHistory().catch(() => {});
-// });
+// Cascade selects
+$("#group").on("change", function () {
+  resetDependentFields("project");
+  if ($(this).val()) {
+    enableField("project");
+    fetchProjects().catch(() => {});
+  }
+});
 
-fetchHistory().catch(() => {});
-fetchLocations().catch(() => {});
-fetchGroups().catch(() => {});
+$("#project").on("change", function () {
+  resetDependentFields("item");
+  if ($(this).val()) {
+    enableField("item");
+    fetchItems().catch(() => {});
+  }
+});
+
+$("#item").on("change", function () {
+  resetDependentFields("jobdesc");
+  if ($(this).val()) {
+    enableField("jobdesc");
+    fetchJobs().catch(() => {});
+  }
+});
+
+$("#jobdesc").on("change", function () {
+  resetDependentFields("work");
+  if ($(this).val()) {
+    enableField("work");
+    fetchWorks().catch(() => {});
+  }
+});
+
+// History filters & search
+$(".ot-filter-btn").on("click", function () {
+  $(".ot-filter-btn").removeClass("active");
+  $(this).addClass("active");
+  setFilter($(this).data("filter"));
+  renderHistory();
+});
+
+$("#historySearch").on("input", function () {
+  setSearchQuery($(this).val());
+  renderHistory();
+});
+
+$("#refreshHistoryBtn").on("click", function () {
+  const $btn = $(this);
+  $btn.prop("disabled", true);
+  fetchHistory()
+    .then(() =>
+      showToast("History refreshed.", { type: "success", duration: 2500 }),
+    )
+    .catch(() => showToast("Could not refresh history.", { type: "error" }))
+    .finally(() => $btn.prop("disabled", false));
+});
+
+$(window).on("focus", () => fetchHistory().catch(() => {}));
 
 // Form submit
-$("#overtimeForm").on("submit", function (e) {
+$("#overtimeForm").on("submit", async function (e) {
   e.preventDefault();
 
-  const date = $("#date").val();
-  const group = $("#group").val();
-  const location = $("#location").val().trim();
-  const project = $("#project").val().trim();
-  const item = $("#item").val().trim();
-  const jobdesc = $("#jobdesc").val().trim();
-  const work = $("#work").val().trim();
-  const hours = parseFloat($("#hours").val());
-  const remarks = $("#remarks").val().trim();
+  const payload = {
+    date: $("#date").val(),
+    group: $("#group").val(),
+    location: $("#location").val(),
+    project: $("#project").val(),
+    item: $("#item").val(),
+    jobdesc: $("#jobdesc").val(),
+    work: $("#work").val(),
+    hours: parseFloat($("#hours").val()),
+    remarks: $("#remarks").val().trim(),
+  };
 
   if (
-    !date ||
-    !group ||
-    !location ||
-    !project ||
-    !item ||
-    !jobdesc ||
-    !work ||
-    !hours ||
-    hours <= 0
+    !payload.date ||
+    !payload.group ||
+    !payload.location ||
+    !payload.project ||
+    !payload.item ||
+    !payload.jobdesc ||
+    !payload.work ||
+    !payload.hours ||
+    payload.hours <= 0
   ) {
-    alert("Please fill all required fields with valid values.");
+    showToast("Please fill all required fields with valid values.", {
+      type: "warning",
+    });
     return;
   }
 
-  const newReq = {
-    date,
-    group,
-    location,
-    project,
-    item,
-    jobdesc,
-    work,
-    hours,
-    remarks,
-  };
-
-  addOvertimeRequest(newReq).catch(() => {});
-
-  $("#overtimeForm")[0].reset();
-  $("#hours").val(1);
-  $("#date").val(date);
+  setSubmitLoading(true);
+  try {
+    await addOvertimeRequest(payload);
+    this.reset();
+    setDefaultDate();
+    resetDependentFields("project");
+  } finally {
+    setSubmitLoading(false);
+  }
 });
 
-// Reset button
 $("#resetBtn").on("click", function () {
   $("#overtimeForm")[0].reset();
-  $("#hours").val(0);
+  setDefaultDate();
+  resetDependentFields("project");
 });
 
-// Filters
-$(".filter-btn").on("click", function () {
-  $(".filter-btn").removeClass("active");
-  $(this).addClass("active");
-  const f = $(this).data("filter");
-  setFilter(f);
-  renderHistory();
-});
+// Init
+setDefaultDate();
+fetchHistory().catch(() => {});
+fetchLocations().catch(() => {});
+fetchGroups().catch(() => {});

@@ -1,254 +1,447 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Overtime Request Notification</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>New Overtime Request</title>
   </head>
-  <body style="margin: 0; padding: 0; background-color: #f4f4f4">
-    <table width="100%" cellpadding="0" cellspacing="0">
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background: #eef2f8;
+      font-family: &quot;Segoe UI&quot;, Arial, Helvetica, sans-serif;
+      color: #0f172a;
+    "
+  >
+    <table
+      role="presentation"
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      border="0"
+      style="background: #eef2f8; margin: 0; padding: 32px 12px"
+    >
       <tr>
         <td align="center">
           <table
+            role="presentation"
             width="600"
             cellpadding="0"
             cellspacing="0"
+            border="0"
             style="
-              margin: 20px auto;
-              background-color: #ffffff;
-              border-radius: 8px;
-              box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+              width: 600px;
+              max-width: 600px;
+              background: #ffffff;
+              border: 1px solid #e2e8f0;
+              border-radius: 16px;
+              overflow: hidden;
+              box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
             "
           >
             <tr>
               <td
                 style="
-                  padding: 30px 40px;
-                  font-family: &quot;Helvetica Neue&quot;, Arial, sans-serif;
+                  padding: 28px 32px;
+                  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
                 "
               >
-                <!-- Header -->
-                <h1 style="margin: 0; font-size: 24px; color: #333333">
-                  New Overtime Request Submitted
-                </h1>
-
-                <!-- Greeting -->
-                <p
-                  style="
-                    font-size: 16px;
-                    color: #555555;
-                    line-height: 1.5;
-                    margin-top: 15px;
-                  "
-                >
-                  Hi <strong>{{approver_name}}</strong>,
-                </p>
-
-                <!-- Intro -->
-                <p style="font-size: 16px; color: #555555; line-height: 1.5">
-                  An overtime request has been submitted. Summary and details
-                  are below.
-                </p>
-
-                <!-- Meta pill -->
-                <p style="margin: 12px 0 18px 0">
-                  <span
-                    style="
-                      display: inline-block;
-                      background: #eef5ff;
-                      color: #0b6efd;
-                      padding: 6px 10px;
-                      border-radius: 999px;
-                      font-size: 13px;
-                      font-weight: 600;
-                    "
-                  >
-                    Date submitted: <strong>{{submitted_at}}</strong>
-                  </span>
-                </p>
-
-                <!-- Details table -->
                 <table
+                  role="presentation"
                   width="100%"
                   cellpadding="0"
                   cellspacing="0"
-                  style="border-collapse: collapse; margin-bottom: 18px"
+                  border="0"
                 >
                   <tr>
                     <td
                       style="
-                        width: 160px;
-                        padding: 12px 0;
-                        font-weight: 700;
-                        color: #666;
+                        font-size: 13px;
+                        color: #dbeafe;
+                        letter-spacing: 0.04em;
+                        text-transform: uppercase;
                       "
                     >
-                      Requestor:
-                    </td>
-                    <td style="padding: 12px 0; color: #222">
-                      {{requestor_name}}
+                      {{app_name}}
                     </td>
                   </tr>
                   <tr>
                     <td
                       style="
-                        width: 160px;
-                        padding: 12px 0;
+                        padding-top: 8px;
+                        font-size: 24px;
+                        line-height: 1.3;
                         font-weight: 700;
-                        color: #666;
+                        color: #ffffff;
                       "
                     >
-                      Group:
-                    </td>
-                    <td style="padding: 12px 0; color: #222">{{group_name}}</td>
-                  </tr>
-                  <tr>
-                    <td
-                      style="
-                        width: 160px;
-                        padding: 12px 0;
-                        font-weight: 700;
-                        color: #666;
-                      "
-                    >
-                      Project:
-                    </td>
-                    <td style="padding: 12px 0; color: #222">
-                      {{project_name}}
+                      New Overtime Request
                     </td>
                   </tr>
                   <tr>
                     <td
                       style="
-                        width: 160px;
-                        padding: 12px 0;
-                        font-weight: 700;
-                        color: #666;
+                        padding-top: 8px;
+                        font-size: 15px;
+                        line-height: 1.5;
+                        color: #dbeafe;
                       "
                     >
-                      Date:
-                    </td>
-                    <td style="padding: 12px 0; color: #222">{{date}}</td>
-                  </tr>
-                  <tr>
-                    <td
-                      style="
-                        width: 160px;
-                        padding: 12px 0;
-                        font-weight: 700;
-                        color: #666;
-                      "
-                    >
-                      Hours:
-                    </td>
-                    <td style="padding: 12px 0; color: #222">{{hours}}</td>
-                  </tr>
-                  <tr>
-                    <td
-                      style="
-                        width: 160px;
-                        padding: 12px 0;
-                        font-weight: 700;
-                        color: #666;
-                        vertical-align: top;
-                      "
-                    >
-                      Remarks:
-                    </td>
-                    <td
-                      style="
-                        padding: 12px 0;
-                        color: #222;
-                        white-space: pre-wrap;
-                      "
-                    >
-                      {{remarks}}
+                      A request is waiting for your review.
                     </td>
                   </tr>
                 </table>
-
-                <!-- Call-to-Action Button -->
-                <!-- <p align="center" style="margin: 20px 0 10px 0">
-                  <a
-                    href="{{approval_url}}"
-                    style="
-                      display: inline-block;
-                      background-color: #3498db;
-                      color: #ffffff !important;
-                      text-decoration: none;
-                      padding: 12px 26px;
-                      font-size: 16px;
-                      border-radius: 6px;
-                    "
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 28px 32px 12px 32px">
+                <p
+                  style="
+                    margin: 0 0 16px 0;
+                    font-size: 16px;
+                    line-height: 1.6;
+                    color: #334155;
+                  "
+                >
+                  Hello
+                  <strong style="color: #0f172a">{{recipient_name}}</strong>,
+                </p>
+                <p
+                  style="
+                    margin: 0 0 20px 0;
+                    font-size: 15px;
+                    line-height: 1.6;
+                    color: #475569;
+                  "
+                >
+                  An overtime request has been submitted. Please review the
+                  summary below.
+                </p>
+                <table
+                  role="presentation"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                  style="margin-bottom: 20px"
+                >
+                  <tr>
+                    <td
+                      style="
+                        background: #eff6ff;
+                        border: 1px solid #bfdbfe;
+                        border-radius: 999px;
+                        padding: 8px 14px;
+                        font-size: 13px;
+                        font-weight: 600;
+                        color: #1d4ed8;
+                      "
+                    >
+                      Submitted {{submitted_at}}
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 0 32px 28px 32px">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                  style="
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    background: #f8fafc;
+                  "
+                >
+                  <tr>
+                    <td
+                      style="
+                        padding: 14px 18px;
+                        border-bottom: 1px solid #e2e8f0;
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: #64748b;
+                        text-transform: uppercase;
+                        letter-spacing: 0.04em;
+                      "
+                    >
+                      Request Details
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        padding: 12px 18px;
+                        border-bottom: 1px solid #eef2f6;
+                      "
+                    >
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
+                        <tr>
+                          <td
+                            width="130"
+                            style="
+                              font-size: 13px;
+                              color: #64748b;
+                              vertical-align: top;
+                            "
+                          >
+                            Requestor
+                          </td>
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
+                            {{requestor_name}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        padding: 12px 18px;
+                        border-bottom: 1px solid #eef2f6;
+                      "
+                    >
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
+                        <tr>
+                          <td
+                            width="130"
+                            style="font-size: 13px; color: #64748b"
+                          >
+                            Group
+                          </td>
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
+                            {{group_name}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        padding: 12px 18px;
+                        border-bottom: 1px solid #eef2f6;
+                      "
+                    >
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
+                        <tr>
+                          <td
+                            width="130"
+                            style="font-size: 13px; color: #64748b"
+                          >
+                            Location
+                          </td>
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
+                            {{location_name}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        padding: 12px 18px;
+                        border-bottom: 1px solid #eef2f6;
+                      "
+                    >
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
+                        <tr>
+                          <td
+                            width="130"
+                            style="font-size: 13px; color: #64748b"
+                          >
+                            Project
+                          </td>
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
+                            {{project_name}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        padding: 12px 18px;
+                        border-bottom: 1px solid #eef2f6;
+                      "
+                    >
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
+                        <tr>
+                          <td
+                            width="130"
+                            style="font-size: 13px; color: #64748b"
+                          >
+                            Overtime Date
+                          </td>
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
+                            {{date}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        padding: 12px 18px;
+                        border-bottom: 1px solid #eef2f6;
+                      "
+                    >
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
+                        <tr>
+                          <td
+                            width="130"
+                            style="font-size: 13px; color: #64748b"
+                          >
+                            Hours
+                          </td>
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
+                            {{hours}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 18px">
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
+                        <tr>
+                          <td
+                            width="130"
+                            style="
+                              font-size: 13px;
+                              color: #64748b;
+                              vertical-align: top;
+                            "
+                          >
+                            Remarks
+                          </td>
+                          <td
+                            style="
+                              font-size: 14px;
+                              color: #0f172a;
+                              line-height: 1.5;
+                            "
+                          >
+                            {{remarks}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+                <p
+                  style="
+                    margin: 22px 0 0 0;
+                    font-size: 14px;
+                    line-height: 1.6;
+                    color: #64748b;
+                  "
+                >
+                  Open the Overtime Approval page in Web JMR to approve or
+                  reject this request.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="
+                  padding: 20px 32px 28px 32px;
+                  border-top: 1px solid #e2e8f0;
+                  background: #f8fafc;
+                "
+              >
+                <p style="margin: 0; font-size: 14px; color: #475569">
+                  Best regards,<br /><strong style="color: #0f172a"
+                    >KDTDev Team</strong
                   >
-                    View / Approve Request
-                  </a>
-                </p> -->
-
-                <!-- Fallback Link -->
-                <!-- <p
-                  style="
-                    font-size: 14px;
-                    color: #888888;
-                    line-height: 1.4;
-                    text-align: center;
-                  "
-                >
-                  If the button doesn't work, copy and paste this link into your
-                  browser:
                 </p>
-                <p
-                  style="
-                    font-size: 14px;
-                    color: #3498db;
-                    word-break: break-all;
-                    line-height: 1.4;
-                    text-align: center;
-                    margin-top: 5px;
-                  "
-                >
-                  {{approval_url}}
-                </p> -->
-
-                <hr
-                  style="
-                    border: none;
-                    border-top: 1px solid #eeeeee;
-                    margin: 30px 0;
-                  "
-                />
-
-                <!-- Footer Greeting -->
-                <p style="font-size: 16px; color: #555555; line-height: 1.5">
-                  Best regards,<br />
-                  KDTDev Team
-                </p>
-
-                <!-- Footer Note -->
-                <p
-                  style="
-                    font-size: 12px;
-                    color: #999999;
-                    line-height: 1.4;
-                    margin-top: 10px;
-                  "
-                >
-                  This is an automated message—please do not reply.
+                <p style="margin: 12px 0 0 0; font-size: 12px; color: #94a3b8">
+                  This is an automated message — please do not reply.
                 </p>
               </td>
             </tr>
           </table>
-
-          <!-- Bottom Disclaimer -->
-          <p
-            style="
-              font-size: 12px;
-              color: #aaaaaa;
-              margin-top: 10px;
-              font-family: &quot;Helvetica Neue&quot;, Arial, sans-serif;
-            "
-          >
-            &copy; {{year}} KHI Design & Technical Service, Inc. All rights
-            reserved.
+          <p style="margin: 14px 0 0 0; font-size: 12px; color: #94a3b8">
+            &copy; {{year}} KHI Design &amp; Technical Service, Inc.
           </p>
         </td>
       </tr>

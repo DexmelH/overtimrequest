@@ -1,55 +1,21 @@
-import {
-  retryFetch,
-  fetchWithTimeout,
-  normalizePayload,
-} from "../components/utilities.js";
+import { apiUrl } from "../../shared/js/api.js";
+import { apiGet, normalizePayload } from "../../shared/js/http.js";
 import { populateSelect } from "../ui/populateSelect.js";
 
-export async function fetchProjects({ showLoading = true } = {}) {
+export async function fetchProjects() {
   const $sel = $("#project");
-  if ($sel.length && showLoading) {
-    $sel.prop("disabled", true);
-    const prev = $sel.data("prev") || null;
-    $sel.data("prev-text", prev);
-    $sel.empty().append('<option value="">Loading...</option>');
-  }
-
   const group = $("#group option:selected").text();
+  $sel.prop("disabled", true).empty().append('<option value="">Loading...</option>');
 
   try {
-    const response = await retryFetch(
-      () =>
-        fetchWithTimeout(
-          "../api/projects?group=" + encodeURIComponent(group),
-          {
-            method: "GET",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
-          },
-          8000,
-        ),
-      3,
-      300,
+    const json = await apiGet(
+      apiUrl("/projects") + "?group=" + encodeURIComponent(group),
     );
-
-    if (!response.ok)
-      throw new Error("Network response was not ok" + response.status);
-    const json = await response.json();
-    const projects = normalizePayload(json);
-    if (projects.length) {
-      populateSelect(projects, "project");
-    } else {
-      populateSelect([], "project");
-    }
+    populateSelect(normalizePayload(json), "project");
   } catch (error) {
     console.error("Failed to fetch projects:", error);
-    if ($sel.length) {
-      $sel.empty().append('<option value="">Failed to load projects</option>');
-    }
-    return [];
+    $sel.empty().append('<option value="">Failed to load projects</option>');
   } finally {
-    if ($sel.length) {
-      $sel.prop("disabled", false);
-    }
+    $sel.prop("disabled", false);
   }
 }

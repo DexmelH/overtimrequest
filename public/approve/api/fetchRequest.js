@@ -1,24 +1,27 @@
+import { apiUrl } from "../../shared/js/api.js";
+import { apiGet } from "../../shared/js/http.js";
 import { setOvertime } from "../services/state.js";
 import { renderTable } from "../ui/renderOvertime.js";
+import { updateStats } from "../ui/stats.js";
 
 export async function fetchRequest() {
+  $("#tableLoading").removeClass("d-none");
+  $("#tableEmpty").addClass("d-none");
+
   try {
-    const response = await fetch("../api/overtimetoapprove", {
-      method: "GET",
-      credentials: "same-origin",
-    });
-    if (!response.ok)
-      throw new Error("Network response was not ok" + response.status);
-    const json = await response.json();
-
-    console.log(json.data);
-
-    const incoming = Array.isArray(json.data) ? json.data : [];
-
+    const json = await apiGet(apiUrl("/overtimetoapprove"));
+    const incoming = Array.isArray(json?.data) ? json.data : [];
     setOvertime(incoming);
-
-    renderTable(incoming);
+    updateStats(incoming);
+    renderTable();
+    return incoming;
   } catch (error) {
-    console.log("Failed to fetch overtime requests:", error);
+    console.error("Failed to fetch overtime requests:", error);
+    setOvertime([]);
+    updateStats([]);
+    renderTable();
+    throw error;
+  } finally {
+    $("#tableLoading").addClass("d-none");
   }
 }

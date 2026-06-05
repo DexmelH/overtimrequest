@@ -1,44 +1,56 @@
-import { history } from "../services/state.js";
-import { statusClass, statusText } from "../components/status.js";
+import { history, filter, searchQuery } from "../services/state.js";
+import { statusClass, statusText } from "../../shared/js/status.js";
 import { openModal } from "../components/modal.js";
-import { filter } from "../services/state.js";
+
+function matchesFilter(item) {
+  if (filter === "all") return true;
+  if (filter === "approved") return item.status == 1;
+  if (filter === "denied") return item.status == 0;
+  if (filter === "pending") return item.status == null || item.status === "";
+  return true;
+}
+
+function matchesSearch(item) {
+  if (!searchQuery) return true;
+  const hay = [
+    item.group_name,
+    item.project_name,
+    item.location_name,
+    item.item_name,
+    item.remarks,
+    item.request_date,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return hay.includes(searchQuery);
+}
 
 export function renderHistory() {
   const $list = $("#historyList").empty();
-  const items = history;
-  const filterText =
-    filter === "approved"
-      ? 1
-      : filter === "denied"
-        ? 0
-        : filter === "pending"
-          ? null
-          : "all";
+  const filtered = history.filter((item) => matchesFilter(item) && matchesSearch(item));
 
-  items.forEach((item) => {
-    if (filterText !== "all" && item.status != filterText) return;
-
+  filtered.forEach((item) => {
+    const dateBadge = item.request_date ? item.request_date.slice(5) : "—";
     const $row = $(`
-        <div class="history-item" data-id="${item.id}" role="listitem" tabindex="0">
-          <div class="history-left">
-            <div class="dot">${item.request_date ? item.request_date.slice(5) : ""}</div>
-            <div>
-              <div class="history-meta">${item.group_name} <span style="color:var(--muted); font-weight:600; font-size:12px;"> — ${item.project_name}</span></div>
-              <div class="history-sub">${item.request_date} · ${item.duration} hrs · ${item.location_name}</div>
-            </div>
-          </div>
+      <div class="history-item" data-id="${item.id}" role="listitem" tabindex="0">
+        <div class="history-left">
+          <div class="history-date-badge">${dateBadge}</div>
           <div>
-            <div class="status-badge ${statusClass(item.status)}">${statusText(item.status)}</div>
+            <div class="history-title">${item.group_name || "—"}</div>
+            <div class="history-sub">${item.request_date || ""} · ${item.duration ?? 0} hrs · ${item.location_name || ""}</div>
           </div>
         </div>
-      `);
+        <span class="status-badge ${statusClass(item.status)}">${statusText(item.status)}</span>
+      </div>
+    `);
 
-    // Open modal when clicked or activated via keyboard
     $row.on("click keypress", function (e) {
       if (
         e.type === "click" ||
         (e.type === "keypress" && (e.key === "Enter" || e.key === " "))
       ) {
+        e.preventDefault();
         openModal(item.id);
       }
     });
@@ -46,9 +58,12 @@ export function renderHistory() {
     $list.append($row);
   });
 
-  if ($list.children().length === 0) {
-    $list.append(
-      '<div style="color:var(--muted); padding:12px;">No requests found for this filter.</div>',
-    );
+  if (filtered.length === 0) {
+    $list.append(`
+      <div class="ot-empty">
+        <i class="bi bi-inbox"></i>
+        <p class="mb-0">No requests match this filter.</p>
+      </div>
+    `);
   }
 }

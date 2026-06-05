@@ -1,3 +1,2 @@
-const modalEl = $("#detailsModal");
-
-export const modal = new bootstrap.Modal(modalEl);
+const modalEl = document.getElementById("detailsModal");
+export const modal = modalEl ? bootstrap.Modal.getOrCreateInstance(modalEl) : null;

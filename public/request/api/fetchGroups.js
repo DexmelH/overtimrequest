@@ -1,58 +1,18 @@
-import {
-  retryFetch,
-  fetchWithTimeout,
-  normalizePayload,
-} from "../components/utilities.js";
+import { apiUrl } from "../../shared/js/api.js";
+import { apiGet, normalizePayload } from "../../shared/js/http.js";
 import { populateSelect } from "../ui/populateSelect.js";
 
-export async function fetchGroups({ showLoading = true } = {}) {
+export async function fetchGroups() {
   const $sel = $("#group");
-  if ($sel.length && showLoading) {
-    $sel.prop("disabled", true);
-    const prev = $sel.data("prev") || null;
-    $sel.data("prev-text", prev);
-    $sel.empty().append('<option value="">Loading...</option>');
-  }
+  $sel.prop("disabled", true).empty().append('<option value="">Loading...</option>');
 
   try {
-    const response = await retryFetch(
-      () =>
-        fetchWithTimeout(
-          "../api/groups",
-          {
-            method: "GET",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
-          },
-          8000,
-        ),
-      3,
-      300,
-    );
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        const rootFolder = `//${document.location.hostname}`;
-        window.location.href = rootFolder + "/KDTPortalLogin";
-      }
-      throw new Error("Network response was not ok" + response.status);
-    }
-    const json = await response.json();
-    const groups = normalizePayload(json);
-    if (groups.length) {
-      populateSelect(groups, "group");
-    } else {
-      populateSelect([], "group");
-    }
+    const json = await apiGet(apiUrl("/groups"));
+    populateSelect(normalizePayload(json), "group");
   } catch (error) {
     console.error("Failed to fetch groups:", error);
-    if ($sel.length) {
-      $sel.empty().append('<option value="">Failed to load groups</option>');
-    }
-    return [];
+    $sel.empty().append('<option value="">Failed to load groups</option>');
   } finally {
-    if ($sel.length) {
-      $sel.prop("disabled", false);
-    }
+    $sel.prop("disabled", false);
   }
 }

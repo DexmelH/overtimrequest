@@ -1,44 +1,36 @@
-import { renderHistory } from "../ui/renderHistory.js";
+import { apiUrl } from "../../shared/js/api.js";
+import { apiPost } from "../../shared/js/http.js";
+import { showToast } from "../../shared/js/toast.js";
 import { fetchHistory } from "./fetchHistory.js";
-import { showToast } from "../components/toast.js";
 import { openModal } from "../components/modal.js";
 
 export async function addOvertimeRequest(formData) {
-  const newFormData = new FormData();
-  newFormData.append("date", formData.date);
-  newFormData.append("group", formData.group);
-  newFormData.append("location", formData.location);
-  newFormData.append("project", formData.project);
-  newFormData.append("item", formData.item);
-  newFormData.append("jobdesc", formData.jobdesc);
-  newFormData.append("work", formData.work);
-  newFormData.append("remarks", formData.remarks);
-  newFormData.append("hours", formData.hours);
+  const body = new FormData();
+  body.append("date", formData.date);
+  body.append("group", formData.group);
+  body.append("location", formData.location);
+  body.append("project", formData.project);
+  body.append("item", formData.item);
+  body.append("jobdesc", formData.jobdesc);
+  body.append("work", formData.work);
+  body.append("remarks", formData.remarks);
+  body.append("hours", formData.hours);
 
   try {
-    const response = await fetch("../api/addovertime", {
-      method: "POST",
-      credentials: "same-origin",
-      body: newFormData,
-    });
-    if (!response.ok)
-      throw new Error("Network response was not ok" + response.status);
-    const payload = await response.json();
-    if (payload && payload.success) {
+    const payload = await apiPost(apiUrl("/addovertime"), body);
+    if (payload?.success) {
       await fetchHistory();
-      openModal(parseInt(payload.id));
-      showToast("Overtime request submitted successfully.", {
-        type: "success",
-      });
-    } else {
-      console.warn("Request submission failed.");
-      showToast("Failed to submit request.", {
-        type: "warning",
-      });
+      if (payload.id) {
+        openModal(payload.id);
+      }
+      showToast("Overtime request submitted successfully.", { type: "success" });
+      return payload;
     }
+    showToast(payload?.message || "Failed to submit request.", { type: "warning" });
+    return payload;
   } catch (error) {
-    renderHistory();
-    console.log("Failed to add overtime request:", error);
+    console.error("Failed to add overtime request:", error);
     showToast("Failed to submit request. Please try again.", { type: "error" });
+    throw error;
   }
 }

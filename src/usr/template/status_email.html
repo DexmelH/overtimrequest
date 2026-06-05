@@ -14,7 +14,6 @@
       color: #0f172a;
     "
   >
-    <!-- Legacy filename kept for compatibility; content matches status_email.html -->
     <table
       role="presentation"
       width="100%"
@@ -54,8 +53,10 @@
                     <td
                       style="
                         font-size: 13px;
-                        color: rgba(255, 255, 255, 0.85);
+                        color: #fecaca;
+                        letter-spacing: 0.04em;
                         text-transform: uppercase;
+                        color: rgba(255, 255, 255, 0.85);
                       "
                     >
                       {{app_name}}
@@ -66,6 +67,7 @@
                       style="
                         padding-top: 8px;
                         font-size: 24px;
+                        line-height: 1.3;
                         font-weight: 700;
                         color: #ffffff;
                       "
@@ -78,6 +80,7 @@
                       style="
                         padding-top: 8px;
                         font-size: 15px;
+                        line-height: 1.5;
                         color: rgba(255, 255, 255, 0.9);
                       "
                     >
@@ -89,8 +92,16 @@
             </tr>
             <tr>
               <td style="padding: 28px 32px 12px 32px">
-                <p style="margin: 0 0 18px 0; font-size: 16px; color: #334155">
-                  Hello <strong>{{recipient_name}}</strong>,
+                <p
+                  style="
+                    margin: 0 0 18px 0;
+                    font-size: 16px;
+                    line-height: 1.6;
+                    color: #334155;
+                  "
+                >
+                  Hello
+                  <strong style="color: #0f172a">{{recipient_name}}</strong>,
                 </p>
                 <table
                   role="presentation"
@@ -98,34 +109,40 @@
                   cellpadding="0"
                   cellspacing="0"
                   border="0"
-                  style="background:{{status_soft_bg}};border:1px solid {{status_soft_border}};border-radius:12px;"
+                  style="margin-bottom:22px;background:{{status_soft_bg}};border:1px solid {{status_soft_border}};border-radius:12px;"
                 >
                   <tr>
                     <td style="padding: 16px 18px">
-                      <table role="presentation" width="100%">
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                        border="0"
+                      >
                         <tr>
                           <td
-                            style="font-size:14px;font-weight:600;color:{{status_text}};"
+                            colspan="2"
+                            style="
+                              padding-top: 10px;
+                              font-size: 14px;
+                              color: #475569;
+                              line-height: 1.5;
+                            "
                           >
-                            Request #{{request_id}}
+                            Reviewed by
+                            <strong style="color: #0f172a"
+                              >{{actor_name}}</strong
+                            >
                           </td>
                           <td align="right">
                             <span
-                              style="background:{{status_bg}};color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;font-weight:700;"
+                              style="display:inline-block;background:{{status_bg}};color:#ffffff;padding:8px 14px;border-radius:999px;font-size:13px;font-weight:700;"
                               >{{status_label}}</span
                             >
                           </td>
                         </tr>
                       </table>
-                      <p
-                        style="
-                          margin: 10px 0 0 0;
-                          font-size: 14px;
-                          color: #475569;
-                        "
-                      >
-                        Reviewed by <strong>{{actor_name}}</strong>
-                      </p>
                     </td>
                   </tr>
                 </table>
@@ -142,9 +159,25 @@
                   style="
                     border: 1px solid #e2e8f0;
                     border-radius: 12px;
+                    overflow: hidden;
                     background: #f8fafc;
                   "
                 >
+                  <tr>
+                    <td
+                      style="
+                        padding: 14px 18px;
+                        border-bottom: 1px solid #e2e8f0;
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: #64748b;
+                        text-transform: uppercase;
+                        letter-spacing: 0.04em;
+                      "
+                    >
+                      Request Summary
+                    </td>
+                  </tr>
                   <tr>
                     <td
                       style="
@@ -152,7 +185,12 @@
                         border-bottom: 1px solid #eef2f6;
                       "
                     >
-                      <table role="presentation" width="100%">
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
                         <tr>
                           <td
                             width="130"
@@ -160,7 +198,13 @@
                           >
                             Group
                           </td>
-                          <td style="font-size: 14px; font-weight: 600">
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
                             {{group_name}}
                           </td>
                         </tr>
@@ -174,7 +218,12 @@
                         border-bottom: 1px solid #eef2f6;
                       "
                     >
-                      <table role="presentation" width="100%">
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
                         <tr>
                           <td
                             width="130"
@@ -182,7 +231,13 @@
                           >
                             Location
                           </td>
-                          <td style="font-size: 14px; font-weight: 600">
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
                             {{location_name}}
                           </td>
                         </tr>
@@ -196,7 +251,12 @@
                         border-bottom: 1px solid #eef2f6;
                       "
                     >
-                      <table role="presentation" width="100%">
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
                         <tr>
                           <td
                             width="130"
@@ -204,7 +264,13 @@
                           >
                             Project
                           </td>
-                          <td style="font-size: 14px; font-weight: 600">
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
                             {{project_name}}
                           </td>
                         </tr>
@@ -218,15 +284,26 @@
                         border-bottom: 1px solid #eef2f6;
                       "
                     >
-                      <table role="presentation" width="100%">
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
                         <tr>
                           <td
                             width="130"
                             style="font-size: 13px; color: #64748b"
                           >
-                            Date
+                            Overtime Date
                           </td>
-                          <td style="font-size: 14px; font-weight: 600">
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
                             {{date}}
                           </td>
                         </tr>
@@ -240,7 +317,12 @@
                         border-bottom: 1px solid #eef2f6;
                       "
                     >
-                      <table role="presentation" width="100%">
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
                         <tr>
                           <td
                             width="130"
@@ -248,7 +330,13 @@
                           >
                             Hours
                           </td>
-                          <td style="font-size: 14px; font-weight: 600">
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
                             {{hours}}
                           </td>
                         </tr>
@@ -262,7 +350,12 @@
                         border-bottom: 1px solid #eef2f6;
                       "
                     >
-                      <table role="presentation" width="100%">
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
                         <tr>
                           <td
                             width="130"
@@ -274,12 +367,41 @@
                           >
                             Your Remarks
                           </td>
-                          <td style="font-size: 14px">{{remarks}}</td>
+                          <td
+                            style="
+                              font-size: 14px;
+                              color: #0f172a;
+                              line-height: 1.5;
+                            "
+                          >
+                            {{remarks}}
+                          </td>
                         </tr>
                       </table>
                     </td>
                   </tr>
+                  <tr>
+                    <td style="padding: 12px 18px">
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      ></table>
+                    </td>
+                  </tr>
                 </table>
+                <p
+                  style="
+                    margin: 22px 0 0 0;
+                    font-size: 14px;
+                    line-height: 1.6;
+                    color: #64748b;
+                  "
+                >
+                  You can view the full status in the Overtime Request page in
+                  Web JMR.
+                </p>
               </td>
             </tr>
             <tr>
@@ -291,10 +413,12 @@
                 "
               >
                 <p style="margin: 0; font-size: 14px; color: #475569">
-                  Best regards,<br /><strong>KDTDev Team</strong>
+                  Best regards,<br /><strong style="color: #0f172a"
+                    >KDTDev Team</strong
+                  >
                 </p>
                 <p style="margin: 12px 0 0 0; font-size: 12px; color: #94a3b8">
-                  Automated message — please do not reply.
+                  This is an automated message — please do not reply.
                 </p>
               </td>
             </tr>

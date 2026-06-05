@@ -19,18 +19,53 @@ class OvertimeRepository
 
     public function findRequestById(string $requestID): array
     {
-        $sql = "SELECT el.`surname`, gl.`abbreviation`, pt.`fldProject`, orq.`remarks`, 
-                    orq.`duration`, orq.`request_date`, orq.`date_created` 
-                FROM `overtime_request` orq 
-                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = orq.`user_id` 
-                LEFT JOIN kdtphdb_new.`group_list` gl ON gl.`id` = orq.`group_id` 
-                LEFT JOIN `projectstable` pt ON pt.`fldID` = orq.`project_id` 
+        return $this->findRequestEmailDetails((int) $requestID);
+    }
+
+    public function findRequestEmailDetails(int $requestID): array
+    {
+        $sql = "SELECT orq.`id`, orq.`remarks`, orq.`duration`, orq.`request_date`, orq.`date_created`, orq.`status`,
+                    el.`surname`, el.`surname` AS requestor_name, el.`email` AS requestor_email,
+                    gl.`abbreviation`, gl.`abbreviation` AS group_name,
+                    l.`fldLocation` AS location_name,
+                    pt.`fldProject`
+                FROM `overtime_request` orq
+                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = orq.`user_id`
+                LEFT JOIN kdtphdb_new.`group_list` gl ON gl.`id` = orq.`group_id`
+                LEFT JOIN `dispatch_locations` l ON l.`fldID` = orq.`location_id`
+                LEFT JOIN `projectstable` pt ON pt.`fldID` = orq.`project_id`
                 WHERE orq.`id` = :requestID";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([":requestID" => $requestID]);
         $data = $stmt->fetch();
 
         return $data ? $data : [];
+    }
+
+    public function findRequestorByOvertimeId(int $overtimeID): array
+    {
+        $sql = "SELECT el.`id`, el.`surname`, el.`email`
+                FROM `overtime_request` orq
+                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = orq.`user_id`
+                WHERE orq.`id` = :overtimeID";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([":overtimeID" => $overtimeID]);
+        $data = $stmt->fetch();
+
+        return $data ? $data : [];
+    }
+
+    public function findLatestDecisionRemarks(int $overtimeID): string
+    {
+        $sql = "SELECT `remarks` FROM `overtime_accept`
+                WHERE `overtime_id` = :overtimeID AND `status` IS NOT NULL
+                ORDER BY `date_accepted` DESC
+                LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([":overtimeID" => $overtimeID]);
+        $remarks = $stmt->fetchColumn();
+
+        return $remarks ? (string) $remarks : '';
     }
 
     public function findHistoryByUserId(string $userID): array
@@ -84,13 +119,17 @@ class OvertimeRepository
 
     public function insertEmailQueue(array $payload): bool
     {
-        $sql = "INSERT INTO `email_queue` (`email_to`, `approver_name`, `overtime_id`)
-                VALUES (:emailTo, :approverName, :overtimeID)";
+        $sql = "INSERT INTO `email_queue`
+                    (`email_to`, `approver_name`, `overtime_id`, `email_type`, `decision`, `actor_name`, `attempts`)
+                VALUES (:emailTo, :approverName, :overtimeID, :emailType, :decision, :actorName, 0)";
         $stmt = $this->pdo->prepare($sql);
-        return (bool)$stmt->execute([
+        return (bool) $stmt->execute([
             ":emailTo" => $payload["email_to"],
             ":approverName" => $payload["approver_name"],
-            ":overtimeID" => $payload["overtime_id"]
+            ":overtimeID" => $payload["overtime_id"],
+            ":emailType" => $payload["email_type"] ?? "new_request",
+            ":decision" => $payload["decision"] ?? null,
+            ":actorName" => $payload["actor_name"] ?? null,
         ]);
     }
 
