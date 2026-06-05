@@ -10,7 +10,7 @@ use function FastRoute\simpleDispatcher;
 header('Content-Type: application/json; charset=utf-8');
 
 // --- normalize request URI relative to app base ---
-$basePath = '/overtime'; // set to '' if docroot is public/
+$basePath = $config['app']['base_path'] ?? '/overtime';
 $rawUri = $_SERVER['REQUEST_URI'] ?? '/';
 $uri = preg_replace('#\?.*$#', '', $rawUri);
 

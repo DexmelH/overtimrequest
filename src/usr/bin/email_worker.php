@@ -12,8 +12,15 @@ $dbManager = new \App\Database($config['connections'] ?? $config);
 $mailRepo = $dbManager->getConnection("webjmr");
 
 $mailer = new Mailer($config["mail"]);
-$mailService = new MailService($mailer, new EmailTemplate());
+$mailService = new MailService($mailer, new EmailTemplate(), $config['mail'] ?? []);
 $overtimeRepo = new \App\Repository\OvertimeRepository($mailRepo);
+
+error_log(sprintf(
+    'Email worker started [env=%s, mail=%s, db=%s]',
+    $config['app']['env'] ?? 'unknown',
+    ($config['mail']['enabled'] ?? true) ? 'enabled' : 'disabled',
+    $config['connections']['webjmr']['dsn'] ?? 'n/a'
+));
 
 $maxAttempts = 5;
 $baseSleep = 2;

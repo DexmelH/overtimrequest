@@ -5,11 +5,13 @@ class MailService
 {
     private $mailer;
     private EmailTemplate $templates;
+    private array $mailConfig;
 
-    public function __construct($mailer, ?EmailTemplate $templates = null)
+    public function __construct($mailer, ?EmailTemplate $templates = null, ?array $mailConfig = null)
     {
         $this->mailer = $mailer;
         $this->templates = $templates ?? new EmailTemplate();
+        $this->mailConfig = $mailConfig ?? [];
     }
 
     /**
@@ -129,6 +131,25 @@ class MailService
 
     private function deliver(string $toEmail, string $toName, string $subject, string $html): bool
     {
+        $enabled = $this->mailConfig['enabled'] ?? true;
+        $testRecipient = trim((string) ($this->mailConfig['test_recipient'] ?? ''));
+
+        if (!$enabled) {
+            error_log(sprintf(
+                '[MAIL DISABLED] To: %s <%s> | Subject: %s',
+                $toName,
+                $toEmail,
+                $subject
+            ));
+            return true;
+        }
+
+        if ($testRecipient !== '') {
+            $subject = sprintf('[TEST → was: %s] %s', $toEmail, $subject);
+            $toEmail = $testRecipient;
+            $toName = 'Test Recipient';
+        }
+
         try {
             if (method_exists($this->mailer, 'send')) {
                 return (bool) $this->mailer->send($toEmail, $toName, $subject, $html);
