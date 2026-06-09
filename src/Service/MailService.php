@@ -25,6 +25,10 @@ class MailService
             return $this->sendStatusUpdateEmail($queueRow, $requestData);
         }
 
+        if ($emailType === 'request_cancelled') {
+            return $this->sendCancelNotificationEmail($queueRow, $requestData);
+        }
+
         return $this->sendNewRequestEmail($queueRow, $requestData);
     }
 
@@ -76,6 +80,46 @@ class MailService
             : 'Your overtime request was rejected';
 
         return $this->deliver($recipientEmail, $recipientName, $subject, $body);
+    }
+
+    /**
+     * Notify PIC that a requestor cancelled their overtime request.
+     */
+    public function sendCancelNotificationEmail(array $queueRow, array $requestData): bool
+    {
+        $recipientEmail = trim((string) ($queueRow['email_to'] ?? ''));
+        $recipientName = trim((string) ($queueRow['approver_name'] ?? 'PIC'));
+
+        if ($recipientEmail === '') {
+            error_log('MailService: missing PIC email for cancel on overtime ' . ($queueRow['overtime_id'] ?? ''));
+            return false;
+        }
+
+        $html = $this->templates->load('cancel_email.html');
+        $map = $this->buildCancelVars($queueRow, $requestData);
+        $body = $this->templates->render($html, $map);
+        $subject = sprintf(
+            'Overtime request #%s cancelled by %s',
+            $map['{{request_id}}'] ?? '',
+            $map['{{requestor_name}}'] ?? 'employee'
+        );
+
+        return $this->deliver($recipientEmail, $recipientName, $subject, $body);
+    }
+
+    private function buildCancelVars(array $queueRow, array $data): array
+    {
+        return [
+            '{{recipient_name}}' => EmailTemplate::escape($queueRow['approver_name'] ?? 'PIC'),
+            '{{requestor_name}}' => EmailTemplate::escape($data['surname'] ?? $data['requestor_name'] ?? '—'),
+            '{{actor_name}}' => EmailTemplate::escape($queueRow['actor_name'] ?? '—'),
+            '{{group_name}}' => EmailTemplate::escape($data['abbreviation'] ?? $data['group_name'] ?? '—'),
+            '{{project_name}}' => EmailTemplate::escape($data['fldProject'] ?? $data['project_name'] ?? '—'),
+            '{{location_name}}' => EmailTemplate::escape($data['location_name'] ?? '—'),
+            '{{date}}' => EmailTemplate::normalizeDate($data['request_date'] ?? null),
+            '{{hours}}' => EmailTemplate::escape((string) ($data['duration'] ?? '—')),
+            '{{request_id}}' => EmailTemplate::escape((string) ($queueRow['overtime_id'] ?? $data['id'] ?? '—')),
+        ];
     }
 
     private function buildNewRequestVars(array $queueRow, array $data): array

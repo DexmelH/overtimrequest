@@ -158,6 +158,11 @@ body {
   color: #fff;
 }
 
+.ot-btn-warning {
+  background: var(--ot-warning);
+  color: #fff;
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -179,6 +184,10 @@ body {
 .status-denied {
   background: rgba(220, 38, 38, 0.1);
   color: var(--ot-danger);
+}
+.status-cancelled {
+  background: rgba(100, 116, 139, 0.15);
+  color: #475569;
 }
 
 .ot-toast-container {
@@ -398,5 +407,97 @@ body {
 @media (max-width: 768px) {
   .detail-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Confirmation dialog */
+.ot-confirm {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.ot-confirm.show {
+  display: flex;
+}
+
+.ot-confirm-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  animation: ot-confirm-fade-in 0.2s ease;
+}
+
+.ot-confirm-panel {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  background: var(--ot-surface);
+  border-radius: 16px;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+  padding: 1.75rem 1.5rem 1.25rem;
+  text-align: center;
+  outline: none;
+  animation: ot-confirm-scale-in 0.22s ease;
+}
+
+.ot-confirm-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.ot-confirm-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ot-text);
+  line-height: 1.35;
+}
+
+.ot-confirm-message {
+  margin: 0 0 1.25rem;
+  font-size: 0.9rem;
+  color: var(--ot-muted);
+  line-height: 1.55;
+}
+
+.ot-confirm-actions {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.ot-confirm-actions .ot-btn {
+  flex: 1;
+  min-height: 42px;
+}
+
+@keyframes ot-confirm-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ot-confirm-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }

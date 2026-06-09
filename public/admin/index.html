@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="api-base" content="/overtime/api" />
+    <title>Overtime Admin</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+      rel="stylesheet"
+    />
+    <link href="../shared/css/theme.css" rel="stylesheet" />
+    <link href="styles.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div
+      id="toastContainer"
+      class="ot-toast-container"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
+
+    <header class="ot-app-header">
+      <div class="container">
+        <div class="ot-brand">
+          <div class="ot-brand-icon" aria-hidden="true">
+            <i class="bi bi-shield-lock"></i>
+          </div>
+          <div>
+            <h1>Overtime Admin</h1>
+            <p>Manage approvers and view activity logs</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="container py-4">
+      <div id="accessDenied" class="ot-card d-none">
+        <div class="ot-card-body ot-empty">
+          <i class="bi bi-lock"></i>
+          <p class="mb-0">You do not have permission to view this page.</p>
+          <small class="ot-muted">Contact an administrator to add your user ID to APP_ADMIN_USER_IDS.</small>
+        </div>
+      </div>
+
+      <div id="adminContent" class="d-none">
+        <ul class="nav nav-pills admin-tabs mb-4" id="adminTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-approvers" data-bs-toggle="pill"
+              data-bs-target="#panel-approvers" type="button" role="tab">
+              <i class="bi bi-people me-1"></i> Group Approvers
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-logs" data-bs-toggle="pill"
+              data-bs-target="#panel-logs" type="button" role="tab">
+              <i class="bi bi-journal-text me-1"></i> Activity Logs
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content">
+          <!-- Group approvers -->
+          <div class="tab-pane fade show active" id="panel-approvers" role="tabpanel">
+            <div class="ot-card">
+              <div class="ot-card-header flex-wrap">
+                <div>
+                  <h2>Group Approvers</h2>
+                  <p class="ot-muted mb-0">Assign L1–L4 approvers for each group. Used when employees submit overtime.</p>
+                </div>
+                <button type="button" class="ot-btn ot-btn-primary" id="saveApproversBtn">
+                  <i class="bi bi-check-lg"></i> Save Approvers
+                </button>
+              </div>
+              <div class="ot-card-body">
+                <div class="row g-4">
+                  <div class="col-md-4">
+                    <label class="form-label" for="approverGroupSelect">Group</label>
+                    <select class="form-select" id="approverGroupSelect">
+                      <option value="">Select a group</option>
+                    </select>
+                    <p class="ot-muted small mt-2 mb-0">
+                      L1 is the first level, L4 the final level. Leave a level empty if not required.
+                    </p>
+                  </div>
+                  <div class="col-md-8">
+                    <label class="form-label">Approval levels</label>
+                    <div id="approverLevels" class="approver-levels"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activity logs -->
+          <div class="tab-pane fade" id="panel-logs" role="tabpanel">
+            <div class="row g-3 mb-4" id="summaryCards"></div>
+
+            <div class="ot-card">
+              <div class="ot-card-header flex-wrap">
+                <div>
+                  <h2>Activity Log</h2>
+                  <p class="ot-muted mb-0">User actions across request, approval, and admin flows</p>
+                </div>
+                <button type="button" class="ot-btn ot-btn-secondary" id="refreshBtn">
+                  <i class="bi bi-arrow-repeat"></i> Refresh
+                </button>
+              </div>
+              <div class="ot-card-body border-bottom">
+                <form id="filterForm" class="row g-2 align-items-end">
+                  <div class="col-md-3">
+                    <label class="form-label" for="filterSearch">Search</label>
+                    <input type="search" class="form-control form-control-sm" id="filterSearch" placeholder="User, action, details..." />
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label" for="filterAction">Action</label>
+                    <select class="form-select form-select-sm" id="filterAction">
+                      <option value="">All actions</option>
+                    </select>
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label" for="filterUserId">User ID</label>
+                    <input type="number" class="form-control form-control-sm" id="filterUserId" placeholder="e.g. 546" />
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label" for="filterFrom">From</label>
+                    <input type="date" class="form-control form-control-sm" id="filterFrom" />
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label" for="filterTo">To</label>
+                    <input type="date" class="form-control form-control-sm" id="filterTo" />
+                  </div>
+                  <div class="col-md-1">
+                    <button type="submit" class="ot-btn ot-btn-primary btn-sm w-100">Filter</button>
+                  </div>
+                </form>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="logsTable">
+                  <thead class="table-light">
+                    <tr>
+                      <th>When</th>
+                      <th>User</th>
+                      <th>Action</th>
+                      <th>Entity</th>
+                      <th>Details</th>
+                      <th>IP</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+              <div id="logsEmpty" class="ot-empty d-none">
+                <i class="bi bi-journal-x"></i>
+                <p class="mb-0">No log entries match your filters.</p>
+              </div>
+              <div id="logsLoading" class="ot-empty d-none">
+                <div class="spinner-border spinner-border-sm text-primary"></div>
+                <p class="mb-0 mt-2">Loading logs...</p>
+              </div>
+              <div class="d-flex justify-content-between align-items-center p-3 border-top">
+                <small class="ot-muted" id="paginationInfo">—</small>
+                <div class="btn-group btn-group-sm">
+                  <button type="button" class="btn btn-outline-secondary" id="prevPage" disabled>Prev</button>
+                  <button type="button" class="btn btn-outline-secondary" id="nextPage" disabled>Next</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

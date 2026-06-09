@@ -3,6 +3,7 @@ import { approveOvertimeRequest } from "./api/approveRequest.js";
 import { renderTable } from "./ui/renderOvertime.js";
 import { setFilter } from "./services/state.js";
 import { showToast } from "../shared/js/toast.js";
+import { confirmAction } from "../shared/js/confirm.js";
 
 let actionInProgress = false;
 
@@ -12,10 +13,18 @@ async function handleApproval(status) {
   const requestId = $("#rd-requestID").val();
   if (!requestId) return;
 
-  const label = status === 1 ? "approve" : "reject";
-  if (!confirm(`Are you sure you want to ${label} this overtime request?`)) {
-    return;
-  }
+  const isApprove = status === 1;
+  const confirmed = await confirmAction({
+    title: isApprove ? "Approve this request?" : "Reject this request?",
+    message: isApprove
+      ? "The employee will be notified once this request is finalized."
+      : "The employee will be notified that their request was rejected.",
+    confirmText: isApprove ? "Approve" : "Reject",
+    cancelText: "Go back",
+    variant: isApprove ? "success" : "danger",
+    icon: isApprove ? "bi-check-circle-fill" : "bi-x-circle-fill",
+  });
+  if (!confirmed) return;
 
   actionInProgress = true;
   const $approve = $("#btnApproveRequest");

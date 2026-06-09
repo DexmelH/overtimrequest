@@ -1,36 +1,36 @@
 <?php
 namespace App\Controller;
 
+use App\Repository\GroupApproverRepository;
 use App\Repository\OvertimeRepository;
 use App\Repository\UserRepository;
-use App\Repository\GroupRepository;
+use App\Service\ActivityLogger;
 use PDO;
 
 class OvertimeController
 {
     private OvertimeRepository $overtimeRepo;
     private UserRepository $userRepo;
-    
-    public function __construct(PDO $overtimePDO, PDO $userPDO)
+    private GroupApproverRepository $groupApproverRepo;
+    private ActivityLogger $logger;
+
+    public function __construct(PDO $overtimePDO, PDO $userPDO, ActivityLogger $logger)
     {
         $this->overtimeRepo = new OvertimeRepository($overtimePDO);
         $this->userRepo = new UserRepository($userPDO);
+        $this->groupApproverRepo = new GroupApproverRepository($overtimePDO);
+        $this->logger = $logger;
     }
 
     public function getUserHistory(): array
     {
-        $userHash = isset($_COOKIE['userID']) ? $_COOKIE['userID'] : '';
-        $user = $this->userRepo->findIdByHash($userHash);
-        $userID = $user['id'];
-        $history = $this->overtimeRepo->findHistoryByUserId($userID);
-
-        return $history;
+        $user = $this->currentUser();
+        return $this->overtimeRepo->findHistoryByUserId($user['id']);
     }
 
     public function addOvertime(): array
     {
-        $userHash = isset($_COOKIE['userID']) ? $_COOKIE['userID'] : '';
-        $user = $this->userRepo->findIdByHash($userHash);
+        $user = $this->currentUser();
         $userID = $user['id'];
         $groupID = isset($_POST['group']) ? $_POST['group'] : 0;
         $locationID = isset($_POST['location']) ? $_POST['location'] : 0;
@@ -61,19 +61,32 @@ class OvertimeController
             $pdo->beginTransaction();
 
             $id = $this->overtimeRepo->addOvertime($payload);
-            $approver = $this->userRepo->findApprover($user["abbreviation"], $userID);
+            $approver = $this->resolveApprovers((int) $groupID, $user["abbreviation"] ?? '', (int) $userID);
             foreach ($approver as $app) {
-                $payload = [
+                $emailPayload = [
                     'email_to' => $app['email'],
                     'approver_name' => $app['surname'],
                     'overtime_id' => $id,
+                    'email_type' => 'new_request',
                 ];
-                $payload['email_type'] = 'new_request';
-                $this->overtimeRepo->insertEmailQueue($payload);
+                $this->overtimeRepo->insertEmailQueue($emailPayload);
                 $this->overtimeRepo->addAcceptance($id, $app['id']);
             }
 
             $pdo->commit();
+
+            $this->logger->log(
+                'request.submit',
+                (int) $userID,
+                $user['surname'] ?? null,
+                'overtime_request',
+                (int) $id,
+                [
+                    'group_id' => $groupID,
+                    'hours' => $duration,
+                    'request_date' => $requestDate,
+                ]
+            );
 
             return ["success" => true, "id" => $id];
         } catch (\Throwable $e) {
@@ -83,13 +96,74 @@ class OvertimeController
             error_log('Add overtime failed: ' . $e->getMessage());
             return ["success" => false, "message" => "Failed to add overtime request. Please try again."];
         }
-        
+    }
+
+    public function cancelOvertime(): array
+    {
+        $overtimeID = (int) ($_POST['overtimeID'] ?? 0);
+        $user = $this->currentUser();
+        $userID = (int) $user['id'];
+
+        if ($overtimeID <= 0) {
+            return ['success' => false, 'message' => 'Invalid request ID.'];
+        }
+
+        $request = $this->overtimeRepo->findOwnedPendingRequest($overtimeID, $userID);
+        if (!$request) {
+            return ['success' => false, 'message' => 'Request not found.'];
+        }
+        if ($request['status'] !== null) {
+            return ['success' => false, 'message' => 'Only pending requests can be cancelled.'];
+        }
+
+        $pdo = $this->overtimeRepo->getPdo();
+        try {
+            $pdo->beginTransaction();
+
+            if (!$this->overtimeRepo->cancelRequest($overtimeID, $userID)) {
+                $pdo->rollBack();
+                return ['success' => false, 'message' => 'Unable to cancel this request.'];
+            }
+
+            $pics = $this->overtimeRepo->findPicsForOvertime($overtimeID);
+            foreach ($pics as $pic) {
+                $email = trim((string) ($pic['email'] ?? ''));
+                if ($email === '') {
+                    continue;
+                }
+                $this->overtimeRepo->insertEmailQueue([
+                    'email_to' => $email,
+                    'approver_name' => $pic['surname'] ?? 'PIC',
+                    'overtime_id' => $overtimeID,
+                    'email_type' => 'request_cancelled',
+                    'actor_name' => $user['surname'] ?? 'Employee',
+                ]);
+            }
+
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('Cancel overtime failed: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Failed to cancel request. Please try again.'];
+        }
+
+        $this->logger->log(
+            'request.cancel',
+            $userID,
+            $user['surname'] ?? null,
+            'overtime_request',
+            $overtimeID,
+            ['group' => $request['abbreviation'] ?? null]
+        );
+
+        return ['success' => true, 'message' => 'Request cancelled successfully.'];
     }
 
     public function getOvertimeToApprove(): array
     {
-        $userHash = isset($_COOKIE['userID']) ? $_COOKIE['userID'] : '';
-        $user = $this->userRepo->findIdByHash($userHash);
+        $user = $this->currentUser();
         $approverID = $user['id'];
         $overtimeToApprove = $this->overtimeRepo->findOvertimeToApprove($approverID);
 
@@ -107,12 +181,11 @@ class OvertimeController
         $remarks = isset($_POST['remarks']) ? $_POST['remarks'] : '';
         $approved = isset($_POST['status']) ? $_POST['status'] : NULL;
 
-        $userHash = isset($_COOKIE['userID']) ? $_COOKIE['userID'] : '';
-        $user = $this->userRepo->findIdByHash($userHash);
+        $user = $this->currentUser();
         $approverID = $user['id'];
         $ifApproved = $this->overtimeRepo->checkIfFullyApproved($overtimeID);
         if ($ifApproved) {
-            return ['success' => false, 'message' => "This request has already been fully approved."];
+            return ['success' => false, 'message' => "This request has already been finalized."];
         }
         $this->overtimeRepo->approveRequest($overtimeID, $approverID, $remarks, $approved);
 
@@ -125,12 +198,20 @@ class OvertimeController
                 (string) ($user['surname'] ?? 'Approver')
             );
         }
+
+        $action = ((int) $approved === 1) ? 'request.approve' : 'request.reject';
+        $this->logger->log(
+            $action,
+            (int) $approverID,
+            $user['surname'] ?? null,
+            'overtime_request',
+            (int) $overtimeID,
+            ['remarks' => $remarks, 'finalized' => $confirmApproval]
+        );
+
         return ['success' => true, 'message' => "Overtime request updated successfully."];
     }
 
-    /**
-     * Queue an email to the requestor when their overtime is approved or rejected.
-     */
     private function queueRequestorStatusEmail(int $overtimeID, int $decision, string $actorName): void
     {
         $requestor = $this->overtimeRepo->findRequestorByOvertimeId($overtimeID);
@@ -149,5 +230,34 @@ class OvertimeController
             'decision' => $decision,
             'actor_name' => $actorName,
         ]);
+    }
+
+    /**
+     * @return array<int, array{id: int, surname: string, email: string}>
+     */
+    private function resolveApprovers(int $groupId, string $groupAbbrev, int $userId): array
+    {
+        if ($groupId > 0) {
+            $configured = $this->groupApproverRepo->findApproversByGroupId($groupId, $userId);
+            if (!empty($configured)) {
+                return $configured;
+            }
+        }
+
+        if ($groupAbbrev !== '') {
+            $configured = $this->groupApproverRepo->findApproversByGroupAbbreviation($groupAbbrev, $userId);
+            if (!empty($configured)) {
+                return $configured;
+            }
+            return $this->userRepo->findApprover($groupAbbrev, (string) $userId);
+        }
+
+        return [];
+    }
+
+    private function currentUser(): array
+    {
+        $userHash = isset($_COOKIE['userID']) ? $_COOKIE['userID'] : '';
+        return $this->userRepo->findIdByHash($userHash);
     }
 }

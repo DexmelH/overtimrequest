@@ -1,0 +1,120 @@
+#logsTable thead th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ot-muted);
+  white-space: nowrap;
+}
+
+#logsTable tbody td {
+  font-size: 0.85rem;
+  vertical-align: top;
+}
+
+.log-action {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ot-accent);
+}
+
+.log-details {
+  max-width: 280px;
+  word-break: break-word;
+  font-size: 0.78rem;
+  color: var(--ot-muted);
+}
+
+.summary-card .count {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.summary-card .label {
+  font-size: 0.75rem;
+  color: var(--ot-muted);
+  text-transform: uppercase;
+}
+
+.admin-tabs .nav-link {
+  font-weight: 600;
+  color: var(--ot-muted);
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+}
+
+.admin-tabs .nav-link.active {
+  background: var(--ot-accent-soft);
+  color: var(--ot-accent);
+}
+
+.approver-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.approver-level-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid var(--ot-border);
+  border-radius: 10px;
+  background: #fafbfc;
+}
+
+.level-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--ot-accent-soft);
+  color: var(--ot-accent);
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.employee-suggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 20;
+  background: #fff;
+  border: 1px solid var(--ot-border);
+  border-radius: 8px;
+  box-shadow: var(--ot-shadow);
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 4px;
+}
+
+.suggestion-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.suggestion-item:hover {
+  background: var(--ot-accent-soft);
+}
+
+.suggestion-item .ot-muted {
+  display: block;
+  font-size: 0.75rem;
+}
+
+.suggestion-empty {
+  padding: 0.65rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--ot-muted);
+}

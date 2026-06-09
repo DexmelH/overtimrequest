@@ -10,6 +10,9 @@ import { renderHistory } from "./ui/renderHistory.js";
 import { setFilter, setSearchQuery } from "./services/state.js";
 import { resetDependentFields, enableField } from "./ui/selectCascade.js";
 import { showToast } from "../shared/js/toast.js";
+import { cancelOvertimeRequest } from "./api/cancelOvertime.js";
+import { getCurrentRequestId } from "./components/modal.js";
+import { confirmAction } from "../shared/js/confirm.js";
 
 function setDefaultDate() {
   const today = new Date().toISOString().slice(0, 10);
@@ -75,18 +78,17 @@ $("#historySearch").on("input", function () {
   renderHistory();
 });
 
-$("#refreshHistoryBtn").on("click", function () {
-  const $btn = $(this);
-  $btn.prop("disabled", true);
-  fetchHistory()
-    .then(() =>
-      showToast("History refreshed.", { type: "success", duration: 2500 }),
-    )
-    .catch(() => showToast("Could not refresh history.", { type: "error" }))
-    .finally(() => $btn.prop("disabled", false));
-});
+function refreshHistoryOnRevisit() {
+  fetchHistory().catch(() => {});
+}
 
-$(window).on("focus", () => fetchHistory().catch(() => {}));
+$(window).on("focus", refreshHistoryOnRevisit);
+$(window).on("pageshow", refreshHistoryOnRevisit);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    refreshHistoryOnRevisit();
+  }
+});
 
 // Form submit
 $("#overtimeForm").on("submit", async function (e) {
@@ -129,6 +131,28 @@ $("#overtimeForm").on("submit", async function (e) {
     resetDependentFields("project");
   } finally {
     setSubmitLoading(false);
+  }
+});
+
+$("#btnCancelRequest").on("click", async function () {
+  const requestId = getCurrentRequestId();
+  if (!requestId) return;
+
+  const confirmed = await confirmAction({
+    title: "Cancel this request?",
+    message: "PIC will be notified by email. This action cannot be undone.",
+    confirmText: "Yes, cancel",
+    cancelText: "Keep request",
+    variant: "danger",
+    icon: "bi-x-circle-fill",
+  });
+  if (!confirmed) return;
+  const $btn = $(this);
+  $btn.prop("disabled", true);
+  try {
+    await cancelOvertimeRequest(requestId);
+  } finally {
+    $btn.prop("disabled", false);
   }
 });
 

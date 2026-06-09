@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Overtime Request Cancelled</title>
+</head>
+<body style="margin:0;padding:0;background:#eef2f8;font-family:'Segoe UI',Arial,Helvetica,sans-serif;color:#0f172a;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eef2f8;margin:0;padding:32px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);">
+          <tr>
+            <td style="padding:28px 32px;background:linear-gradient(135deg,#64748b 0%,#475569 100%);">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="font-size:13px;color:rgba(255,255,255,0.85);text-transform:uppercase;">{{app_name}}</td></tr>
+                <tr><td style="padding-top:8px;font-size:24px;font-weight:700;color:#ffffff;">Overtime Request Cancelled</td></tr>
+                <tr><td style="padding-top:8px;font-size:15px;color:rgba(255,255,255,0.9);">A pending request was withdrawn by the employee.</td></tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 32px 12px 32px;">
+              <p style="margin:0 0 16px 0;font-size:16px;color:#334155;">Hello <strong>{{recipient_name}}</strong>,</p>
+              <p style="margin:0 0 20px 0;font-size:15px;color:#475569;line-height:1.6;">
+                <strong>{{requestor_name}}</strong> has cancelled their overtime request. No further approval action is required.
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
+                <tr>
+                  <td style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;color:#475569;">
+                    Request #{{request_id}} &nbsp;·&nbsp; Cancelled by {{actor_name}}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px 28px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;">
+                <tr><td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;">Cancelled Request Details</td></tr>
+                <tr><td style="padding:12px 18px;border-bottom:1px solid #eef2f6;"><table role="presentation" width="100%"><tr><td width="130" style="font-size:13px;color:#64748b;">Requestor</td><td style="font-size:14px;font-weight:600;">{{requestor_name}}</td></tr></table></td></tr>
+                <tr><td style="padding:12px 18px;border-bottom:1px solid #eef2f6;"><table role="presentation" width="100%"><tr><td width="130" style="font-size:13px;color:#64748b;">Group</td><td style="font-size:14px;font-weight:600;">{{group_name}}</td></tr></table></td></tr>
+                <tr><td style="padding:12px 18px;border-bottom:1px solid #eef2f6;"><table role="presentation" width="100%"><tr><td width="130" style="font-size:13px;color:#64748b;">Location</td><td style="font-size:14px;font-weight:600;">{{location_name}}</td></tr></table></td></tr>
+                <tr><td style="padding:12px 18px;border-bottom:1px solid #eef2f6;"><table role="presentation" width="100%"><tr><td width="130" style="font-size:13px;color:#64748b;">Project</td><td style="font-size:14px;font-weight:600;">{{project_name}}</td></tr></table></td></tr>
+                <tr><td style="padding:12px 18px;border-bottom:1px solid #eef2f6;"><table role="presentation" width="100%"><tr><td width="130" style="font-size:13px;color:#64748b;">Overtime Date</td><td style="font-size:14px;font-weight:600;">{{date}}</td></tr></table></td></tr>
+                <tr><td style="padding:12px 18px;"><table role="presentation" width="100%"><tr><td width="130" style="font-size:13px;color:#64748b;">Hours</td><td style="font-size:14px;font-weight:600;">{{hours}}</td></tr></table></td></tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 32px 28px 32px;border-top:1px solid #e2e8f0;background:#f8fafc;">
+              <p style="margin:0;font-size:14px;color:#475569;">Best regards,<br /><strong>KDTDev Team</strong></p>
+              <p style="margin:12px 0 0 0;font-size:12px;color:#94a3b8;">Automated message — please do not reply.</p>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:14px 0 0 0;font-size:12px;color:#94a3b8;">&copy; {{year}} KHI Design &amp; Technical Service, Inc.</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -163,7 +163,8 @@ class OvertimeRepository
                 LEFT JOIN `drawingreference` j ON orq.job_id = j.fldID 
                 LEFT JOIN `typesofworktable` w ON orq.tow_id = w.fldID
                 LEFT JOIN kdtphdb_new.`employee_list` el ON el.id = orq.user_id
-                WHERE oa.approver_id = :approverID ORDER BY orq.date_created DESC";
+                WHERE oa.approver_id = :approverID AND orq.status != 2
+                ORDER BY orq.date_created DESC";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
             ":approverID" => $approverID
@@ -175,12 +176,17 @@ class OvertimeRepository
 
     public function findApproverDetails(int $overtimeID): array
     {
-        $sql = "SELECT oa.`approver_id`, el.`surname`, dl.`name` as `role`, 
-                    oa.`status`, oa.`remarks`, oa.`date_accepted` 
+        $sql = "SELECT oa.`approver_id`, el.`surname`,
+                    COALESCE(CONCAT('Level ', oga.`approval_level`), dl.`name`) AS `role`,
+                    oa.`status`, oa.`remarks`, oa.`date_accepted`, oga.`approval_level`
                 FROM `overtime_accept` oa
-                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = oa.`approver_id` 
-                LEFT JOIN kdtphdb_new.`designation_list` dl ON dl.`id` = el.`designation` 
-                WHERE oa.`overtime_id` = :overtimeID";
+                LEFT JOIN `overtime_request` orq ON orq.`id` = oa.`overtime_id`
+                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = oa.`approver_id`
+                LEFT JOIN `overtime_group_approvers` oga
+                    ON oga.`approver_id` = oa.`approver_id` AND oga.`group_id` = orq.`group_id`
+                LEFT JOIN kdtphdb_new.`designation_list` dl ON dl.`id` = el.`designation`
+                WHERE oa.`overtime_id` = :overtimeID
+                ORDER BY oga.`approval_level` ASC, oa.`approver_id` ASC";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
             ":overtimeID" => $overtimeID
@@ -255,5 +261,48 @@ class OvertimeRepository
             ":ostatus" => $ostatus,
             ":overtimeID" => $overtimeID
         ]);
+    }
+
+    public function findOwnedPendingRequest(int $overtimeID, int $userID): array
+    {
+        $sql = "SELECT orq.`id`, orq.`user_id`, orq.`status`, orq.`duration`, orq.`remarks`, orq.`request_date`,
+                    gl.`abbreviation`
+                FROM `overtime_request` orq
+                LEFT JOIN kdtphdb_new.`group_list` gl ON gl.`id` = orq.`group_id`
+                WHERE orq.`id` = :overtimeID AND orq.`user_id` = :userID";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':overtimeID' => $overtimeID,
+            ':userID' => $userID,
+        ]);
+        $data = $stmt->fetch();
+
+        return $data ? $data : [];
+    }
+
+    public function cancelRequest(int $overtimeID, int $userID): bool
+    {
+        $sql = "UPDATE `overtime_request` SET `status` = 2
+                WHERE `id` = :overtimeID AND `user_id` = :userID AND `status` IS NULL";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':overtimeID' => $overtimeID,
+            ':userID' => $userID,
+        ]);
+
+        return $stmt->rowCount() > 0;
+    }
+
+    public function findPicsForOvertime(int $overtimeID): array
+    {
+        $sql = "SELECT el.`id`, el.`surname`, el.`email`
+                FROM `overtime_accept` oa
+                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = oa.`approver_id`
+                WHERE oa.`overtime_id` = :overtimeID";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':overtimeID' => $overtimeID]);
+        $data = $stmt->fetchAll();
+
+        return $data ? $data : [];
     }
 }

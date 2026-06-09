@@ -1,8 +1,9 @@
 import { history } from "../services/state.js";
-import { statusClass, statusText } from "../../shared/js/status.js";
+import { statusClass, statusText, isPending } from "../../shared/js/status.js";
 
 const modalEl = document.getElementById("detailModal");
 let bsModal = null;
+let currentRequestId = null;
 
 function getModal() {
   if (!bsModal && modalEl) {
@@ -14,6 +15,8 @@ function getModal() {
 export function openModal(id) {
   const item = history.find((h) => String(h.id) === String(id));
   if (!item) return;
+
+  currentRequestId = item.id;
 
   $("#m_date").text(item.request_date || "—");
   $("#m_group").text(item.group_name || "—");
@@ -28,9 +31,20 @@ export function openModal(id) {
     `<span class="status-badge ${statusClass(item.status)}">${statusText(item.status)}</span>`,
   );
 
+  if (isPending(item.status)) {
+    $("#btnCancelRequest").removeClass("d-none");
+  } else {
+    $("#btnCancelRequest").addClass("d-none");
+  }
+
   getModal()?.show();
 }
 
 export function closeModal() {
+  currentRequestId = null;
   getModal()?.hide();
+}
+
+export function getCurrentRequestId() {
+  return currentRequestId;
 }

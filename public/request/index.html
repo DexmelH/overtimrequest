@@ -169,20 +169,7 @@
                 <h2>Your History</h2>
                 <p class="ot-muted mb-0">Click a row to view details</p>
               </div>
-              <div class="d-flex flex-column align-items-end gap-2">
-                <button
-                  type="button"
-                  class="ot-btn ot-btn-secondary btn-sm"
-                  id="refreshHistoryBtn"
-                  title="Refresh history"
-                >
-                  <i class="bi bi-arrow-repeat"></i>
-                </button>
-                <div
-                  class="ot-filter-group"
-                  role="group"
-                  aria-label="Filter history"
-                >
+              <div class="ot-filter-group" role="group" aria-label="Filter history">
                   <button
                     class="ot-filter-btn active"
                     data-filter="all"
@@ -211,8 +198,14 @@
                   >
                     Denied
                   </button>
+                  <button
+                    class="ot-filter-btn"
+                    data-filter="cancelled"
+                    type="button"
+                  >
+                    Cancelled
+                  </button>
                 </div>
-              </div>
             </div>
             <div class="ot-card-body flex-grow-1 d-flex flex-column p-0">
               <div class="px-3 pt-2 pb-2 border-bottom">
@@ -297,10 +290,17 @@
               </div>
             </div>
           </div>
-          <div class="modal-footer border-0">
+          <div class="modal-footer border-0 d-flex justify-content-between w-100">
             <button
               type="button"
-              class="ot-btn ot-btn-secondary"
+              class="ot-btn ot-btn-danger d-none"
+              id="btnCancelRequest"
+            >
+              <i class="bi bi-x-circle"></i> Cancel Request
+            </button>
+            <button
+              type="button"
+              class="ot-btn ot-btn-secondary ms-auto"
               data-bs-dismiss="modal"
             >
               Close

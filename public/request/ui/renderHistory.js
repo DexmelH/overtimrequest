@@ -1,12 +1,14 @@
 import { history, filter, searchQuery } from "../services/state.js";
 import { statusClass, statusText } from "../../shared/js/status.js";
 import { openModal } from "../components/modal.js";
+import { fetchHistory } from "../api/fetchHistory.js";
 
 function matchesFilter(item) {
   if (filter === "all") return true;
   if (filter === "approved") return item.status == 1;
   if (filter === "denied") return item.status == 0;
   if (filter === "pending") return item.status == null || item.status === "";
+  if (filter === "cancelled") return item.status == 2;
   return true;
 }
 
@@ -51,7 +53,9 @@ export function renderHistory() {
         (e.type === "keypress" && (e.key === "Enter" || e.key === " "))
       ) {
         e.preventDefault();
-        openModal(item.id);
+        fetchHistory()
+          .then(() => openModal(item.id))
+          .catch(() => openModal(item.id));
       }
     });
 

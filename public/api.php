@@ -38,7 +38,13 @@ $dispatcher = simpleDispatcher(function(RouteCollector $r) {
     $r->addRoute('POST', '/api/addovertime', ['App\Controller\OvertimeController', 'addOvertime']);
     $r->addRoute('GET', '/api/overtimetoapprove', ['App\Controller\OvertimeController', 'getOvertimeToApprove']);
     $r->addRoute('POST', '/api/approveovertime', ['App\Controller\OvertimeController', 'approveOvertime']);
-    // include other routes or require route files here
+    $r->addRoute('POST', '/api/cancelovertime', ['App\Controller\OvertimeController', 'cancelOvertime']);
+    $r->addRoute('GET', '/api/admin/session', ['App\Controller\AdminController', 'getSession']);
+    $r->addRoute('GET', '/api/admin/logs', ['App\Controller\AdminController', 'getActivityLogs']);
+    $r->addRoute('GET', '/api/admin/groups', ['App\Controller\AdminController', 'getAdminGroups']);
+    $r->addRoute('GET', '/api/admin/employees', ['App\Controller\AdminController', 'searchEmployees']);
+    $r->addRoute('GET', '/api/admin/approvers', ['App\Controller\AdminController', 'getGroupApprovers']);
+    $r->addRoute('POST', '/api/admin/approvers', ['App\Controller\AdminController', 'saveGroupApprovers']);
 });
 
 $httpMethod = $_SERVER['REQUEST_METHOD'];
@@ -73,12 +79,26 @@ switch ($routeInfo[0]) {
             $kdtphPdo = $dbManager->getConnection('kdtph');
             $kdtphNewPdo = $dbManager->getConnection('kdtphnew');
 
+            $activityLogger = new \App\Service\ActivityLogger(
+                new \App\Repository\ActivityLogRepository($webjmrPdo)
+            );
+
             $controllerFactory = [
                 'App\Controller\GroupController' => function() use ($kdtphNewPdo, $kdtphPdo) {
                     return new \App\Controller\GroupController($kdtphNewPdo, $kdtphPdo);
                 },
-                'App\Controller\OvertimeController' => function() use ($webjmrPdo, $kdtphPdo) {
-                    return new \App\Controller\OvertimeController($webjmrPdo, $kdtphPdo);
+                'App\Controller\OvertimeController' => function() use ($webjmrPdo, $kdtphPdo, $activityLogger) {
+                    return new \App\Controller\OvertimeController($webjmrPdo, $kdtphPdo, $activityLogger);
+                },
+                'App\Controller\AdminController' => function() use ($webjmrPdo, $kdtphPdo, $kdtphNewPdo, $activityLogger, $config) {
+                    return new \App\Controller\AdminController(
+                        new \App\Repository\ActivityLogRepository($webjmrPdo),
+                        new \App\Repository\UserRepository($kdtphPdo),
+                        new \App\Repository\EmployeeRepository($kdtphNewPdo),
+                        new \App\Repository\GroupApproverRepository($webjmrPdo),
+                        $activityLogger,
+                        $config['app']['admin_user_ids'] ?? []
+                    );
                 },
                 'App\Controller\LocationController' => function() use ($webjmrPdo) {
                     return new \App\Controller\LocationController($webjmrPdo);
