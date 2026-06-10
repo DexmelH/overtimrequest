@@ -163,7 +163,7 @@ class OvertimeRepository
                 LEFT JOIN `drawingreference` j ON orq.job_id = j.fldID 
                 LEFT JOIN `typesofworktable` w ON orq.tow_id = w.fldID
                 LEFT JOIN kdtphdb_new.`employee_list` el ON el.id = orq.user_id
-                WHERE oa.approver_id = :approverID AND orq.status != 2
+                WHERE oa.approver_id = :approverID AND (orq.status != 2 OR orq.status IS NULL)
                 ORDER BY orq.date_created DESC";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([

@@ -3,12 +3,23 @@ import { renderManagers } from "../components/approvers.js";
 import { modal } from "../components/modal.js";
 import { formatDateShort } from "../../shared/js/status.js";
 
+function getInitials(name) {
+  if (!name) return "?";
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 export function populateModal(requestId) {
   const request = overtime.find((r) => String(r.id) === String(requestId));
   if (!request) return;
 
   $("#rd-requestID").val(request.id);
-  $("#rd-avatar").text(request.employee_id);
+  $("#rd-avatar").text(getInitials(request.employee_name));
   $("#rd-employee").text(
     `${request.employee_name || "—"} (${request.employee_id || "—"})`,
   );

@@ -7,30 +7,172 @@ let currentPage = 1;
 let totalPages = 1;
 const filters = { search: "", action: "", user_id: "", from: "", to: "" };
 
-const ACTION_LABELS = {
-  "request.submit": "Submit request",
-  "request.cancel": "Cancel request",
-  "request.approve": "Approve request",
-  "request.reject": "Reject request",
-  "admin.approvers.save": "Save group approvers",
+const ACTION_META = {
+  "request.submit": { label: "Submitted request", icon: "bi-send", tone: "primary" },
+  "request.cancel": { label: "Cancelled request", icon: "bi-x-circle", tone: "muted" },
+  "request.approve": { label: "Approved request", icon: "bi-check-circle", tone: "success" },
+  "request.reject": { label: "Rejected request", icon: "bi-slash-circle", tone: "danger" },
+  "admin.approvers.save": { label: "Updated approvers", icon: "bi-people", tone: "admin" },
 };
 
-function formatAction(action) {
-  return ACTION_LABELS[action] || action;
+const ENTITY_META = {
+  overtime_request: { label: "Overtime Request", icon: "bi-clock-history" },
+  group: { label: "Group", icon: "bi-diagram-3" },
+};
+
+const DETAIL_LABELS = {
+  group_id: "Group",
+  hours: "Hours",
+  request_date: "Request date",
+  group: "Group",
+  remarks: "Remarks",
+  finalized: "Outcome",
+  levels: "Approver levels",
+};
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
-function formatDetails(details) {
-  if (!details) return "—";
-  if (typeof details === "object") {
-    return JSON.stringify(details);
-  }
-  return String(details);
+function getActionMeta(action) {
+  return (
+    ACTION_META[action] || {
+      label: action.replace(/\./g, " · "),
+      icon: "bi-activity",
+      tone: "muted",
+    }
+  );
+}
+
+function formatAction(action) {
+  return getActionMeta(action).label;
+}
+
+function humanizeKey(key) {
+  return DETAIL_LABELS[key] || String(key).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatDetailDate(value) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
 function formatDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
-  return d.toLocaleString();
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatRelativeTime(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  const diffSec = (Date.now() - d.getTime()) / 1000;
+  if (diffSec < 45) return "Just now";
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`;
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function formatEntityHtml(entityType, entityId) {
+  if (!entityType) {
+    return '<span class="ot-muted">—</span>';
+  }
+
+  const meta = ENTITY_META[entityType] || {
+    label: humanizeKey(entityType),
+    icon: "bi-tag",
+  };
+  const idPart = entityId ? `<span class="log-entity-id">#${escapeHtml(entityId)}</span>` : "";
+
+  return `<span class="log-entity"><i class="bi ${meta.icon}"></i><span>${escapeHtml(meta.label)}</span>${idPart}</span>`;
+}
+
+function formatDetailValue(key, value) {
+  if (key === "hours") return `${value} hr${Number(value) === 1 ? "" : "s"}`;
+  if (key === "request_date") return formatDetailDate(value);
+  if (key === "group_id") return `Group #${value}`;
+  if (key === "finalized") return value ? "Final decision recorded" : "Partial approval step";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (value === null || value === undefined || value === "") return "—";
+  return String(value);
+}
+
+function formatDetailsHtml(action, details) {
+  if (!details || (typeof details === "object" && !Object.keys(details).length)) {
+    return '<span class="log-detail-empty">No additional details</span>';
+  }
+
+  const items = [];
+
+  switch (action) {
+    case "request.submit":
+      if (details.group_id != null) items.push({ label: "Group", value: formatDetailValue("group_id", details.group_id) });
+      if (details.hours != null) items.push({ label: "Duration", value: formatDetailValue("hours", details.hours) });
+      if (details.request_date) items.push({ label: "Date", value: formatDetailValue("request_date", details.request_date) });
+      break;
+
+    case "request.cancel":
+      if (details.group) items.push({ label: "Group", value: details.group });
+      break;
+
+    case "request.approve":
+    case "request.reject":
+      if (details.remarks) items.push({ label: "Remarks", value: details.remarks, full: true });
+      if (details.finalized) {
+        items.push({ badge: "final", value: "This was the final decision" });
+      }
+      break;
+
+    case "admin.approvers.save":
+      if (details.levels && typeof details.levels === "object") {
+        Object.entries(details.levels)
+          .sort(([a], [b]) => Number(a) - Number(b))
+          .forEach(([level, employeeId]) => {
+            items.push({ label: `Level ${level}`, value: `Employee #${employeeId}` });
+          });
+      }
+      break;
+
+    default:
+      if (typeof details === "object") {
+        Object.entries(details).forEach(([key, value]) => {
+          if (typeof value === "object" && value !== null) {
+            items.push({ label: humanizeKey(key), value: JSON.stringify(value), full: true });
+          } else {
+            items.push({ label: humanizeKey(key), value: formatDetailValue(key, value) });
+          }
+        });
+      } else {
+        return `<span class="log-detail-value">${escapeHtml(String(details))}</span>`;
+      }
+  }
+
+  if (!items.length) {
+    return '<span class="log-detail-empty">No additional details</span>';
+  }
+
+  return `<ul class="log-detail-list">${items
+    .map((item) => {
+      if (item.badge === "final") {
+        return `<li><span class="log-detail-badge">${escapeHtml(item.value)}</span></li>`;
+      }
+      const fullClass = item.full ? " log-detail-item--full" : "";
+      return `<li class="log-detail-item${fullClass}"><span class="log-detail-label">${escapeHtml(item.label)}</span><span class="log-detail-value">${escapeHtml(item.value)}</span></li>`;
+    })
+    .join("")}</ul>`;
 }
 
 async function checkAccess() {
@@ -52,12 +194,14 @@ async function checkAccess() {
 function renderSummary(summary) {
   const $wrap = $("#summaryCards").empty();
   (summary || []).slice(0, 6).forEach((item) => {
+    const meta = getActionMeta(item.action);
     $wrap.append(`
-      <div class="col-md-4 col-lg-2">
-        <div class="ot-card summary-card h-100">
+      <div class="col-6 col-md-4 col-lg-2">
+        <div class="ot-card summary-card summary-card--${meta.tone} h-100">
           <div class="ot-card-body py-3">
+            <div class="summary-icon"><i class="bi ${meta.icon}"></i></div>
             <div class="count">${item.total}</div>
-            <div class="label">${formatAction(item.action)}</div>
+            <div class="label">${escapeHtml(meta.label)}</div>
           </div>
         </div>
       </div>
@@ -84,20 +228,26 @@ function renderLogs(rows) {
   $("#logsEmpty").addClass("d-none");
 
   rows.forEach((row) => {
-    const entity = row.entity_type
-      ? `${row.entity_type}${row.entity_id ? " #" + row.entity_id : ""}`
-      : "—";
+    const meta = getActionMeta(row.action);
+
     $tbody.append(`
       <tr>
-        <td class="text-nowrap">${formatDate(row.created_at)}</td>
+        <td class="log-col-when">
+          <div class="log-time-relative" title="${escapeHtml(formatDate(row.created_at))}">${formatRelativeTime(row.created_at)}</div>
+          <small class="log-time-full">${formatDate(row.created_at)}</small>
+        </td>
         <td>
-          <div class="fw-semibold">${row.user_name || "—"}</div>
+          <div class="fw-semibold">${escapeHtml(row.user_name || "Unknown user")}</div>
           <small class="ot-muted">ID ${row.user_id ?? "—"}</small>
         </td>
-        <td><span class="log-action">${formatAction(row.action)}</span></td>
-        <td>${entity}</td>
-        <td class="log-details">${formatDetails(row.details)}</td>
-        <td class="text-nowrap ot-muted">${row.ip_address || "—"}</td>
+        <td>
+          <span class="log-action-badge log-action-badge--${meta.tone}">
+            <i class="bi ${meta.icon}"></i>${escapeHtml(meta.label)}
+          </span>
+        </td>
+        <td>${formatEntityHtml(row.entity_type, row.entity_id)}</td>
+        <td class="log-col-details">${formatDetailsHtml(row.action, row.details)}</td>
+        <td class="log-col-ip">${row.ip_address ? escapeHtml(row.ip_address) : '<span class="ot-muted">—</span>'}</td>
       </tr>
     `);
   });

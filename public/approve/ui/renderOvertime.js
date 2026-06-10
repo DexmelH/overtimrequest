@@ -2,6 +2,17 @@ import { getFilteredOvertime } from "../services/state.js";
 import { populateModal } from "./populateModal.js";
 import { statusClass, formatDateShort } from "../../shared/js/status.js";
 
+function getInitials(name) {
+  if (!name) return "?";
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 export function renderTable() {
   const requests = getFilteredOvertime();
   const $tbody = $("#requestsTable tbody").empty();
@@ -26,7 +37,7 @@ export function renderTable() {
       $("<td>").html(`<strong>${req.group_name || "—"}</strong>`),
       $("<td>").html(`
         <div class="employee-cell">
-          <span class="avatar">${req.employee_id}</span>
+          <span class="avatar">${getInitials(req.employee_name)}</span>
           <div>
             <div class="fw-semibold">${req.employee_name || "—"}</div>
             <div class="employee-meta">${req.project_name || ""}</div>

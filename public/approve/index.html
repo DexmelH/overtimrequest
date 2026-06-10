@@ -47,7 +47,7 @@
       </div>
     </header>
 
-    <main class="container py-4">
+    <main class="container ot-main">
       <div class="row g-3 mb-4">
         <div class="col-sm-4">
           <div class="ot-card stat-card">
@@ -139,12 +139,12 @@
     </main>
 
     <!-- Details modal -->
-    <div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade ot-modal" id="detailsModal" tabindex="-1" aria-hidden="true">
       <div
         class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"
       >
-        <div class="modal-content border-0 shadow">
-          <div class="modal-header bg-primary text-white">
+        <div class="modal-content">
+          <div class="modal-header ot-modal-header-accent">
             <h5 class="modal-title">Overtime Request Details</h5>
             <button
               type="button"
@@ -163,7 +163,7 @@
                     <div class="fw-bold fs-5" id="rd-employee">—</div>
                     <div class="ot-muted" id="rd-meta">—</div>
                   </div>
-                  <div class="ms-auto d-flex gap-2">
+                  <div class="ms-auto d-flex gap-2 modal-hero-badges">
                     <span
                       class="badge rounded-pill bg-light text-dark border"
                       id="rd-date"
