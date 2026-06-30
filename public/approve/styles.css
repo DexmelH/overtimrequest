@@ -101,7 +101,7 @@
 }
 
 .ot-modal .modal-footer#approvalActions {
-  background: #fff;
+  background: var(--ot-surface);
   border-top: 1px solid var(--ot-border);
   padding-top: 1rem;
 }
@@ -113,4 +113,16 @@
 .modal-hero-badges .badge {
   font-weight: 700;
   padding: 0.45rem 0.75rem;
+}
+
+[data-theme="dark"] .row-needs-action {
+  background: rgba(251, 191, 36, 0.08) !important;
+}
+
+[data-theme="dark"] .row-acted td {
+  color: var(--ot-muted);
+}
+
+[data-theme="dark"] .row-acted .fw-semibold {
+  color: var(--ot-text);
 }

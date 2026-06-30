@@ -2,7 +2,7 @@
   overflow-y: auto;
   max-height: 520px;
   padding: 0.65rem 0.85rem 0.85rem;
-  background: linear-gradient(180deg, #fafbff 0%, #fff 100%);
+  background: var(--ot-surface-muted);
 }
 
 .history-item {
@@ -14,7 +14,7 @@
   margin-bottom: 0.5rem;
   border-radius: var(--ot-radius-sm);
   border: 1px solid var(--ot-border);
-  background: #fff;
+  background: var(--ot-surface);
   cursor: pointer;
   transition:
     box-shadow 0.18s ease,
@@ -80,7 +80,7 @@
 #historySearch {
   border-radius: 999px;
   padding-left: 1rem;
-  background: #f8fafc;
+  background: var(--ot-surface-muted);
 }
 
 #overtimeForm .border-top {
@@ -91,4 +91,10 @@
   .history-list {
     max-height: 360px;
   }
+}
+
+[data-theme="dark"] .history-item:hover,
+[data-theme="dark"] .history-item:focus-visible {
+  border-color: rgba(129, 140, 248, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }

@@ -4,6 +4,7 @@ import { renderTable } from "./ui/renderOvertime.js";
 import { setFilter } from "./services/state.js";
 import { showToast } from "../shared/js/toast.js";
 import { confirmAction } from "../shared/js/confirm.js";
+import { initShell } from "../shared/js/shell.js";
 
 let actionInProgress = false;
 
@@ -61,4 +62,5 @@ $(".ot-filter-btn").on("click", function () {
   renderTable();
 });
 
+initShell();
 fetchRequest().catch(() => {});

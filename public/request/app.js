@@ -13,6 +13,7 @@ import { showToast } from "../shared/js/toast.js";
 import { cancelOvertimeRequest } from "./api/cancelOvertime.js";
 import { getCurrentRequestId } from "./components/modal.js";
 import { confirmAction } from "../shared/js/confirm.js";
+import { initShell } from "../shared/js/shell.js";
 
 function setDefaultDate() {
   const today = new Date().toISOString().slice(0, 10);
@@ -163,6 +164,7 @@ $("#resetBtn").on("click", function () {
 });
 
 // Init
+initShell();
 setDefaultDate();
 fetchHistory().catch(() => {});
 fetchLocations().catch(() => {});

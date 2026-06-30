@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="api-base" content="/overtime/api" />
     <title>Overtime Admin</title>
+    <script src="../shared/js/theme-init.js"></script>
 
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
@@ -17,7 +18,7 @@
     <link href="../shared/css/theme.css" rel="stylesheet" />
     <link href="styles.css" rel="stylesheet" />
   </head>
-  <body>
+  <body data-page="admin">
     <div
       id="toastContainer"
       class="ot-toast-container"
@@ -35,6 +36,10 @@
             <h1>Overtime Admin</h1>
             <p>Manage approvers and view activity logs</p>
           </div>
+        </div>
+        <div class="ot-header-end">
+          <nav class="ot-nav" id="otNav" aria-label="App sections"></nav>
+          <div class="ot-header-tools" id="otHeaderTools"></div>
         </div>
       </div>
     </header>
@@ -99,71 +104,71 @@
 
           <!-- Activity logs -->
           <div class="tab-pane fade" id="panel-logs" role="tabpanel">
-            <div class="row g-3 mb-4" id="summaryCards"></div>
+            <div class="row g-3 mb-3" id="summaryCards"></div>
 
-            <div class="ot-card">
-              <div class="ot-card-header flex-wrap">
+            <div class="ot-card logs-card">
+              <div class="ot-card-header flex-wrap logs-card-header">
                 <div>
                   <h2>Activity Log</h2>
-                  <p class="ot-muted mb-0">User actions across request, approval, and admin flows</p>
+                  <p class="ot-muted mb-0 d-none d-lg-block">User actions across request, approval, and admin flows</p>
                 </div>
-                <button type="button" class="ot-btn ot-btn-secondary" id="refreshBtn">
+                <button type="button" class="ot-btn ot-btn-secondary btn-sm" id="refreshBtn">
                   <i class="bi bi-arrow-repeat"></i> Refresh
                 </button>
               </div>
-              <div class="ot-card-body border-bottom">
+              <div class="ot-card-body border-bottom logs-filters">
                 <form id="filterForm" class="row g-2 align-items-end">
-                  <div class="col-md-3">
+                  <div class="col-lg-3 col-md-4 col-12">
                     <label class="form-label" for="filterSearch">Search</label>
                     <input type="search" class="form-control form-control-sm" id="filterSearch" placeholder="User, action, details..." />
                   </div>
-                  <div class="col-md-2">
+                  <div class="col-lg-2 col-md-3 col-6">
                     <label class="form-label" for="filterAction">Action</label>
                     <select class="form-select form-select-sm" id="filterAction">
                       <option value="">All actions</option>
                     </select>
                   </div>
-                  <div class="col-md-2">
+                  <div class="col-lg-1 col-md-2 col-6">
                     <label class="form-label" for="filterUserId">User ID</label>
-                    <input type="number" class="form-control form-control-sm" id="filterUserId" placeholder="e.g. 546" />
+                    <input type="number" class="form-control form-control-sm" id="filterUserId" placeholder="ID" />
                   </div>
-                  <div class="col-md-2">
+                  <div class="col-lg-2 col-md-3 col-6">
                     <label class="form-label" for="filterFrom">From</label>
                     <input type="date" class="form-control form-control-sm" id="filterFrom" />
                   </div>
-                  <div class="col-md-2">
+                  <div class="col-lg-2 col-md-3 col-6">
                     <label class="form-label" for="filterTo">To</label>
                     <input type="date" class="form-control form-control-sm" id="filterTo" />
                   </div>
-                  <div class="col-md-1">
+                  <div class="col-lg-2 col-md-2 col-12">
                     <button type="submit" class="ot-btn ot-btn-primary btn-sm w-100">Filter</button>
                   </div>
                 </form>
               </div>
-              <div class="table-responsive">
+              <div class="logs-table-scroll">
                 <table class="table table-hover align-middle mb-0" id="logsTable">
                   <thead class="table-light">
                     <tr>
-                      <th>When</th>
-                      <th>User</th>
-                      <th>Action</th>
-                      <th>Entity</th>
-                      <th>Details</th>
-                      <th>IP</th>
+                      <th class="log-col-when">When</th>
+                      <th class="log-col-user">User</th>
+                      <th class="log-col-action">Action</th>
+                      <th class="log-col-entity">Entity</th>
+                      <th class="log-col-details">Details</th>
+                      <th class="log-col-ip d-none d-xl-table-cell">IP</th>
                     </tr>
                   </thead>
                   <tbody></tbody>
                 </table>
+                <div id="logsEmpty" class="ot-empty logs-empty-state d-none">
+                  <i class="bi bi-journal-x"></i>
+                  <p class="mb-0">No log entries match your filters.</p>
+                </div>
+                <div id="logsLoading" class="ot-empty logs-empty-state d-none">
+                  <div class="spinner-border spinner-border-sm text-primary"></div>
+                  <p class="mb-0 mt-2">Loading logs...</p>
+                </div>
               </div>
-              <div id="logsEmpty" class="ot-empty d-none">
-                <i class="bi bi-journal-x"></i>
-                <p class="mb-0">No log entries match your filters.</p>
-              </div>
-              <div id="logsLoading" class="ot-empty d-none">
-                <div class="spinner-border spinner-border-sm text-primary"></div>
-                <p class="mb-0 mt-2">Loading logs...</p>
-              </div>
-              <div class="d-flex justify-content-between align-items-center p-3 border-top">
+              <div class="d-flex justify-content-between align-items-center border-top logs-footer">
                 <small class="ot-muted" id="paginationInfo">—</small>
                 <div class="btn-group btn-group-sm">
                   <button type="button" class="btn btn-outline-secondary" id="prevPage" disabled>Prev</button>

@@ -2,6 +2,7 @@ import { apiUrl } from "../shared/js/api.js";
 import { apiGet } from "../shared/js/http.js";
 import { showToast } from "../shared/js/toast.js";
 import { initApprovers } from "./approvers.js";
+import { initShell } from "../shared/js/shell.js";
 
 let currentPage = 1;
 let totalPages = 1;
@@ -233,21 +234,20 @@ function renderLogs(rows) {
     $tbody.append(`
       <tr>
         <td class="log-col-when">
-          <div class="log-time-relative" title="${escapeHtml(formatDate(row.created_at))}">${formatRelativeTime(row.created_at)}</div>
-          <small class="log-time-full">${formatDate(row.created_at)}</small>
+          <span class="log-time-relative" title="${escapeHtml(formatDate(row.created_at))}">${formatRelativeTime(row.created_at)}</span>
         </td>
-        <td>
-          <div class="fw-semibold">${escapeHtml(row.user_name || "Unknown user")}</div>
-          <small class="ot-muted">ID ${row.user_id ?? "—"}</small>
+        <td class="log-col-user">
+          <div class="log-user-name" title="${escapeHtml(row.user_name || "Unknown user")}">${escapeHtml(row.user_name || "Unknown user")}</div>
+          <small class="ot-muted">#${row.user_id ?? "—"}</small>
         </td>
-        <td>
-          <span class="log-action-badge log-action-badge--${meta.tone}">
-            <i class="bi ${meta.icon}"></i>${escapeHtml(meta.label)}
+        <td class="log-col-action">
+          <span class="log-action-badge log-action-badge--${meta.tone}" title="${escapeHtml(meta.label)}">
+            <i class="bi ${meta.icon}"></i><span class="log-action-text">${escapeHtml(meta.label)}</span>
           </span>
         </td>
-        <td>${formatEntityHtml(row.entity_type, row.entity_id)}</td>
+        <td class="log-col-entity">${formatEntityHtml(row.entity_type, row.entity_id)}</td>
         <td class="log-col-details">${formatDetailsHtml(row.action, row.details)}</td>
-        <td class="log-col-ip">${row.ip_address ? escapeHtml(row.ip_address) : '<span class="ot-muted">—</span>'}</td>
+        <td class="log-col-ip d-none d-xl-table-cell">${row.ip_address ? escapeHtml(row.ip_address) : '<span class="ot-muted">—</span>'}</td>
       </tr>
     `);
   });
@@ -322,5 +322,6 @@ $("#tab-logs").on("shown.bs.tab", () => {
 });
 
 checkAccess().then((ok) => {
+  initShell();
   if (ok) initApprovers();
 });

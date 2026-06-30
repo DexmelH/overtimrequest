@@ -1,5 +1,5 @@
 .admin-tabs {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--ot-nav-bg, rgba(255, 255, 255, 0.7));
   border: 1px solid var(--ot-border);
   border-radius: 999px;
   padding: 0.35rem;
@@ -29,47 +29,177 @@
 
 .admin-tabs .nav-link.active {
   background: var(--ot-accent);
-  color: #fff;
+  color: var(--ot-on-accent);
   box-shadow: 0 2px 10px var(--ot-accent-glow);
 }
 
+/* Activity logs — viewport-fit layout */
+body[data-page="admin"] .ot-main {
+  padding-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+#adminContent {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#adminContent > .tab-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#panel-logs.tab-pane.active {
+  display: flex !important;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0.5rem;
+  height: calc(100dvh - var(--ot-header-h) - 10rem);
+  max-height: calc(100dvh - var(--ot-header-h) - 10rem);
+}
+
+#panel-logs #summaryCards {
+  flex-shrink: 0;
+}
+
+.logs-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.logs-card-header {
+  padding: 0.65rem 1rem !important;
+  flex-shrink: 0;
+}
+
+.logs-card-header h2 {
+  font-size: 0.95rem;
+}
+
+.logs-filters {
+  padding: 0.55rem 1rem !important;
+  flex-shrink: 0;
+}
+
+.logs-filters .form-label {
+  margin-bottom: 0.15rem;
+  font-size: 0.65rem;
+}
+
+.logs-table-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+
+.logs-empty-state {
+  padding: 2rem 1rem;
+}
+
+.logs-footer {
+  flex-shrink: 0;
+  padding: 0.45rem 1rem !important;
+}
+
+#logsTable {
+  table-layout: fixed;
+  width: 100%;
+}
+
 #logsTable thead th {
-  font-size: 0.72rem;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  font-size: 0.68rem;
+  padding: 0.45rem 0.6rem;
+  white-space: nowrap;
 }
 
 #logsTable tbody td {
-  font-size: 0.85rem;
-  vertical-align: top;
-  padding: 0.9rem 1.25rem;
+  font-size: 0.76rem;
+  vertical-align: middle;
+  padding: 0.45rem 0.6rem;
 }
 
 .log-col-when {
+  width: 8%;
   white-space: nowrap;
-  min-width: 110px;
+}
+
+.log-col-user {
+  width: 13%;
+  max-width: 0;
+}
+
+.log-col-action {
+  width: 15%;
+  max-width: 0;
+}
+
+.log-col-entity {
+  width: 14%;
+  max-width: 0;
+}
+
+.log-col-details {
+  width: auto;
+}
+
+.log-col-ip {
+  width: 10%;
+  white-space: nowrap;
+}
+
+.log-user-name {
+  font-weight: 700;
+  font-size: 0.76rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.log-col-user small {
+  font-size: 0.65rem;
 }
 
 .log-time-relative {
   font-weight: 700;
-  font-size: 0.82rem;
+  font-size: 0.74rem;
+  color: var(--ot-text);
 }
 
 .log-time-full {
-  display: block;
-  font-size: 0.72rem;
-  color: var(--ot-muted);
-  margin-top: 0.1rem;
-  font-weight: 500;
+  display: none;
 }
 
 .log-action-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.3rem 0.7rem;
+  gap: 0.25rem;
+  padding: 0.18rem 0.45rem;
   border-radius: 999px;
-  font-size: 0.74rem;
+  font-size: 0.66rem;
   font-weight: 700;
   white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.log-action-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .log-action-badge--primary {
@@ -89,25 +219,34 @@
 
 .log-action-badge--admin {
   background: rgba(124, 58, 237, 0.1);
-  color: #7c3aed;
+  color: var(--ot-accent);
 }
 
 .log-action-badge--muted {
-  background: #f1f5f9;
+  background: var(--ot-surface-muted);
   color: var(--ot-muted);
 }
 
 .log-entity {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.25rem 0.65rem;
-  border-radius: 8px;
-  background: #f8fafc;
+  gap: 0.3rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  background: var(--ot-surface-muted);
   border: 1px solid var(--ot-border);
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 600;
   white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.log-entity > span:not(.log-entity-id) {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .log-entity i {
@@ -121,8 +260,7 @@
 }
 
 .log-col-details {
-  min-width: 200px;
-  max-width: 320px;
+  overflow: hidden;
 }
 
 .log-detail-list {
@@ -130,45 +268,65 @@
   margin: 0;
   padding: 0;
   display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.1rem 0.55rem;
+  align-items: baseline;
 }
 
 .log-detail-item {
-  display: flex;
+  display: inline-flex;
   align-items: baseline;
-  gap: 0.4rem;
-  font-size: 0.8rem;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  min-width: 0;
 }
 
 .log-detail-item--full {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.15rem;
+  flex: 1 1 100%;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
 }
 
 .log-detail-label {
   color: var(--ot-muted);
-  font-size: 0.7rem;
+  font-size: 0.62rem;
   font-weight: 700;
   flex-shrink: 0;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
 }
 
 .log-detail-value {
   color: var(--ot-text);
   word-break: break-word;
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.log-detail-item:not(.log-detail-item--full) .log-detail-value {
+  white-space: nowrap;
+  max-width: 9rem;
 }
 
 .log-detail-item--full .log-detail-value {
-  line-height: 1.4;
-  white-space: pre-wrap;
+  line-height: 1.35;
+  white-space: normal;
+  max-width: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.log-detail-item:not(.log-detail-item--full) .log-detail-label::after {
+  content: ":";
 }
 
 .log-detail-empty {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   color: var(--ot-muted);
   font-style: italic;
 }
@@ -176,19 +334,65 @@
 .log-detail-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.15rem 0.5rem;
+  padding: 0.1rem 0.4rem;
   border-radius: 999px;
   background: rgba(5, 150, 105, 0.12);
   color: var(--ot-success);
-  font-size: 0.72rem;
+  font-size: 0.65rem;
   font-weight: 700;
 }
 
 .log-col-ip {
   font-family: ui-monospace, Consolas, monospace;
-  font-size: 0.76rem;
+  font-size: 0.68rem;
   color: var(--ot-muted);
-  white-space: nowrap;
+}
+
+@media (max-width: 1199.98px) {
+  #panel-logs.tab-pane.active {
+    height: calc(100dvh - var(--ot-header-h) - 11rem);
+    max-height: calc(100dvh - var(--ot-header-h) - 11rem);
+  }
+
+  .log-col-entity {
+    width: 12%;
+  }
+
+  .log-action-text {
+    display: none;
+  }
+
+  .log-action-badge {
+    padding: 0.22rem 0.35rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  #panel-logs.tab-pane.active {
+    height: auto;
+    max-height: none;
+  }
+
+  .logs-card {
+    min-height: calc(100dvh - var(--ot-header-h) - 10rem);
+  }
+
+  .logs-table-scroll {
+    max-height: 55vh;
+  }
+
+  #logsTable {
+    table-layout: auto;
+  }
+
+  .log-col-when,
+  .log-col-user,
+  .log-col-action,
+  .log-col-entity,
+  .log-col-details {
+    width: auto;
+    max-width: none;
+  }
 }
 
 .summary-card {
@@ -213,7 +417,7 @@
 }
 
 .summary-card--admin {
-  border-left-color: #7c3aed;
+  border-left-color: var(--ot-accent);
 }
 
 .summary-card .summary-icon {
@@ -235,7 +439,7 @@
 }
 
 .summary-card--admin .summary-icon {
-  color: #7c3aed;
+  color: var(--ot-accent);
 }
 
 .summary-card .count {
@@ -266,7 +470,7 @@
   padding: 0.9rem 1rem;
   border: 1px solid var(--ot-border);
   border-radius: var(--ot-radius-sm);
-  background: linear-gradient(180deg, #fafbff 0%, #f8fafc 100%);
+  background: var(--ot-surface-muted);
   transition: border-color 0.15s ease;
 }
 
@@ -295,7 +499,7 @@
   right: 0;
   top: 100%;
   z-index: 20;
-  background: #fff;
+  background: var(--ot-surface);
   border: 1px solid var(--ot-border);
   border-radius: var(--ot-radius-sm);
   box-shadow: var(--ot-shadow-lg);
@@ -334,4 +538,20 @@
 
 #accessDenied .ot-empty i {
   color: var(--ot-danger);
+}
+
+[data-theme="dark"] .log-entity {
+  color: var(--ot-text);
+}
+
+[data-theme="dark"] .summary-card .label {
+  color: var(--ot-muted);
+}
+
+[data-theme="dark"] .suggestion-item {
+  color: var(--ot-text);
+}
+
+[data-theme="dark"] .suggestion-item:hover {
+  background: var(--ot-accent-soft);
 }
