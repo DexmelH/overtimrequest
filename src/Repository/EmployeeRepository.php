@@ -19,6 +19,37 @@ class EmployeeRepository
         return $stmt ? ($stmt->fetchAll() ?: []) : [];
     }
 
+    public function findGroupById(int $id): ?array
+    {
+        $sql = "SELECT `id`, `abbreviation`, `name` FROM `group_list` WHERE `id` = :id LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':id' => $id]);
+        $row = $stmt->fetch();
+
+        return $row ?: null;
+    }
+
+    /** @return array<int, string> id => abbreviation */
+    public function findAbbreviationsByIds(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if (!$ids) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT `id`, `abbreviation` FROM `group_list` WHERE `id` IN ({$placeholders})";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($ids);
+
+        $map = [];
+        foreach ($stmt->fetchAll() ?: [] as $row) {
+            $map[(int) $row['id']] = (string) $row['abbreviation'];
+        }
+
+        return $map;
+    }
+
     public function searchEmployees(string $query, int $limit = 25): array
     {
         $query = trim($query);
@@ -31,12 +62,17 @@ class EmployeeRepository
 
         if ($query !== '') {
             if (ctype_digit($query)) {
-                $sql .= " AND (el.`id` = :id OR el.`surname` LIKE :q OR el.`firstname` LIKE :q)";
+                $sql .= " AND (el.`id` = :id OR el.`surname` LIKE :q1 OR el.`firstname` LIKE :q2)";
                 $params[':id'] = (int) $query;
-                $params[':q'] = '%' . $query . '%';
+                $like = '%' . $query . '%';
+                $params[':q1'] = $like;
+                $params[':q2'] = $like;
             } else {
-                $sql .= " AND (el.`surname` LIKE :q OR el.`firstname` LIKE :q OR el.`username` LIKE :q)";
-                $params[':q'] = '%' . $query . '%';
+                $sql .= " AND (el.`surname` LIKE :q1 OR el.`firstname` LIKE :q2 OR el.`username` LIKE :q3)";
+                $like = '%' . $query . '%';
+                $params[':q1'] = $like;
+                $params[':q2'] = $like;
+                $params[':q3'] = $like;
             }
         }
 

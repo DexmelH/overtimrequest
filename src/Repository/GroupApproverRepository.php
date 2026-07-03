@@ -99,4 +99,27 @@ class GroupApproverRepository
             ]);
         }
     }
+
+    public function saveLevel(int $groupId, int $level, int $approverId, int $updatedBy): void
+    {
+        $stmt = $this->pdo->prepare(
+            "INSERT INTO `overtime_group_approvers` (`group_id`, `approval_level`, `approver_id`, `updated_by`)
+             VALUES (:groupId, :level, :approverId, :updatedBy)
+             ON DUPLICATE KEY UPDATE `approver_id` = VALUES(`approver_id`), `updated_by` = VALUES(`updated_by`)"
+        );
+        $stmt->execute([
+            ':groupId' => $groupId,
+            ':level' => $level,
+            ':approverId' => $approverId,
+            ':updatedBy' => $updatedBy,
+        ]);
+    }
+
+    public function deleteLevel(int $groupId, int $level): void
+    {
+        $stmt = $this->pdo->prepare(
+            "DELETE FROM `overtime_group_approvers` WHERE `group_id` = :groupId AND `approval_level` = :level"
+        );
+        $stmt->execute([':groupId' => $groupId, ':level' => $level]);
+    }
 }

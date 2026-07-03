@@ -461,6 +461,7 @@ body[data-page="admin"] .ot-main {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  overflow: visible;
 }
 
 .approver-level-row {
@@ -498,14 +499,18 @@ body[data-page="admin"] .ot-main {
   left: 0;
   right: 0;
   top: 100%;
-  z-index: 20;
+  z-index: 1050;
   background: var(--ot-surface);
   border: 1px solid var(--ot-border);
   border-radius: var(--ot-radius-sm);
   box-shadow: var(--ot-shadow-lg);
-  max-height: 200px;
+  max-height: 220px;
   overflow-y: auto;
   margin-top: 4px;
+}
+
+.approver-level-row .position-relative {
+  overflow: visible;
 }
 
 .suggestion-item {
@@ -534,6 +539,55 @@ body[data-page="admin"] .ot-main {
   padding: 0.7rem 0.85rem;
   font-size: 0.85rem;
   color: var(--ot-muted);
+}
+
+.approver-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.approver-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--ot-border);
+  border-radius: var(--ot-radius-sm);
+  background: var(--ot-surface-muted);
+}
+
+.approver-preview-item.official {
+  background: rgba(5, 150, 105, 0.06);
+  border-color: rgba(5, 150, 105, 0.18);
+}
+
+.level-badge-sm {
+  width: 34px;
+  height: 34px;
+  font-size: 0.72rem;
+  border-radius: 8px;
+}
+
+.approver-preview-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.official-approvers-card .ot-card-header {
+  background: linear-gradient(180deg, rgba(5, 150, 105, 0.06) 0%, transparent 100%);
+}
+
+.approver-level-row .input-group .add-approver-btn {
+  white-space: nowrap;
+  border-radius: 0 var(--ot-radius-sm) var(--ot-radius-sm) 0 !important;
+}
+
+.approver-level-row .input-group .approver-search {
+  border-radius: var(--ot-radius-sm) 0 0 var(--ot-radius-sm) !important;
 }
 
 #accessDenied .ot-empty i {

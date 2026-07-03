@@ -45,6 +45,8 @@ $dispatcher = simpleDispatcher(function(RouteCollector $r) {
     $r->addRoute('GET', '/api/admin/employees', ['App\Controller\AdminController', 'searchEmployees']);
     $r->addRoute('GET', '/api/admin/approvers', ['App\Controller\AdminController', 'getGroupApprovers']);
     $r->addRoute('POST', '/api/admin/approvers', ['App\Controller\AdminController', 'saveGroupApprovers']);
+    $r->addRoute('POST', '/api/admin/approver-level', ['App\Controller\AdminController', 'saveGroupApproverLevel']);
+    $r->addRoute('POST', '/api/admin/approver-logs', ['App\Controller\AdminController', 'logApproverAction']);
 });
 
 $httpMethod = $_SERVER['REQUEST_METHOD'];

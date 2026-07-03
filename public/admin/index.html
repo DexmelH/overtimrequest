@@ -72,31 +72,56 @@
         <div class="tab-content">
           <!-- Group approvers -->
           <div class="tab-pane fade show active" id="panel-approvers" role="tabpanel">
-            <div class="ot-card">
-              <div class="ot-card-header flex-wrap">
-                <div>
-                  <h2>Group Approvers</h2>
-                  <p class="ot-muted mb-0">Assign L1–L4 approvers for each group. Used when employees submit overtime.</p>
+            <div class="row g-4">
+              <div class="col-lg-7">
+                <div class="ot-card h-100">
+                  <div class="ot-card-header flex-wrap">
+                    <div>
+                      <h2>Group Approvers</h2>
+                      <p class="ot-muted mb-0">Search and add L1–L4 approvers. Saved approvers are used for overtime request routing.</p>
+                    </div>
+                  </div>
+                  <div class="ot-card-body">
+                    <div class="row g-4">
+                      <div class="col-md-5">
+                        <label class="form-label" for="approverGroupSelect">Group</label>
+                        <select class="form-select" id="approverGroupSelect">
+                          <option value="">Select a group</option>
+                        </select>
+                        <p class="ot-muted small mt-2 mb-0">
+                          Pick a group, search employees, then click <strong>Add</strong> for each level.
+                        </p>
+                      </div>
+                      <div class="col-md-7">
+                        <label class="form-label">Approval levels</label>
+                        <div id="approverLevels" class="approver-levels"></div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <button type="button" class="ot-btn ot-btn-primary" id="saveApproversBtn">
-                  <i class="bi bi-check-lg"></i> Save Approvers
-                </button>
               </div>
-              <div class="ot-card-body">
-                <div class="row g-4">
-                  <div class="col-md-4">
-                    <label class="form-label" for="approverGroupSelect">Group</label>
-                    <select class="form-select" id="approverGroupSelect">
-                      <option value="">Select a group</option>
-                    </select>
-                    <p class="ot-muted small mt-2 mb-0">
-                      L1 is the first level, L4 the final level. Leave a level empty if not required.
-                    </p>
+
+              <div class="col-lg-5">
+                <div class="ot-card mb-4">
+                  <div class="ot-card-header py-2">
+                    <div>
+                      <h3 class="h6 mb-0">Saved approvers</h3>
+                      <p class="ot-muted small mb-0">Stored in overtime_group_approvers</p>
+                    </div>
+                    <span class="status-badge status-approved">Saved</span>
                   </div>
-                  <div class="col-md-8">
-                    <label class="form-label">Approval levels</label>
-                    <div id="approverLevels" class="approver-levels"></div>
+                  <div class="ot-card-body pt-2" id="draftApproversPreview"></div>
+                </div>
+
+                <div class="ot-card official-approvers-card">
+                  <div class="ot-card-header py-2">
+                    <div>
+                      <h3 class="h6 mb-0">Official approvers</h3>
+                      <p class="ot-muted small mb-0">From Forms PIC — fallback when no saved approvers</p>
+                    </div>
+                    <span class="status-badge status-approved">Active</span>
                   </div>
+                  <div class="ot-card-body pt-2" id="officialApproversList"></div>
                 </div>
               </div>
             </div>

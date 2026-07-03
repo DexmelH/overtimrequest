@@ -649,23 +649,32 @@ body {
 }
 
 /* Modals */
+.modal-backdrop {
+  --bs-backdrop-bg: #0f172a;
+  --bs-backdrop-opacity: 0.45;
+}
+
 .ot-modal .modal-content {
   border: none;
   border-radius: var(--ot-radius);
   box-shadow: var(--ot-shadow-lg);
   overflow: hidden;
+  background-color: var(--ot-surface);
+  color: var(--ot-text);
 }
 
 .ot-modal .modal-header {
   border: none;
+  border-bottom: 1px solid var(--ot-border);
   padding: 1.35rem 1.5rem 0.75rem;
-  background: var(--ot-card-header-bg);
+  background-color: var(--ot-surface);
 }
 
 .ot-modal .modal-header.ot-modal-header-accent {
   background: linear-gradient(135deg, var(--ot-accent) 0%, #6366f1 100%);
   color: #fff;
   padding: 1.25rem 1.5rem;
+  border-bottom: none;
 }
 
 .ot-modal .modal-header.ot-modal-header-accent .modal-title {
@@ -675,12 +684,14 @@ body {
 
 .ot-modal .modal-body {
   padding: 1rem 1.5rem 1.25rem;
+  background-color: var(--ot-surface);
 }
 
 .ot-modal .modal-footer {
   border: none;
+  border-top: 1px solid var(--ot-border);
   padding: 0.75rem 1.5rem 1.35rem;
-  background: var(--ot-surface-muted);
+  background-color: var(--ot-surface-muted);
 }
 
 /* Confirmation dialog */
@@ -1071,8 +1082,22 @@ body.ot-ready .ot-main {
 }
 
 [data-theme="dark"] .ot-modal .modal-content {
-  background: var(--ot-surface);
+  background-color: var(--ot-surface);
   color: var(--ot-text);
+}
+
+[data-theme="dark"] .ot-modal .modal-header:not(.ot-modal-header-accent) {
+  background-color: var(--ot-surface);
+  border-bottom-color: var(--ot-border);
+}
+
+[data-theme="dark"] .ot-modal .modal-body {
+  background-color: var(--ot-surface);
+}
+
+[data-theme="dark"] .ot-modal .modal-footer {
+  background-color: var(--ot-surface-muted);
+  border-top-color: var(--ot-border);
 }
 
 [data-theme="dark"] .ot-modal .modal-header.ot-modal-header-accent {

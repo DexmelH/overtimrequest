@@ -13,7 +13,9 @@ const ACTION_META = {
   "request.cancel": { label: "Cancelled request", icon: "bi-x-circle", tone: "muted" },
   "request.approve": { label: "Approved request", icon: "bi-check-circle", tone: "success" },
   "request.reject": { label: "Rejected request", icon: "bi-slash-circle", tone: "danger" },
-  "admin.approvers.save": { label: "Updated approvers", icon: "bi-people", tone: "admin" },
+  "admin.approvers.save": { label: "Saved group approvers", icon: "bi-people", tone: "admin" },
+  "admin.approvers.preview.add": { label: "Added preview approver", icon: "bi-person-plus", tone: "admin" },
+  "admin.approvers.preview.clear": { label: "Cleared preview approver", icon: "bi-person-dash", tone: "muted" },
 };
 
 const ENTITY_META = {
@@ -29,6 +31,10 @@ const DETAIL_LABELS = {
   remarks: "Remarks",
   finalized: "Outcome",
   levels: "Approver levels",
+  level: "Level",
+  approver_id: "Approver",
+  approver_name: "Approver",
+  group_abbr: "Group",
 };
 
 function escapeHtml(value) {
@@ -87,7 +93,7 @@ function formatRelativeTime(iso) {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function formatEntityHtml(entityType, entityId) {
+function formatEntityHtml(entityType, entityId, details, entityLabel) {
   if (!entityType) {
     return '<span class="ot-muted">—</span>';
   }
@@ -96,15 +102,36 @@ function formatEntityHtml(entityType, entityId) {
     label: humanizeKey(entityType),
     icon: "bi-tag",
   };
-  const idPart = entityId ? `<span class="log-entity-id">#${escapeHtml(entityId)}</span>` : "";
+
+  let idPart = "";
+  if (entityType === "group") {
+    const abbr =
+      entityLabel ||
+      (details && typeof details === "object" ? details.group_abbr : null);
+    if (abbr) {
+      idPart = `<span class="log-entity-id">${escapeHtml(abbr)}</span>`;
+    } else if (entityId) {
+      idPart = `<span class="log-entity-id">#${escapeHtml(entityId)}</span>`;
+    }
+  } else if (entityId) {
+    idPart = `<span class="log-entity-id">#${escapeHtml(entityId)}</span>`;
+  }
 
   return `<span class="log-entity"><i class="bi ${meta.icon}"></i><span>${escapeHtml(meta.label)}</span>${idPart}</span>`;
+}
+
+function formatGroupLabel(details) {
+  if (!details || typeof details !== "object") return "—";
+  if (details.group_abbr) return String(details.group_abbr);
+  if (details.group) return String(details.group);
+  if (details.group_id != null) return `#${details.group_id}`;
+  return "—";
 }
 
 function formatDetailValue(key, value) {
   if (key === "hours") return `${value} hr${Number(value) === 1 ? "" : "s"}`;
   if (key === "request_date") return formatDetailDate(value);
-  if (key === "group_id") return `Group #${value}`;
+  if (key === "group_id") return `#${value}`;
   if (key === "finalized") return value ? "Final decision recorded" : "Partial approval step";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (value === null || value === undefined || value === "") return "—";
@@ -120,7 +147,9 @@ function formatDetailsHtml(action, details) {
 
   switch (action) {
     case "request.submit":
-      if (details.group_id != null) items.push({ label: "Group", value: formatDetailValue("group_id", details.group_id) });
+      if (details.group_id != null || details.group_abbr || details.group) {
+        items.push({ label: "Group", value: formatGroupLabel(details) });
+      }
       if (details.hours != null) items.push({ label: "Duration", value: formatDetailValue("hours", details.hours) });
       if (details.request_date) items.push({ label: "Date", value: formatDetailValue("request_date", details.request_date) });
       break;
@@ -138,6 +167,16 @@ function formatDetailsHtml(action, details) {
       break;
 
     case "admin.approvers.save":
+      if (details.group_abbr) items.push({ label: "Group", value: details.group_abbr });
+      if (details.level) {
+        const label = details.cleared ? "Cleared level" : "Level";
+        items.push({ label, value: details.level });
+      }
+      if (details.approver_name) {
+        items.push({ label: "Approver", value: details.approver_name });
+      } else if (details.approver_id) {
+        items.push({ label: "Approver", value: `Employee #${details.approver_id}` });
+      }
       if (details.levels && typeof details.levels === "object") {
         Object.entries(details.levels)
           .sort(([a], [b]) => Number(a) - Number(b))
@@ -147,9 +186,22 @@ function formatDetailsHtml(action, details) {
       }
       break;
 
+    case "admin.approvers.preview.add":
+    case "admin.approvers.preview.clear":
+      if (details.group_abbr) items.push({ label: "Group", value: details.group_abbr });
+      if (details.level) items.push({ label: "Level", value: details.level });
+      if (details.approver_name) {
+        items.push({ label: "Approver", value: details.approver_name });
+      } else if (details.approver_id) {
+        items.push({ label: "Approver", value: `Employee #${details.approver_id}` });
+      }
+      break;
+
     default:
       if (typeof details === "object") {
         Object.entries(details).forEach(([key, value]) => {
+          if (key === "group_id" && (details.group_abbr || details.group)) return;
+          if (key === "group_abbr" && details.group) return;
           if (typeof value === "object" && value !== null) {
             items.push({ label: humanizeKey(key), value: JSON.stringify(value), full: true });
           } else {
@@ -245,7 +297,7 @@ function renderLogs(rows) {
             <i class="bi ${meta.icon}"></i><span class="log-action-text">${escapeHtml(meta.label)}</span>
           </span>
         </td>
-        <td class="log-col-entity">${formatEntityHtml(row.entity_type, row.entity_id)}</td>
+        <td class="log-col-entity">${formatEntityHtml(row.entity_type, row.entity_id, row.details, row.entity_label)}</td>
         <td class="log-col-details">${formatDetailsHtml(row.action, row.details)}</td>
         <td class="log-col-ip d-none d-xl-table-cell">${row.ip_address ? escapeHtml(row.ip_address) : '<span class="ot-muted">—</span>'}</td>
       </tr>

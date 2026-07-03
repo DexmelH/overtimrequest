@@ -61,7 +61,7 @@ class OvertimeController
             $pdo->beginTransaction();
 
             $id = $this->overtimeRepo->addOvertime($payload);
-            $approver = $this->resolveApprovers((int) $groupID, $user["abbreviation"] ?? '', (int) $userID);
+            $approver = $this->resolveApprovers((int) $user["group_id"], $user["abbreviation"] ?? '', (int) $userID);
             foreach ($approver as $app) {
                 $emailPayload = [
                     'email_to' => $app['email'],
@@ -245,10 +245,6 @@ class OvertimeController
         }
 
         if ($groupAbbrev !== '') {
-            $configured = $this->groupApproverRepo->findApproversByGroupAbbreviation($groupAbbrev, $userId);
-            if (!empty($configured)) {
-                return $configured;
-            }
             return $this->userRepo->findApprover($groupAbbrev, (string) $userId);
         }
 
