@@ -134,7 +134,8 @@ body[data-page="admin"] .ot-main {
 }
 
 .log-col-when {
-  width: 8%;
+  width: 11%;
+  min-width: 9.5rem;
   white-space: nowrap;
 }
 
@@ -174,14 +175,11 @@ body[data-page="admin"] .ot-main {
   font-size: 0.65rem;
 }
 
-.log-time-relative {
-  font-weight: 700;
+.log-time-full {
+  font-weight: 600;
   font-size: 0.74rem;
   color: var(--ot-text);
-}
-
-.log-time-full {
-  display: none;
+  line-height: 1.35;
 }
 
 .log-action-badge {

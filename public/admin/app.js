@@ -82,17 +82,6 @@ function formatDate(iso) {
   });
 }
 
-function formatRelativeTime(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  const diffSec = (Date.now() - d.getTime()) / 1000;
-  if (diffSec < 45) return "Just now";
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
-  if (diffSec < 604800) return `${Math.floor(diffSec / 86400)}d ago`;
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
 function formatEntityHtml(entityType, entityId, details, entityLabel) {
   if (!entityType) {
     return '<span class="ot-muted">—</span>';
@@ -286,7 +275,7 @@ function renderLogs(rows) {
     $tbody.append(`
       <tr>
         <td class="log-col-when">
-          <span class="log-time-relative" title="${escapeHtml(formatDate(row.created_at))}">${formatRelativeTime(row.created_at)}</span>
+          <span class="log-time-full">${escapeHtml(formatDate(row.created_at))}</span>
         </td>
         <td class="log-col-user">
           <div class="log-user-name" title="${escapeHtml(row.user_name || "Unknown user")}">${escapeHtml(row.user_name || "Unknown user")}</div>
