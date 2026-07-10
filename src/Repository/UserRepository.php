@@ -14,7 +14,7 @@ class UserRepository
 
     public function findIdByHash(string $userHash): array
     {
-        $sql = "SELECT el.`id`, el.`surname`, gl.`id` AS `group_id`, gl.`abbreviation` 
+        $sql = "SELECT el.`id`, el.`surname`, el.`firstname`, gl.`id` AS `group_id`, gl.`abbreviation` 
                 FROM `kdtlogin` kl 
                 LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = kl.`fldEmployeeNum` 
                 LEFT JOIN kdtphdb_new.`group_list` gl ON gl.`id` = el.`group_id` 

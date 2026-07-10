@@ -1,3 +1,5 @@
+import { apiUrl } from "../shared/js/api.js";
+import { apiGet } from "../shared/js/http.js";
 import { fetchRequest } from "./api/fetchRequest.js";
 import { approveOvertimeRequest } from "./api/approveRequest.js";
 import { renderTable } from "./ui/renderOvertime.js";
@@ -63,6 +65,21 @@ $(".ot-filter-btn").on("click", function () {
   renderTable();
 });
 
-initShell();
-initOnBehalf();
-fetchRequest().catch(() => {});
+async function bootstrapApprovePage() {
+  try {
+    const json = await apiGet(apiUrl("/session"));
+    if (!json?.is_approver) {
+      window.location.replace("../request/");
+      return;
+    }
+  } catch {
+    window.location.replace("../request/");
+    return;
+  }
+
+  initShell();
+  initOnBehalf();
+  fetchRequest().catch(() => {});
+}
+
+bootstrapApprovePage();

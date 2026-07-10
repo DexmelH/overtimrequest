@@ -9,14 +9,46 @@ let totalPages = 1;
 const filters = { search: "", action: "", user_id: "", from: "", to: "" };
 
 const ACTION_META = {
-  "request.submit": { label: "Submitted request", icon: "bi-send", tone: "primary" },
-  "request.submit.on_behalf": { label: "Submitted delegated request", icon: "bi-person-check", tone: "primary" },
-  "request.cancel": { label: "Cancelled request", icon: "bi-x-circle", tone: "muted" },
-  "request.approve": { label: "Approved request", icon: "bi-check-circle", tone: "success" },
-  "request.reject": { label: "Rejected request", icon: "bi-slash-circle", tone: "danger" },
-  "admin.approvers.save": { label: "Saved group approvers", icon: "bi-people", tone: "admin" },
-  "admin.approvers.preview.add": { label: "Added preview approver", icon: "bi-person-plus", tone: "admin" },
-  "admin.approvers.preview.clear": { label: "Cleared preview approver", icon: "bi-person-dash", tone: "muted" },
+  "request.submit": {
+    label: "Submitted request",
+    icon: "bi-send",
+    tone: "primary",
+  },
+  "request.submit.on_behalf": {
+    label: "Submitted member request",
+    icon: "bi-person-check",
+    tone: "primary",
+  },
+  "request.cancel": {
+    label: "Cancelled request",
+    icon: "bi-x-circle",
+    tone: "muted",
+  },
+  "request.approve": {
+    label: "Approved request",
+    icon: "bi-check-circle",
+    tone: "success",
+  },
+  "request.reject": {
+    label: "Rejected request",
+    icon: "bi-slash-circle",
+    tone: "danger",
+  },
+  "admin.approvers.save": {
+    label: "Saved group approvers",
+    icon: "bi-people",
+    tone: "admin",
+  },
+  "admin.approvers.preview.add": {
+    label: "Added preview approver",
+    icon: "bi-person-plus",
+    tone: "admin",
+  },
+  "admin.approvers.preview.clear": {
+    label: "Cleared preview approver",
+    icon: "bi-person-dash",
+    tone: "muted",
+  },
 };
 
 const ENTITY_META = {
@@ -64,14 +96,23 @@ function formatAction(action) {
 }
 
 function humanizeKey(key) {
-  return DETAIL_LABELS[key] || String(key).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return (
+    DETAIL_LABELS[key] ||
+    String(key)
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+  );
 }
 
 function formatDetailDate(value) {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return String(value);
-  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function formatDate(iso) {
@@ -125,14 +166,18 @@ function formatDetailValue(key, value) {
   if (key === "hours") return `${value} hr${Number(value) === 1 ? "" : "s"}`;
   if (key === "request_date") return formatDetailDate(value);
   if (key === "group_id") return `#${value}`;
-  if (key === "finalized") return value ? "Final decision recorded" : "Partial approval step";
+  if (key === "finalized")
+    return value ? "Final decision recorded" : "Partial approval step";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (value === null || value === undefined || value === "") return "—";
   return String(value);
 }
 
 function formatDetailsHtml(action, details) {
-  if (!details || (typeof details === "object" && !Object.keys(details).length)) {
+  if (
+    !details ||
+    (typeof details === "object" && !Object.keys(details).length)
+  ) {
     return '<span class="log-detail-empty">No additional details</span>';
   }
 
@@ -149,10 +194,21 @@ function formatDetailsHtml(action, details) {
       if (details.group_id != null || details.group_abbr || details.group) {
         items.push({ label: "Group", value: formatGroupLabel(details) });
       }
-      if (details.hours != null) items.push({ label: "Duration", value: formatDetailValue("hours", details.hours) });
-      if (details.request_date) items.push({ label: "Date", value: formatDetailValue("request_date", details.request_date) });
+      if (details.hours != null)
+        items.push({
+          label: "Duration",
+          value: formatDetailValue("hours", details.hours),
+        });
+      if (details.request_date)
+        items.push({
+          label: "Date",
+          value: formatDetailValue("request_date", details.request_date),
+        });
       if (details.auto_approved) {
-        items.push({ badge: "final", value: "Approved automatically upon submission" });
+        items.push({
+          badge: "final",
+          value: "Approved automatically upon submission",
+        });
       }
       break;
 
@@ -162,14 +218,16 @@ function formatDetailsHtml(action, details) {
 
     case "request.approve":
     case "request.reject":
-      if (details.remarks) items.push({ label: "Remarks", value: details.remarks, full: true });
+      if (details.remarks)
+        items.push({ label: "Remarks", value: details.remarks, full: true });
       if (details.finalized) {
         items.push({ badge: "final", value: "This was the final decision" });
       }
       break;
 
     case "admin.approvers.save":
-      if (details.group_abbr) items.push({ label: "Group", value: details.group_abbr });
+      if (details.group_abbr)
+        items.push({ label: "Group", value: details.group_abbr });
       if (details.level) {
         const label = details.cleared ? "Cleared level" : "Level";
         items.push({ label, value: details.level });
@@ -177,37 +235,55 @@ function formatDetailsHtml(action, details) {
       if (details.approver_name) {
         items.push({ label: "Approver", value: details.approver_name });
       } else if (details.approver_id) {
-        items.push({ label: "Approver", value: `Employee #${details.approver_id}` });
+        items.push({
+          label: "Approver",
+          value: `Employee #${details.approver_id}`,
+        });
       }
       if (details.levels && typeof details.levels === "object") {
         Object.entries(details.levels)
           .sort(([a], [b]) => Number(a) - Number(b))
           .forEach(([level, employeeId]) => {
-            items.push({ label: `Level ${level}`, value: `Employee #${employeeId}` });
+            items.push({
+              label: `Level ${level}`,
+              value: `Employee #${employeeId}`,
+            });
           });
       }
       break;
 
     case "admin.approvers.preview.add":
     case "admin.approvers.preview.clear":
-      if (details.group_abbr) items.push({ label: "Group", value: details.group_abbr });
+      if (details.group_abbr)
+        items.push({ label: "Group", value: details.group_abbr });
       if (details.level) items.push({ label: "Level", value: details.level });
       if (details.approver_name) {
         items.push({ label: "Approver", value: details.approver_name });
       } else if (details.approver_id) {
-        items.push({ label: "Approver", value: `Employee #${details.approver_id}` });
+        items.push({
+          label: "Approver",
+          value: `Employee #${details.approver_id}`,
+        });
       }
       break;
 
     default:
       if (typeof details === "object") {
         Object.entries(details).forEach(([key, value]) => {
-          if (key === "group_id" && (details.group_abbr || details.group)) return;
+          if (key === "group_id" && (details.group_abbr || details.group))
+            return;
           if (key === "group_abbr" && details.group) return;
           if (typeof value === "object" && value !== null) {
-            items.push({ label: humanizeKey(key), value: JSON.stringify(value), full: true });
+            items.push({
+              label: humanizeKey(key),
+              value: JSON.stringify(value),
+              full: true,
+            });
           } else {
-            items.push({ label: humanizeKey(key), value: formatDetailValue(key, value) });
+            items.push({
+              label: humanizeKey(key),
+              value: formatDetailValue(key, value),
+            });
           }
         });
       } else {
@@ -269,7 +345,9 @@ function populateActionFilter(summary) {
   const current = $sel.val();
   $sel.find("option:not(:first)").remove();
   (summary || []).forEach((item) => {
-    $sel.append(`<option value="${item.action}">${formatAction(item.action)} (${item.total})</option>`);
+    $sel.append(
+      `<option value="${item.action}">${formatAction(item.action)} (${item.total})</option>`,
+    );
   });
   if (current) $sel.val(current);
 }
@@ -333,7 +411,9 @@ async function loadLogs(page = 1) {
     renderLogs(json.data);
     const p = json.pagination || {};
     totalPages = p.pages || 1;
-    $("#paginationInfo").text(`Page ${p.page || 1} of ${totalPages} · ${p.total || 0} entries`);
+    $("#paginationInfo").text(
+      `Page ${p.page || 1} of ${totalPages} · ${p.total || 0} entries`,
+    );
     $("#prevPage").prop("disabled", (p.page || 1) <= 1);
     $("#nextPage").prop("disabled", (p.page || 1) >= totalPages);
   } catch (e) {

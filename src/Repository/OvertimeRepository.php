@@ -133,15 +133,6 @@ class OvertimeRepository
         ]);
     }
 
-    public function hasApproverAssignments(int $approverId): bool
-    {
-        $sql = "SELECT COUNT(*) FROM `overtime_accept` WHERE `approver_id` = :approverId";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':approverId' => $approverId]);
-
-        return (int) $stmt->fetchColumn() > 0;
-    }
-
     /** @return int[] */
     public function findAssignedGroupIds(int $approverId): array
     {

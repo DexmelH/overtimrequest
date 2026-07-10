@@ -41,7 +41,9 @@ class AdminController
             'is_admin' => $this->isAdmin((int) $user['id']),
             'user' => [
                 'id' => $user['id'],
-                'name' => $user['surname'] ?? '',
+                'name' => trim(
+                    trim((string) ($user['firstname'] ?? '')) . ' ' . trim((string) ($user['surname'] ?? ''))
+                ) ?: ($user['surname'] ?? ''),
             ],
         ];
     }

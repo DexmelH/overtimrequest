@@ -134,7 +134,7 @@ class OvertimeController
         $requestDate = trim((string) ($_POST['date'] ?? date('Y-m-d')));
 
         if (!$this->isApprover($approverId)) {
-            return ['success' => false, 'message' => 'You are not authorized to submit delegated overtime requests.'];
+            return ['success' => false, 'message' => 'You are not authorized to submit member overtime requests.'];
         }
 
         if ($employeeId <= 0) {
@@ -512,8 +512,7 @@ class OvertimeController
         }
 
         return $this->groupApproverRepo->isAssignedApprover($approverId)
-            || $this->userRepo->isFormPicApprover($approverId)
-            || $this->overtimeRepo->hasApproverAssignments($approverId);
+            || $this->userRepo->isFormPicApprover($approverId);
     }
 
     /** @deprecated Use getApproverGroupIds() */

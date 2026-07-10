@@ -5,7 +5,7 @@ const THEME_KEY = "ot-theme";
 
 const NAV_PAGES = [
   { id: "request", label: "Request", icon: "bi-clock-history", href: "../request/" },
-  { id: "approve", label: "Approve", icon: "bi-check2-square", href: "../approve/" },
+  { id: "approve", label: "Approve", icon: "bi-check2-square", href: "../approve/", approverOnly: true },
   { id: "admin", label: "Admin", icon: "bi-shield-lock", href: "../admin/", adminOnly: true },
 ];
 
@@ -56,8 +56,11 @@ function renderNav(currentPage) {
 
   nav.innerHTML = NAV_PAGES.map((page) => {
     const active = page.id === currentPage ? " active" : "";
-    const adminClass = page.adminOnly ? ' data-admin-only="true"' : "";
-    return `<a class="ot-nav-link${active}" href="${page.href}"${adminClass}>
+    const attrs = [];
+    if (page.adminOnly) attrs.push('data-admin-only="true"');
+    if (page.approverOnly) attrs.push('data-approver-only="true"');
+    const attrStr = attrs.length ? ` ${attrs.join(" ")}` : "";
+    return `<a class="ot-nav-link${active}" href="${page.href}"${attrStr}>
       <i class="bi ${page.icon}" aria-hidden="true"></i>
       <span>${page.label}</span>
     </a>`;
@@ -65,6 +68,12 @@ function renderNav(currentPage) {
 
   if (currentPage === "admin") {
     nav.querySelectorAll('[data-admin-only="true"]').forEach((el) => {
+      el.classList.add("is-visible");
+    });
+  }
+
+  if (currentPage === "approve") {
+    nav.querySelectorAll('[data-approver-only="true"]').forEach((el) => {
       el.classList.add("is-visible");
     });
   }
@@ -84,17 +93,45 @@ function renderThemeToggle() {
   syncThemeToggle();
 }
 
-async function revealAdminNav() {
+function ensureUserGreeting() {
+  if (document.getElementById("otUserGreeting")) return;
+
+  const greeting = document.createElement("p");
+  greeting.id = "otUserGreeting";
+  greeting.className = "ot-user-greeting d-none";
+  greeting.setAttribute("aria-live", "polite");
+  document.body.appendChild(greeting);
+}
+
+async function loadSession() {
   try {
-    const json = await apiGet(apiUrl("/admin/session"));
+    const json = await apiGet(apiUrl("/session"));
+    const name = String(json?.user?.name || "").trim();
+    const greeting = document.getElementById("otUserGreeting");
+
+    if (name && greeting) {
+      greeting.textContent = `Hello, ${name}`;
+      greeting.classList.remove("d-none");
+    }
+
+    if (json?.is_approver) {
+      document.querySelectorAll('[data-approver-only="true"]').forEach((el) => {
+        el.classList.add("is-visible");
+      });
+    }
+
     if (json?.is_admin) {
       document.querySelectorAll('[data-admin-only="true"]').forEach((el) => {
         el.classList.add("is-visible");
       });
     }
-  } catch (e) {
-    /* not admin or unreachable */
+  } catch {
+    /* session unavailable */
   }
+}
+
+async function revealAdminNav() {
+  await loadSession();
 }
 
 function staggerCards() {
@@ -110,6 +147,7 @@ export function initShell() {
   updateThemeMeta(getTheme() === "dark");
   renderNav(currentPage);
   renderThemeToggle();
+  ensureUserGreeting();
   revealAdminNav();
   staggerCards();
 

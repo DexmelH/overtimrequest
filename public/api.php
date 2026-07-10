@@ -28,6 +28,7 @@ if ($uri[0] !== '/') {
 
 // --- build dispatcher ---
 $dispatcher = simpleDispatcher(function(RouteCollector $r) {
+    $r->addRoute('GET', '/api/session', ['App\Controller\UserController', 'getSession']);
     $r->addRoute('GET', '/api/groups', ['App\Controller\GroupController', 'getGroupsByUserId']);
     $r->addRoute('GET', '/api/locations', ['App\Controller\LocationController', 'getLocations']);
     $r->addRoute('GET', '/api/projects', ['App\Controller\ProjectController', 'getProjects']);
@@ -93,6 +94,13 @@ switch ($routeInfo[0]) {
             );
 
             $controllerFactory = [
+                'App\Controller\UserController' => function() use ($kdtphPdo, $webjmrPdo, $config) {
+                    return new \App\Controller\UserController(
+                        new \App\Repository\UserRepository($kdtphPdo),
+                        new \App\Repository\GroupApproverRepository($webjmrPdo),
+                        $config['app']['admin_user_ids'] ?? []
+                    );
+                },
                 'App\Controller\GroupController' => function() use ($kdtphNewPdo, $kdtphPdo) {
                     return new \App\Controller\GroupController($kdtphNewPdo, $kdtphPdo);
                 },
