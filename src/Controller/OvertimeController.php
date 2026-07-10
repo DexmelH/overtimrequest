@@ -150,11 +150,6 @@ class OvertimeController
             return ['success' => false, 'message' => 'The selected group is not assigned to this employee.'];
         }
 
-        $dateError = $this->validateRequestDate($requestDate, $employeeId, true);
-        if ($dateError !== null) {
-            return ['success' => false, 'message' => $dateError];
-        }
-
         if (
             $locationID <= 0 || $projectID <= 0 || $itemOfWorkID <= 0
             || $jobDescriptionID <= 0 || $workID <= 0 || $duration <= 0

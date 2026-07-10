@@ -10,7 +10,10 @@ let leaveWeekRanges = [];
 let dateFieldId = "date";
 let relaxedMode = false;
 
-export function configureRequestDate({ dateFieldId: fieldId = "date", relaxed = false } = {}) {
+export function configureRequestDate({
+  dateFieldId: fieldId = "date",
+  relaxed = false,
+} = {}) {
   dateFieldId = fieldId;
   relaxedMode = relaxed;
 }
@@ -65,7 +68,9 @@ function workWeekBounds(isoDate) {
 
 function hasLeaveInWeek(isoDate) {
   const { start, end } = workWeekBounds(isoDate);
-  return leaveWeekRanges.some((range) => range.start === start && range.end === end);
+  return leaveWeekRanges.some(
+    (range) => range.start === start && range.end === end,
+  );
 }
 
 function isInCurrentWorkWeek(isoDate) {
@@ -103,7 +108,9 @@ export function applyDateConstraints() {
 
 export function setDefaultRequestDate() {
   applyDateConstraints();
-  $dateField().val(formatLocalDate(relaxedMode ? startOfToday() : nextAllowedDate()));
+  $dateField().val(
+    formatLocalDate(relaxedMode ? startOfToday() : nextAllowedDate()),
+  );
 }
 
 export function validateDateInput(showMessage = true) {
@@ -119,14 +126,22 @@ export function validateDateInput(showMessage = true) {
     const date = parseLocalDate(value);
     if (isBeforeToday(date)) {
       showToast("Past dates are not allowed.", { type: "warning" });
-    } else if (!relaxedMode && isRestrictedDay(value) && !isInCurrentWorkWeek(value)) {
+    } else if (
+      !relaxedMode &&
+      isRestrictedDay(value) &&
+      !isInCurrentWorkWeek(value)
+    ) {
       showToast(
         isHoliday(value)
           ? "Only holidays in the current week can be selected."
           : "Only weekends in the current week can be selected.",
         { type: "warning" },
       );
-    } else if (!relaxedMode && isRestrictedDay(value) && hasLeaveInWeek(value)) {
+    } else if (
+      !relaxedMode &&
+      isRestrictedDay(value) &&
+      hasLeaveInWeek(value)
+    ) {
       if (isHoliday(value)) {
         const name = getHolidayName(value);
         showToast(
