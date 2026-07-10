@@ -3,6 +3,7 @@ namespace App\Controller;
 
 use App\Repository\GroupApproverRepository;
 use App\Repository\HolidayRepository;
+use App\Repository\LeaveRepository;
 use App\Repository\OvertimeRepository;
 use App\Repository\UserRepository;
 use App\Service\ActivityLogger;
@@ -14,19 +15,22 @@ class OvertimeController
     private UserRepository $userRepo;
     private GroupApproverRepository $groupApproverRepo;
     private HolidayRepository $holidayRepo;
+    private LeaveRepository $leaveRepo;
     private ActivityLogger $logger;
 
-    public function __construct(PDO $overtimePDO, PDO $userPDO, ActivityLogger $logger)
+    public function __construct(PDO $overtimePDO, PDO $userPDO, PDO $formsPDO, ActivityLogger $logger)
     {
         $this->overtimeRepo = new OvertimeRepository($overtimePDO);
         $this->userRepo = new UserRepository($userPDO);
         $this->groupApproverRepo = new GroupApproverRepository($overtimePDO);
         $this->holidayRepo = new HolidayRepository($userPDO);
+        $this->leaveRepo = new LeaveRepository($formsPDO);
         $this->logger = $logger;
     }
 
     public function getHolidays(): array
     {
+        $user = $this->currentUser();
         $from = trim((string) ($_GET['from'] ?? date('Y-m-d')));
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $from)) {
             $from = date('Y-m-d');
@@ -35,6 +39,7 @@ class OvertimeController
         return [
             'success' => true,
             'data' => $this->holidayRepo->findFromDate($from),
+            'leave_weeks' => $this->leaveRepo->findAcceptedLeaveWeekRanges((int) $user['id'], $from),
         ];
     }
 
@@ -58,7 +63,7 @@ class OvertimeController
         $duration = isset($_POST['hours']) ? $_POST['hours'] : 0;
         $requestDate = isset($_POST['date']) ? $_POST['date'] : date('Y-m-d');
 
-        $dateError = $this->validateRequestDate($requestDate);
+        $dateError = $this->validateRequestDate($requestDate, (int) $userID);
         if ($dateError !== null) {
             return ['success' => false, 'message' => $dateError];
         }
@@ -278,7 +283,7 @@ class OvertimeController
         return $this->userRepo->findIdByHash($userHash);
     }
 
-    private function validateRequestDate(string $date): ?string
+    private function validateRequestDate(string $date, int $employeeId): ?string
     {
         if ($date === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
             return 'Invalid request date.';
@@ -295,15 +300,31 @@ class OvertimeController
         }
 
         $dayOfWeek = (int) $dt->format('N');
-        if ($dayOfWeek >= 6) {
-            return 'Saturday and Sunday are not allowed.';
-        }
+        $isWeekend = $dayOfWeek >= 6;
+        $isHoliday = $this->holidayRepo->isBlockedDate($date);
 
-        if ($this->holidayRepo->isBlockedDate($date)) {
-            $name = $this->holidayRepo->findHolidayName($date);
-            return $name
-                ? "{$name} is a holiday and cannot be selected."
-                : 'This date is a holiday and cannot be selected.';
+        if ($isWeekend || $isHoliday) {
+            [$todayWeekStart] = LeaveRepository::workWeekBoundsForDate($today->format('Y-m-d'));
+            [$dateWeekStart, $weekEnd] = LeaveRepository::workWeekBoundsForDate($date);
+
+            if ($dateWeekStart !== $todayWeekStart) {
+                return $isHoliday
+                    ? 'Only holidays in the current week can be selected.'
+                    : 'Only weekends in the current week can be selected.';
+            }
+
+            if ($this->leaveRepo->hasAcceptedLeaveInWeek($employeeId, $dateWeekStart, $weekEnd)) {
+                if ($isHoliday) {
+                    $name = $this->holidayRepo->findHolidayName($date);
+                    return $name
+                        ? "You have approved leave this week, so {$name} cannot be selected."
+                        : 'You have approved leave this week, so this holiday cannot be selected.';
+                }
+
+                return 'You have approved leave this week, so weekend overtime cannot be requested.';
+            }
+
+            return null;
         }
 
         return null;

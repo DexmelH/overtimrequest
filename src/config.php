@@ -53,6 +53,7 @@ return [
         'webjmr' => $makeConnection(Env::get('DB_WEBJMR_NAME', 'webjmrdb')),
         'kdtph' => $makeConnection(Env::get('DB_KDTPH_NAME', 'kdtphdb')),
         'kdtphnew' => $makeConnection(Env::get('DB_KDTPHNEW_NAME', 'kdtphdb_new')),
+        'forms' => $makeConnection(Env::get('DB_FORMS_NAME', 'forms_db')),
     ],
     'mail' => [
         'host' => Env::get('MAIL_HOST', 'mail01.khi.co.jp'),

@@ -81,6 +81,7 @@ switch ($routeInfo[0]) {
             $webjmrPdo = $dbManager->getConnection('webjmr');
             $kdtphPdo = $dbManager->getConnection('kdtph');
             $kdtphNewPdo = $dbManager->getConnection('kdtphnew');
+            $formsPdo = $dbManager->getConnection('forms');
 
             $activityLogger = new \App\Service\ActivityLogger(
                 new \App\Repository\ActivityLogRepository($webjmrPdo)
@@ -90,8 +91,8 @@ switch ($routeInfo[0]) {
                 'App\Controller\GroupController' => function() use ($kdtphNewPdo, $kdtphPdo) {
                     return new \App\Controller\GroupController($kdtphNewPdo, $kdtphPdo);
                 },
-                'App\Controller\OvertimeController' => function() use ($webjmrPdo, $kdtphPdo, $activityLogger) {
-                    return new \App\Controller\OvertimeController($webjmrPdo, $kdtphPdo, $activityLogger);
+                'App\Controller\OvertimeController' => function() use ($webjmrPdo, $kdtphPdo, $formsPdo, $activityLogger) {
+                    return new \App\Controller\OvertimeController($webjmrPdo, $kdtphPdo, $formsPdo, $activityLogger);
                 },
                 'App\Controller\AdminController' => function() use ($webjmrPdo, $kdtphPdo, $kdtphNewPdo, $activityLogger, $config) {
                     return new \App\Controller\AdminController(
