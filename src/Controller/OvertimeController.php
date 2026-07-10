@@ -2,6 +2,7 @@
 namespace App\Controller;
 
 use App\Repository\GroupApproverRepository;
+use App\Repository\HolidayRepository;
 use App\Repository\OvertimeRepository;
 use App\Repository\UserRepository;
 use App\Service\ActivityLogger;
@@ -12,6 +13,7 @@ class OvertimeController
     private OvertimeRepository $overtimeRepo;
     private UserRepository $userRepo;
     private GroupApproverRepository $groupApproverRepo;
+    private HolidayRepository $holidayRepo;
     private ActivityLogger $logger;
 
     public function __construct(PDO $overtimePDO, PDO $userPDO, ActivityLogger $logger)
@@ -19,7 +21,21 @@ class OvertimeController
         $this->overtimeRepo = new OvertimeRepository($overtimePDO);
         $this->userRepo = new UserRepository($userPDO);
         $this->groupApproverRepo = new GroupApproverRepository($overtimePDO);
+        $this->holidayRepo = new HolidayRepository($userPDO);
         $this->logger = $logger;
+    }
+
+    public function getHolidays(): array
+    {
+        $from = trim((string) ($_GET['from'] ?? date('Y-m-d')));
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $from)) {
+            $from = date('Y-m-d');
+        }
+
+        return [
+            'success' => true,
+            'data' => $this->holidayRepo->findFromDate($from),
+        ];
     }
 
     public function getUserHistory(): array
@@ -41,6 +57,11 @@ class OvertimeController
         $remarks = isset($_POST['remarks']) ? $_POST['remarks'] : '';
         $duration = isset($_POST['hours']) ? $_POST['hours'] : 0;
         $requestDate = isset($_POST['date']) ? $_POST['date'] : date('Y-m-d');
+
+        $dateError = $this->validateRequestDate($requestDate);
+        if ($dateError !== null) {
+            return ['success' => false, 'message' => $dateError];
+        }
 
         $payload = [
             "user_id" => $userID,
@@ -255,5 +276,36 @@ class OvertimeController
     {
         $userHash = isset($_COOKIE['userID']) ? $_COOKIE['userID'] : '';
         return $this->userRepo->findIdByHash($userHash);
+    }
+
+    private function validateRequestDate(string $date): ?string
+    {
+        if ($date === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return 'Invalid request date.';
+        }
+
+        $dt = \DateTime::createFromFormat('Y-m-d', $date);
+        if (!$dt || $dt->format('Y-m-d') !== $date) {
+            return 'Invalid request date.';
+        }
+
+        $today = new \DateTime('today');
+        if ($dt < $today) {
+            return 'Past dates are not allowed.';
+        }
+
+        $dayOfWeek = (int) $dt->format('N');
+        if ($dayOfWeek >= 6) {
+            return 'Saturday and Sunday are not allowed.';
+        }
+
+        if ($this->holidayRepo->isBlockedDate($date)) {
+            $name = $this->holidayRepo->findHolidayName($date);
+            return $name
+                ? "{$name} is a holiday and cannot be selected."
+                : 'This date is a holiday and cannot be selected.';
+        }
+
+        return null;
     }
 }

@@ -14,10 +14,16 @@ import { cancelOvertimeRequest } from "./api/cancelOvertime.js";
 import { getCurrentRequestId } from "./components/modal.js";
 import { confirmAction } from "../shared/js/confirm.js";
 import { initShell } from "../shared/js/shell.js";
+import {
+  applyDateConstraints,
+  isAllowedRequestDate,
+  loadBlockedHolidays,
+  setDefaultRequestDate,
+  validateDateInput,
+} from "./ui/requestDate.js";
 
 function setDefaultDate() {
-  const today = new Date().toISOString().slice(0, 10);
-  $("#date").val(today);
+  setDefaultRequestDate();
 }
 
 function setSubmitLoading(loading) {
@@ -109,6 +115,7 @@ $("#overtimeForm").on("submit", async function (e) {
 
   if (
     !payload.date ||
+    !isAllowedRequestDate(payload.date) ||
     !payload.group ||
     !payload.location ||
     !payload.project ||
@@ -118,6 +125,10 @@ $("#overtimeForm").on("submit", async function (e) {
     !payload.hours ||
     payload.hours <= 0
   ) {
+    if (payload.date && !isAllowedRequestDate(payload.date)) {
+      validateDateInput(true);
+      return;
+    }
     showToast("Please fill all required fields with valid values.", {
       type: "warning",
     });
@@ -163,9 +174,15 @@ $("#resetBtn").on("click", function () {
   resetDependentFields("project");
 });
 
+$("#date").on("change input", function () {
+  validateDateInput(true);
+});
+
 // Init
 initShell();
+applyDateConstraints();
 setDefaultDate();
+loadBlockedHolidays().catch(() => {});
 fetchHistory().catch(() => {});
 fetchLocations().catch(() => {});
 fetchGroups().catch(() => {});
