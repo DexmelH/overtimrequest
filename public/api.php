@@ -35,6 +35,11 @@ $dispatcher = simpleDispatcher(function(RouteCollector $r) {
     $r->addRoute('GET', '/api/jobs', ['App\Controller\JobController', 'getJobs']);
     $r->addRoute('GET', '/api/works', ['App\Controller\WorkController', 'getWorks']);
     $r->addRoute('GET', '/api/holidays', ['App\Controller\OvertimeController', 'getHolidays']);
+    $r->addRoute('GET', '/api/approve/employee-groups', ['App\Controller\OvertimeController', 'getEmployeeGroups']);
+    $r->addRoute('GET', '/api/approve/approver-groups', ['App\Controller\OvertimeController', 'getApproverGroups']);
+    $r->addRoute('GET', '/api/approve/managed-groups', ['App\Controller\OvertimeController', 'getApproverGroups']);
+    $r->addRoute('GET', '/api/approve/employees', ['App\Controller\OvertimeController', 'searchApproverEmployees']);
+    $r->addRoute('POST', '/api/approve/addovertime', ['App\Controller\OvertimeController', 'addOvertimeOnBehalf']);
     $r->addRoute('GET', '/api/overtimehistory', ['App\Controller\OvertimeController', 'getUserHistory']);
     $r->addRoute('POST', '/api/addovertime', ['App\Controller\OvertimeController', 'addOvertime']);
     $r->addRoute('GET', '/api/overtimetoapprove', ['App\Controller\OvertimeController', 'getOvertimeToApprove']);
@@ -91,8 +96,8 @@ switch ($routeInfo[0]) {
                 'App\Controller\GroupController' => function() use ($kdtphNewPdo, $kdtphPdo) {
                     return new \App\Controller\GroupController($kdtphNewPdo, $kdtphPdo);
                 },
-                'App\Controller\OvertimeController' => function() use ($webjmrPdo, $kdtphPdo, $formsPdo, $activityLogger) {
-                    return new \App\Controller\OvertimeController($webjmrPdo, $kdtphPdo, $formsPdo, $activityLogger);
+                'App\Controller\OvertimeController' => function() use ($webjmrPdo, $kdtphPdo, $formsPdo, $kdtphNewPdo, $activityLogger) {
+                    return new \App\Controller\OvertimeController($webjmrPdo, $kdtphPdo, $formsPdo, $kdtphNewPdo, $activityLogger);
                 },
                 'App\Controller\AdminController' => function() use ($webjmrPdo, $kdtphPdo, $kdtphNewPdo, $activityLogger, $config) {
                     return new \App\Controller\AdminController(

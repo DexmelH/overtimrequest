@@ -5,6 +5,12 @@ const LABELS = {
   item: "Item",
   jobdesc: "Job Description",
   work: "Work Type",
+  obGroup: "Group",
+  obLocation: "Location",
+  obProject: "Project",
+  obItem: "Item",
+  obJobdesc: "Job Description",
+  obWork: "Work Type",
 };
 
 export function populateSelect(items, fieldId, { preserveValue = false } = {}) {

@@ -133,6 +133,47 @@ class OvertimeRepository
         ]);
     }
 
+    public function hasApproverAssignments(int $approverId): bool
+    {
+        $sql = "SELECT COUNT(*) FROM `overtime_accept` WHERE `approver_id` = :approverId";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':approverId' => $approverId]);
+
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    /** @return int[] */
+    public function findAssignedGroupIds(int $approverId): array
+    {
+        $sql = "SELECT DISTINCT orq.`group_id`
+                FROM `overtime_accept` oa
+                INNER JOIN `overtime_request` orq ON orq.`id` = oa.`overtime_id`
+                WHERE oa.`approver_id` = :approverId AND orq.`group_id` IS NOT NULL
+                ORDER BY orq.`group_id` ASC";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':approverId' => $approverId]);
+        $ids = [];
+        foreach ($stmt->fetchAll() ?: [] as $row) {
+            $ids[] = (int) $row['group_id'];
+        }
+
+        return $ids;
+    }
+
+    public function findApproverGroupDetails(int $approverId): array
+    {
+        $sql = "SELECT DISTINCT gl.`id`, gl.`abbreviation`, gl.`name`
+                FROM `overtime_accept` oa
+                INNER JOIN `overtime_request` orq ON orq.`id` = oa.`overtime_id`
+                INNER JOIN kdtphdb_new.`group_list` gl ON gl.`id` = orq.`group_id`
+                WHERE oa.`approver_id` = :approverId AND orq.`group_id` IS NOT NULL
+                ORDER BY gl.`abbreviation` ASC";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':approverId' => $approverId]);
+
+        return $stmt->fetchAll() ?: [];
+    }
+
     public function addAcceptance(int $overtime, int $approverID): bool
     {
         $sql = "INSERT INTO `overtime_accept` (`overtime_id`, `approver_id`) VALUES (:overtimeID, :approverID)";

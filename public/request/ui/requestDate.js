@@ -7,6 +7,18 @@ let blockedHolidays = new Map();
 /** @type {Array<{start: string, end: string}>} */
 let leaveWeekRanges = [];
 
+let dateFieldId = "date";
+let relaxedMode = false;
+
+export function configureRequestDate({ dateFieldId: fieldId = "date", relaxed = false } = {}) {
+  dateFieldId = fieldId;
+  relaxedMode = relaxed;
+}
+
+function $dateField() {
+  return $(`#${dateFieldId}`);
+}
+
 function parseLocalDate(isoDate) {
   const [y, m, d] = isoDate.split("-").map(Number);
   return new Date(y, m - 1, d);
@@ -71,6 +83,7 @@ export function isAllowedRequestDate(isoDate) {
   if (!isoDate) return false;
   const date = parseLocalDate(isoDate);
   if (isBeforeToday(date)) return false;
+  if (relaxedMode) return true;
   if (!isRestrictedDay(isoDate)) return true;
   if (!isInCurrentWorkWeek(isoDate)) return false;
   return !hasLeaveInWeek(isoDate);
@@ -85,16 +98,16 @@ function nextAllowedDate(fromDate = startOfToday()) {
 }
 
 export function applyDateConstraints() {
-  $("#date").attr("min", formatLocalDate(startOfToday()));
+  $dateField().attr("min", formatLocalDate(startOfToday()));
 }
 
 export function setDefaultRequestDate() {
   applyDateConstraints();
-  $("#date").val(formatLocalDate(nextAllowedDate()));
+  $dateField().val(formatLocalDate(relaxedMode ? startOfToday() : nextAllowedDate()));
 }
 
 export function validateDateInput(showMessage = true) {
-  const $date = $("#date");
+  const $date = $dateField();
   const value = $date.val();
   if (!value) return false;
 
@@ -106,14 +119,14 @@ export function validateDateInput(showMessage = true) {
     const date = parseLocalDate(value);
     if (isBeforeToday(date)) {
       showToast("Past dates are not allowed.", { type: "warning" });
-    } else if (isRestrictedDay(value) && !isInCurrentWorkWeek(value)) {
+    } else if (!relaxedMode && isRestrictedDay(value) && !isInCurrentWorkWeek(value)) {
       showToast(
         isHoliday(value)
           ? "Only holidays in the current week can be selected."
           : "Only weekends in the current week can be selected.",
         { type: "warning" },
       );
-    } else if (isRestrictedDay(value) && hasLeaveInWeek(value)) {
+    } else if (!relaxedMode && isRestrictedDay(value) && hasLeaveInWeek(value)) {
       if (isHoliday(value)) {
         const name = getHolidayName(value);
         showToast(
@@ -135,12 +148,23 @@ export function validateDateInput(showMessage = true) {
   return false;
 }
 
-export async function loadBlockedHolidays() {
+export async function loadBlockedHolidays(employeeId = null) {
+  if (relaxedMode) {
+    applyDateConstraints();
+    const current = $dateField().val();
+    if (!current) {
+      setDefaultRequestDate();
+    }
+    return;
+  }
+
   const from = formatLocalDate(startOfToday());
+  let url = apiUrl("/holidays") + "?from=" + encodeURIComponent(from);
+  if (employeeId) {
+    url += "&employee_id=" + encodeURIComponent(String(employeeId));
+  }
   try {
-    const json = await apiGet(
-      apiUrl("/holidays") + "?from=" + encodeURIComponent(from),
-    );
+    const json = await apiGet(url);
     blockedHolidays = new Map();
     (json?.data || []).forEach((row) => {
       if (!row?.date) return;
@@ -158,7 +182,7 @@ export async function loadBlockedHolidays() {
     leaveWeekRanges = [];
   }
 
-  const current = $("#date").val();
+  const current = $dateField().val();
   if (current && !isAllowedRequestDate(current)) {
     validateDateInput(true);
   } else if (!current) {

@@ -82,6 +82,49 @@ class UserRepository
         return $matches;
     }
 
+    /** @return string[] */
+    public function findFormPicGroupAbbreviationsByEmployeeId(int $employeeId): array
+    {
+        if ($employeeId <= 0) {
+            return [];
+        }
+
+        $sql = "SELECT fp.`fldGroups` AS groups_raw
+                FROM `formspic` fp
+                WHERE fp.`fldEmployeeNum` = :employeeId";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':employeeId' => $employeeId]);
+
+        $abbreviations = [];
+        foreach ($stmt->fetchAll() ?: [] as $row) {
+            $groups = @unserialize((string) ($row['groups_raw'] ?? ''));
+            if (!is_array($groups)) {
+                continue;
+            }
+            foreach ($groups as $abbr) {
+                $abbr = trim((string) $abbr);
+                if ($abbr !== '') {
+                    $abbreviations[$abbr] = true;
+                }
+            }
+        }
+
+        return array_keys($abbreviations);
+    }
+
+    public function isFormPicApprover(int $employeeId): bool
+    {
+        if ($employeeId <= 0) {
+            return false;
+        }
+
+        $sql = "SELECT COUNT(*) FROM `formspic` WHERE `fldEmployeeNum` = :employeeId";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':employeeId' => $employeeId]);
+
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
     private function formPicGroupsContains(string $serialized, string $abbreviation): bool
     {
         $groups = @unserialize($serialized);

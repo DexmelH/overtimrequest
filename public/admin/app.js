@@ -10,6 +10,7 @@ const filters = { search: "", action: "", user_id: "", from: "", to: "" };
 
 const ACTION_META = {
   "request.submit": { label: "Submitted request", icon: "bi-send", tone: "primary" },
+  "request.submit.on_behalf": { label: "Submitted delegated request", icon: "bi-person-check", tone: "primary" },
   "request.cancel": { label: "Cancelled request", icon: "bi-x-circle", tone: "muted" },
   "request.approve": { label: "Approved request", icon: "bi-check-circle", tone: "success" },
   "request.reject": { label: "Rejected request", icon: "bi-slash-circle", tone: "danger" },
@@ -35,6 +36,9 @@ const DETAIL_LABELS = {
   approver_id: "Approver",
   approver_name: "Approver",
   group_abbr: "Group",
+  employee_name: "Employee",
+  employee_id: "Employee ID",
+  auto_approved: "Auto-approved",
 };
 
 function escapeHtml(value) {
@@ -136,11 +140,20 @@ function formatDetailsHtml(action, details) {
 
   switch (action) {
     case "request.submit":
+    case "request.submit.on_behalf":
+      if (details.employee_name) {
+        items.push({ label: "Employee", value: details.employee_name });
+      } else if (details.employee_id != null) {
+        items.push({ label: "Employee", value: `#${details.employee_id}` });
+      }
       if (details.group_id != null || details.group_abbr || details.group) {
         items.push({ label: "Group", value: formatGroupLabel(details) });
       }
       if (details.hours != null) items.push({ label: "Duration", value: formatDetailValue("hours", details.hours) });
       if (details.request_date) items.push({ label: "Date", value: formatDetailValue("request_date", details.request_date) });
+      if (details.auto_approved) {
+        items.push({ badge: "final", value: "Approved automatically upon submission" });
+      }
       break;
 
     case "request.cancel":

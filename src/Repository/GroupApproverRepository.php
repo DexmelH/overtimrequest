@@ -66,6 +66,64 @@ class GroupApproverRepository
         return $data ?: [];
     }
 
+    /** @return int[] */
+    public function findAssignedGroupIds(int $approverId): array
+    {
+        $sql = "SELECT DISTINCT oga.`group_id`
+                FROM `overtime_group_approvers` oga
+                WHERE oga.`approver_id` = :approverId
+                ORDER BY oga.`group_id` ASC";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':approverId' => $approverId]);
+        $ids = [];
+        foreach ($stmt->fetchAll() ?: [] as $row) {
+            $ids[] = (int) $row['group_id'];
+        }
+
+        return $ids;
+    }
+
+    public function findApproverGroupDetails(int $approverId): array
+    {
+        $sql = "SELECT DISTINCT gl.`id`, gl.`abbreviation`, gl.`name`
+                FROM `overtime_group_approvers` oga
+                INNER JOIN kdtphdb_new.`group_list` gl ON gl.`id` = oga.`group_id`
+                WHERE oga.`approver_id` = :approverId
+                ORDER BY gl.`abbreviation` ASC";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':approverId' => $approverId]);
+
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /** @deprecated Use findAssignedGroupIds() */
+    public function findManagedGroupIds(int $approverId): array
+    {
+        return $this->findAssignedGroupIds($approverId);
+    }
+
+    public function isAssignedApprover(int $approverId): bool
+    {
+        $sql = "SELECT COUNT(*) FROM `overtime_group_approvers` WHERE `approver_id` = :approverId";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':approverId' => $approverId]);
+
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    public function isApproverForGroup(int $approverId, int $groupId): bool
+    {
+        $sql = "SELECT COUNT(*) FROM `overtime_group_approvers`
+                WHERE `approver_id` = :approverId AND `group_id` = :groupId";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':approverId' => $approverId,
+            ':groupId' => $groupId,
+        ]);
+
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
     public function hasConfiguredApprovers(int $groupId): bool
     {
         $sql = "SELECT COUNT(*) FROM `overtime_group_approvers` WHERE `group_id` = :groupId";

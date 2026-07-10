@@ -5,6 +5,7 @@ import { setFilter } from "./services/state.js";
 import { showToast } from "../shared/js/toast.js";
 import { confirmAction } from "../shared/js/confirm.js";
 import { initShell } from "../shared/js/shell.js";
+import { initOnBehalf } from "./onBehalf.js";
 
 let actionInProgress = false;
 
@@ -63,4 +64,5 @@ $(".ot-filter-btn").on("click", function () {
 });
 
 initShell();
+initOnBehalf();
 fetchRequest().catch(() => {});
