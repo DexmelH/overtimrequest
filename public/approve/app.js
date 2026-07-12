@@ -18,6 +18,14 @@ async function handleApproval(status) {
   if (!requestId) return;
 
   const isApprove = status === 1;
+  const remarks = $("#approvalRemarks").val().trim();
+
+  if (!isApprove && !remarks) {
+    showToast("Remarks are required when rejecting a request.", { type: "warning" });
+    $("#approvalRemarks").trigger("focus");
+    return;
+  }
+
   const confirmed = await confirmAction({
     title: isApprove ? "Approve this request?" : "Reject this request?",
     message: isApprove
@@ -37,7 +45,7 @@ async function handleApproval(status) {
   $reject.prop("disabled", true);
 
   try {
-    await approveOvertimeRequest(requestId, status, $("#approvalRemarks").val().trim());
+    await approveOvertimeRequest(requestId, status, remarks);
     bootstrap.Modal.getInstance(document.getElementById("detailsModal"))?.hide();
   } finally {
     actionInProgress = false;

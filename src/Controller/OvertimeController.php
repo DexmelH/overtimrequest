@@ -392,8 +392,12 @@ class OvertimeController
     public function approveOvertime(): array
     {
         $overtimeID = isset($_POST['overtimeID']) ? $_POST['overtimeID'] : 0;
-        $remarks = isset($_POST['remarks']) ? $_POST['remarks'] : '';
+        $remarks = trim((string) ($_POST['remarks'] ?? ''));
         $approved = isset($_POST['status']) ? $_POST['status'] : NULL;
+
+        if ((int) $approved === 0 && $remarks === '') {
+            return ['success' => false, 'message' => 'Remarks are required when rejecting a request.'];
+        }
 
         $user = $this->currentUser();
         $approverID = $user['id'];
