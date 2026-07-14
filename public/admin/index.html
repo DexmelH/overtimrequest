@@ -26,25 +26,48 @@
       aria-atomic="true"
     ></div>
 
-    <header class="ot-app-header">
-      <div class="container">
-        <div class="ot-brand">
+    <div class="ot-shell">
+      <aside class="ot-sidebar" id="otSidebar" aria-label="Primary">
+        <div class="ot-sidebar-brand">
           <div class="ot-brand-icon" aria-hidden="true">
-            <i class="bi bi-shield-lock"></i>
+            <i class="bi bi-clock-history"></i>
           </div>
           <div>
+            <span class="ot-sidebar-app-name">Overtime</span>
+            <span class="ot-sidebar-app-tag">Portal</span>
+          </div>
+        </div>
+        <nav class="ot-sidebar-nav" id="otNav" aria-label="App sections"></nav>
+        <div class="ot-sidebar-footer">
+          <a class="ot-sidebar-link ot-sidebar-home" href="../request/" title="Home">
+            <i class="bi bi-house-door" aria-hidden="true"></i>
+            <span>Home</span>
+          </a>
+        </div>
+      </aside>
+      <div class="ot-sidebar-backdrop" id="otSidebarBackdrop" hidden></div>
+      <div class="ot-shell-content">
+        <header class="ot-topbar">
+          <button
+            type="button"
+            class="ot-sidebar-toggle"
+            id="otSidebarToggle"
+            aria-label="Open navigation"
+            aria-controls="otSidebar"
+            aria-expanded="false"
+          >
+            <i class="bi bi-list" aria-hidden="true"></i>
+          </button>
+          <div class="ot-topbar-title">
             <h1>Overtime Admin</h1>
             <p>Manage approvers and view activity logs</p>
           </div>
-        </div>
-        <div class="ot-header-end">
-          <nav class="ot-nav" id="otNav" aria-label="App sections"></nav>
-          <div class="ot-header-tools" id="otHeaderTools"></div>
-        </div>
-      </div>
-    </header>
+          <div class="ot-header-end">
+            <div class="ot-header-tools" id="otHeaderTools"></div>
+          </div>
+        </header>
 
-    <main class="container ot-main">
+        <main class="container ot-main">
       <div id="accessDenied" class="ot-card d-none">
         <div class="ot-card-body ot-empty">
           <i class="bi bi-lock"></i>
@@ -204,7 +227,9 @@
           </div>
         </div>
       </div>
-    </main>
+        </main>
+      </div>
+    </div>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

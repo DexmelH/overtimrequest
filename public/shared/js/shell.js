@@ -2,6 +2,7 @@ import { apiUrl } from "./api.js";
 import { apiGet } from "./http.js";
 
 const THEME_KEY = "ot-theme";
+const SIDEBAR_OPEN_CLASS = "ot-sidebar-open";
 
 const NAV_PAGES = [
   { id: "request", label: "Request", icon: "bi-clock-history", href: "../request/" },
@@ -60,7 +61,7 @@ function renderNav(currentPage) {
     if (page.adminOnly) attrs.push('data-admin-only="true"');
     if (page.approverOnly) attrs.push('data-approver-only="true"');
     const attrStr = attrs.length ? ` ${attrs.join(" ")}` : "";
-    return `<a class="ot-nav-link${active}" href="${page.href}"${attrStr}>
+    return `<a class="ot-sidebar-link${active}" href="${page.href}"${attrStr}>
       <i class="bi ${page.icon}" aria-hidden="true"></i>
       <span>${page.label}</span>
     </a>`;
@@ -96,11 +97,76 @@ function renderThemeToggle() {
 function ensureUserGreeting() {
   if (document.getElementById("otUserGreeting")) return;
 
+  const tools = document.getElementById("otHeaderTools");
+  if (!tools) return;
+
   const greeting = document.createElement("p");
   greeting.id = "otUserGreeting";
   greeting.className = "ot-user-greeting d-none";
   greeting.setAttribute("aria-live", "polite");
-  document.body.appendChild(greeting);
+  tools.prepend(greeting);
+}
+
+function setSidebarOpen(open) {
+  const shell = document.querySelector(".ot-shell");
+  const toggle = document.getElementById("otSidebarToggle");
+  const backdrop = document.getElementById("otSidebarBackdrop");
+  if (!shell) return;
+
+  shell.classList.toggle(SIDEBAR_OPEN_CLASS, open);
+  document.body.classList.toggle(SIDEBAR_OPEN_CLASS, open);
+
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    toggle.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+    const icon = toggle.querySelector("i");
+    if (icon) {
+      icon.className = open ? "bi bi-x-lg" : "bi bi-list";
+    }
+  }
+
+  if (backdrop) {
+    backdrop.hidden = !open;
+  }
+}
+
+function initSidebarDrawer() {
+  const toggle = document.getElementById("otSidebarToggle");
+  const backdrop = document.getElementById("otSidebarBackdrop");
+  const nav = document.getElementById("otNav");
+
+  if (toggle) {
+    toggle.addEventListener("click", () => {
+      const shell = document.querySelector(".ot-shell");
+      const isOpen = shell?.classList.contains(SIDEBAR_OPEN_CLASS);
+      setSidebarOpen(!isOpen);
+    });
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener("click", () => setSidebarOpen(false));
+  }
+
+  if (nav) {
+    nav.addEventListener("click", (event) => {
+      const link = event.target.closest("a.ot-sidebar-link");
+      if (link && window.matchMedia("(max-width: 991.98px)").matches) {
+        setSidebarOpen(false);
+      }
+    });
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    const shell = document.querySelector(".ot-shell");
+    if (shell?.classList.contains(SIDEBAR_OPEN_CLASS)) {
+      setSidebarOpen(false);
+    }
+  });
+
+  window.matchMedia("(min-width: 992px)").addEventListener("change", (event) => {
+    if (event.matches) setSidebarOpen(false);
+  });
 }
 
 async function loadSession() {
@@ -148,6 +214,7 @@ export function initShell() {
   renderNav(currentPage);
   renderThemeToggle();
   ensureUserGreeting();
+  initSidebarDrawer();
   revealAdminNav();
   staggerCards();
 

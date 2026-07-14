@@ -32,7 +32,7 @@
   --ot-radius-sm: 10px;
   --ot-font: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
   --ot-header-h: 72px;
-  --ot-z-greeting: 1100;
+  --ot-sidebar-w: 220px;
   --ot-on-accent: #ffffff;
 
   /* Bootstrap alignment */
@@ -83,6 +83,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+body.ot-sidebar-open {
+  overflow: hidden;
+}
+
 /* Themed text helpers */
 .ot-text {
   color: var(--ot-text);
@@ -106,11 +110,16 @@ body {
   border-color: transparent;
 }
 
-/* Header */
-.ot-app-header {
+/* Header / top bar */
+.ot-topbar {
   position: sticky;
   top: 0;
   z-index: 1020;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-height: var(--ot-header-h);
+  padding: 0.75rem 1.25rem;
   background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -118,12 +127,24 @@ body {
   box-shadow: var(--ot-shadow-sm);
 }
 
-.ot-app-header .container {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.85rem 0;
-  min-height: var(--ot-header-h);
+.ot-topbar-title {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ot-topbar-title h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.ot-topbar-title p {
+  margin: 0.12rem 0 0;
+  font-size: 0.8rem;
+  color: var(--ot-muted);
+  font-weight: 500;
 }
 
 .ot-brand {
@@ -177,6 +198,173 @@ body {
 
 .ot-header-pill i {
   color: var(--ot-accent);
+}
+
+/* App shell layout */
+.ot-shell {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.ot-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1040;
+  width: var(--ot-sidebar-w);
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem 0.85rem;
+  background: var(--ot-surface);
+  border-right: 1px solid var(--ot-border);
+  box-shadow: var(--ot-shadow-sm);
+}
+
+.ot-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--ot-border);
+}
+
+.ot-sidebar-brand .ot-brand-icon {
+  width: 40px;
+  height: 40px;
+  font-size: 1.05rem;
+  border-radius: 11px;
+}
+
+.ot-sidebar-app-name {
+  display: block;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ot-text);
+  line-height: 1.2;
+}
+
+.ot-sidebar-app-tag {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ot-muted);
+}
+
+.ot-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.25rem 0;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ot-sidebar-footer {
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--ot-border);
+  width: 100%;
+}
+
+.ot-sidebar-home {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ot-sidebar-home i {
+  font-size: 1.15rem;
+}
+
+.ot-sidebar-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--ot-radius-sm);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--ot-muted);
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ot-sidebar-link i {
+  font-size: 1.05rem;
+  width: 1.15rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.ot-sidebar-link:hover {
+  color: var(--ot-accent);
+  background: var(--ot-accent-soft);
+}
+
+.ot-sidebar-link.active {
+  color: var(--ot-accent);
+  background: var(--ot-accent-soft);
+  border-color: rgba(79, 70, 229, 0.18);
+  box-shadow: inset 3px 0 0 var(--ot-accent);
+}
+
+.ot-sidebar-link[data-admin-only="true"],
+.ot-sidebar-link[data-approver-only="true"] {
+  display: none;
+}
+
+.ot-sidebar-link[data-admin-only="true"].is-visible,
+.ot-sidebar-link[data-approver-only="true"].is-visible {
+  display: inline-flex;
+}
+
+.ot-sidebar-backdrop {
+  display: none;
+}
+
+.ot-sidebar-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--ot-border);
+  border-radius: 10px;
+  background: var(--ot-surface);
+  color: var(--ot-muted);
+  cursor: pointer;
+  font-size: 1.15rem;
+  flex-shrink: 0;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.ot-sidebar-toggle:hover {
+  color: var(--ot-accent);
+  border-color: rgba(79, 70, 229, 0.3);
+  background: var(--ot-accent-soft);
+}
+
+.ot-shell-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: var(--ot-sidebar-w);
+  display: flex;
+  flex-direction: column;
 }
 
 /* Main layout */
@@ -788,6 +976,54 @@ body {
   }
 }
 
+@media (max-width: 991.98px) {
+  .ot-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: var(--ot-shadow-lg);
+  }
+
+  .ot-shell.ot-sidebar-open .ot-sidebar {
+    transform: translateX(0);
+  }
+
+  .ot-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1035;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(2px);
+  }
+
+  .ot-sidebar-backdrop[hidden] {
+    display: none;
+  }
+
+  .ot-sidebar-toggle {
+    display: inline-flex;
+  }
+
+  .ot-shell-content {
+    margin-left: 0;
+  }
+
+  .ot-topbar-title p {
+    display: none;
+  }
+
+  .ot-header-end {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .ot-user-greeting {
+    font-size: 0.75rem;
+    max-width: min(9.5rem, 36vw);
+    padding: 0.35rem 0.65rem;
+  }
+}
+
 @media (max-width: 768px) {
   .detail-grid {
     grid-template-columns: 1fr;
@@ -801,35 +1037,23 @@ body {
     padding: 1.15rem;
   }
 
-  .ot-brand p {
-    display: none;
+  .ot-topbar {
+    padding: 0.65rem 0.85rem;
   }
 
-  .ot-header-end {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-
-  .ot-user-greeting {
-    font-size: 0.78rem;
-    padding: 0.7rem 0.75rem;
-    max-width: min(12rem, calc(100vw - 1.5rem));
-  }
-
-  .ot-nav {
-    order: 2;
-    flex: 1 1 100%;
-    margin-top: 0.25rem;
+  .ot-topbar-title h1 {
+    font-size: 1rem;
   }
 }
 
-/* ── App shell: navigation & tools ── */
+/* ── App shell: topbar tools ── */
 .ot-header-end {
   display: flex;
   align-items: center;
   gap: 0.65rem;
   margin-left: auto;
   flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .ot-header-extra {
@@ -846,71 +1070,24 @@ body {
 }
 
 .ot-user-greeting {
-  position: fixed;
-  top: 0;
-  right: 0;
-  z-index: var(--ot-z-greeting);
   margin: 0;
-  padding: 0.85rem 1rem;
-  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  max-width: min(12rem, 28vw);
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--ot-border);
+  background: var(--ot-surface);
+  box-shadow: var(--ot-shadow-sm);
+  font-size: 0.78rem;
   font-weight: 600;
-  color: var(--ot-text);
+  color: var(--ot-muted);
   white-space: nowrap;
   letter-spacing: -0.01em;
-  text-align: right;
-  pointer-events: none;
-  max-width: min(16rem, calc(100vw - 2rem));
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.ot-nav {
-  display: flex;
-  align-items: center;
-  gap: 0.2rem;
-  padding: 0.25rem;
-  background: var(--ot-nav-bg, rgba(255, 255, 255, 0.65));
-  border: 1px solid var(--ot-border);
-  border-radius: 999px;
-  box-shadow: var(--ot-shadow-sm);
-}
-
-.ot-nav-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.42rem 0.85rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--ot-muted);
-  text-decoration: none;
-  white-space: nowrap;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-.ot-nav-link:hover {
-  color: var(--ot-accent);
-  background: var(--ot-accent-soft);
-}
-
-.ot-nav-link.active {
-  background: var(--ot-accent);
-  color: var(--ot-on-accent);
-  box-shadow: 0 2px 10px var(--ot-accent-glow);
-}
-
-.ot-nav-link[data-admin-only="true"],
-.ot-nav-link[data-approver-only="true"] {
-  display: none;
-}
-
-.ot-nav-link[data-admin-only="true"].is-visible,
-.ot-nav-link[data-approver-only="true"].is-visible {
-  display: inline-flex;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .ot-theme-toggle {
@@ -1048,9 +1225,24 @@ body.ot-ready .ot-main {
   color-scheme: dark;
 }
 
-[data-theme="dark"] .ot-app-header {
+[data-theme="dark"] .ot-topbar {
   background: rgba(15, 23, 42, 0.88);
   border-bottom-color: rgba(51, 65, 85, 0.9);
+}
+
+[data-theme="dark"] .ot-sidebar {
+  background: var(--ot-surface);
+  border-right-color: rgba(51, 65, 85, 0.9);
+}
+
+[data-theme="dark"] .ot-sidebar-link.active {
+  border-color: rgba(129, 140, 248, 0.28);
+  box-shadow: inset 3px 0 0 var(--ot-accent);
+}
+
+[data-theme="dark"] .ot-sidebar-toggle {
+  background: var(--ot-surface-raised);
+  border-color: var(--ot-border);
 }
 
 [data-theme="dark"] .ot-card {
