@@ -60,7 +60,7 @@
           </button>
           <div class="ot-topbar-title">
             <h1>Overtime Admin</h1>
-            <p>Manage approvers and view activity logs</p>
+            <p>Manage approvers, admins, and activity logs</p>
           </div>
           <div class="ot-header-end">
             <div class="ot-header-tools" id="otHeaderTools"></div>
@@ -72,7 +72,7 @@
         <div class="ot-card-body ot-empty">
           <i class="bi bi-lock"></i>
           <p class="mb-0">You do not have permission to view this page.</p>
-          <small class="ot-muted">Contact an administrator to add your user ID to APP_ADMIN_USER_IDS.</small>
+          <small class="ot-muted">Ask an existing administrator to grant you access.</small>
         </div>
       </div>
 
@@ -82,6 +82,12 @@
             <button class="nav-link active" id="tab-approvers" data-bs-toggle="pill"
               data-bs-target="#panel-approvers" type="button" role="tab">
               <i class="bi bi-people me-1"></i> Group Approvers
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-members" data-bs-toggle="pill"
+              data-bs-target="#panel-members" type="button" role="tab">
+              <i class="bi bi-shield-check me-1"></i> Admins
             </button>
           </li>
           <li class="nav-item" role="presentation">
@@ -145,6 +151,73 @@
                     <span class="status-badge status-approved">Active</span>
                   </div>
                   <div class="ot-card-body pt-2" id="officialApproversList"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- App admins -->
+          <div class="tab-pane fade" id="panel-members" role="tabpanel">
+            <div class="row g-4">
+              <div class="col-lg-5">
+                <div class="ot-card h-100">
+                  <div class="ot-card-header">
+                    <div>
+                      <h2>Add admin</h2>
+                      <p class="ot-muted mb-0">Search an employee and grant admin access</p>
+                    </div>
+                  </div>
+                  <div class="ot-card-body">
+                    <div class="mb-3 position-relative">
+                      <label class="form-label" for="adminMemberSearch">Employee</label>
+                      <input
+                        type="search"
+                        class="form-control"
+                        id="adminMemberSearch"
+                        placeholder="Name or employee ID"
+                        autocomplete="off"
+                      />
+                      <input type="hidden" id="adminMemberEmployeeId" value="" />
+                      <div id="adminMemberSearchResults" class="admin-member-search-results d-none"></div>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label" for="adminMemberNotes">Notes <span class="text-muted fw-normal">(optional)</span></label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="adminMemberNotes"
+                        maxlength="255"
+                        placeholder="Reason or role note"
+                      />
+                    </div>
+                    <button type="button" class="ot-btn ot-btn-primary" id="adminMemberAddBtn" disabled>
+                      <i class="bi bi-person-plus"></i> Add admin
+                    </button>
+                    <p class="ot-muted small mt-3 mb-0">
+                      Managers (MNG), IT, and System (SYS) are default admin groups from <code>APP_ADMIN_GROUP_ABBRS</code>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-7">
+                <div class="ot-card h-100">
+                  <div class="ot-card-header flex-wrap">
+                    <div>
+                      <h2>Admin members</h2>
+                      <p class="ot-muted mb-0">Assigned admins and default group admins</p>
+                    </div>
+                    <button type="button" class="ot-btn ot-btn-secondary btn-sm" id="adminMembersRefreshBtn">
+                      <i class="bi bi-arrow-repeat"></i> Refresh
+                    </button>
+                  </div>
+                  <div class="ot-card-body p-0">
+                    <div class="admin-members-list" id="adminMembersList">
+                      <div class="ot-empty">
+                        <div class="spinner-border spinner-border-sm text-primary"></div>
+                        <p class="mb-0 mt-2">Loading admins...</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -228,6 +301,53 @@
         </div>
       </div>
         </main>
+      </div>
+    </div>
+
+    <div
+      class="modal fade ot-modal"
+      id="adminNotesModal"
+      tabindex="-1"
+      aria-labelledby="adminNotesModalTitle"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <div>
+              <h5 class="modal-title" id="adminNotesModalTitle">Edit admin notes</h5>
+              <p class="ot-muted mb-0" id="adminNotesMemberName"></p>
+            </div>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <form id="adminNotesForm">
+            <div class="modal-body">
+              <input type="hidden" id="adminNotesEmployeeId" />
+              <label class="form-label" for="adminNotesEdit">Notes</label>
+              <textarea
+                class="form-control"
+                id="adminNotesEdit"
+                rows="4"
+                maxlength="255"
+                placeholder="Reason or role note"
+              ></textarea>
+              <div class="form-text">Maximum 255 characters.</div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="ot-btn ot-btn-secondary" data-bs-dismiss="modal">
+                Cancel
+              </button>
+              <button type="submit" class="ot-btn ot-btn-primary" id="adminNotesSaveBtn">
+                <i class="bi bi-check2"></i> Save notes
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
 

@@ -50,6 +50,10 @@ $dispatcher = simpleDispatcher(function(RouteCollector $r) {
     $r->addRoute('GET', '/api/admin/logs', ['App\Controller\AdminController', 'getActivityLogs']);
     $r->addRoute('GET', '/api/admin/groups', ['App\Controller\AdminController', 'getAdminGroups']);
     $r->addRoute('GET', '/api/admin/employees', ['App\Controller\AdminController', 'searchEmployees']);
+    $r->addRoute('GET', '/api/admin/members', ['App\Controller\AdminController', 'getAdminMembers']);
+    $r->addRoute('POST', '/api/admin/members', ['App\Controller\AdminController', 'addAdminMember']);
+    $r->addRoute('POST', '/api/admin/members/update', ['App\Controller\AdminController', 'updateAdminMember']);
+    $r->addRoute('POST', '/api/admin/members/remove', ['App\Controller\AdminController', 'removeAdminMember']);
     $r->addRoute('GET', '/api/admin/approvers', ['App\Controller\AdminController', 'getGroupApprovers']);
     $r->addRoute('POST', '/api/admin/approvers', ['App\Controller\AdminController', 'saveGroupApprovers']);
     $r->addRoute('POST', '/api/admin/approver-level', ['App\Controller\AdminController', 'saveGroupApproverLevel']);
@@ -94,11 +98,16 @@ switch ($routeInfo[0]) {
             );
 
             $controllerFactory = [
-                'App\Controller\UserController' => function() use ($kdtphPdo, $webjmrPdo, $config) {
+                'App\Controller\UserController' => function() use ($kdtphPdo, $webjmrPdo, $kdtphNewPdo, $config) {
+                    $adminAccess = new \App\Service\AdminAccessService(
+                        new \App\Repository\AdminMemberRepository($webjmrPdo),
+                        new \App\Repository\EmployeeRepository($kdtphNewPdo),
+                        $config['app']['admin_group_abbrs'] ?? []
+                    );
                     return new \App\Controller\UserController(
                         new \App\Repository\UserRepository($kdtphPdo),
                         new \App\Repository\GroupApproverRepository($webjmrPdo),
-                        $config['app']['admin_user_ids'] ?? []
+                        $adminAccess
                     );
                 },
                 'App\Controller\GroupController' => function() use ($kdtphNewPdo, $kdtphPdo) {
@@ -108,13 +117,21 @@ switch ($routeInfo[0]) {
                     return new \App\Controller\OvertimeController($webjmrPdo, $kdtphPdo, $formsPdo, $kdtphNewPdo, $activityLogger);
                 },
                 'App\Controller\AdminController' => function() use ($webjmrPdo, $kdtphPdo, $kdtphNewPdo, $activityLogger, $config) {
+                    $adminMemberRepo = new \App\Repository\AdminMemberRepository($webjmrPdo);
+                    $employeeRepo = new \App\Repository\EmployeeRepository($kdtphNewPdo);
+                    $adminAccess = new \App\Service\AdminAccessService(
+                        $adminMemberRepo,
+                        $employeeRepo,
+                        $config['app']['admin_group_abbrs'] ?? []
+                    );
                     return new \App\Controller\AdminController(
                         new \App\Repository\ActivityLogRepository($webjmrPdo),
                         new \App\Repository\UserRepository($kdtphPdo),
-                        new \App\Repository\EmployeeRepository($kdtphNewPdo),
+                        $employeeRepo,
                         new \App\Repository\GroupApproverRepository($webjmrPdo),
-                        $activityLogger,
-                        $config['app']['admin_user_ids'] ?? []
+                        $adminMemberRepo,
+                        $adminAccess,
+                        $activityLogger
                     );
                 },
                 'App\Controller\LocationController' => function() use ($webjmrPdo) {

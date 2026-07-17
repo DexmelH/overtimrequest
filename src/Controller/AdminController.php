@@ -2,10 +2,12 @@
 namespace App\Controller;
 
 use App\Repository\ActivityLogRepository;
+use App\Repository\AdminMemberRepository;
 use App\Repository\EmployeeRepository;
 use App\Repository\GroupApproverRepository;
 use App\Repository\UserRepository;
 use App\Service\ActivityLogger;
+use App\Service\AdminAccessService;
 
 class AdminController
 {
@@ -13,24 +15,26 @@ class AdminController
     private UserRepository $userRepo;
     private EmployeeRepository $employeeRepo;
     private GroupApproverRepository $approverRepo;
+    private AdminMemberRepository $adminMemberRepo;
+    private AdminAccessService $adminAccess;
     private ActivityLogger $logger;
-    /** @var int[] */
-    private array $adminUserIds;
 
     public function __construct(
         ActivityLogRepository $logRepo,
         UserRepository $userRepo,
         EmployeeRepository $employeeRepo,
         GroupApproverRepository $approverRepo,
-        ActivityLogger $logger,
-        array $adminUserIds = []
+        AdminMemberRepository $adminMemberRepo,
+        AdminAccessService $adminAccess,
+        ActivityLogger $logger
     ) {
         $this->logRepo = $logRepo;
         $this->userRepo = $userRepo;
         $this->employeeRepo = $employeeRepo;
         $this->approverRepo = $approverRepo;
+        $this->adminMemberRepo = $adminMemberRepo;
+        $this->adminAccess = $adminAccess;
         $this->logger = $logger;
-        $this->adminUserIds = array_map('intval', $adminUserIds);
     }
 
     public function getSession(): array
@@ -38,13 +42,168 @@ class AdminController
         $user = $this->currentUser();
         return [
             'success' => true,
-            'is_admin' => $this->isAdmin((int) $user['id']),
+            'is_admin' => $this->adminAccess->isAdmin((int) $user['id']),
             'user' => [
                 'id' => $user['id'],
                 'name' => trim(
                     trim((string) ($user['firstname'] ?? '')) . ' ' . trim((string) ($user['surname'] ?? ''))
                 ) ?: ($user['surname'] ?? ''),
             ],
+        ];
+    }
+
+    public function getAdminMembers(): array
+    {
+        $user = $this->currentUser();
+        $this->requireAdmin((int) $user['id']);
+
+        return [
+            'success' => true,
+            'default_groups' => $this->adminAccess->defaultGroupAbbreviations(),
+            'data' => $this->adminAccess->listAdmins(),
+        ];
+    }
+
+    public function addAdminMember(): array
+    {
+        $user = $this->currentUser();
+        $actorId = (int) $user['id'];
+        $this->requireAdmin($actorId);
+
+        $employeeId = (int) ($_POST['employee_id'] ?? 0);
+        $notes = trim((string) ($_POST['notes'] ?? ''));
+
+        if ($employeeId <= 0) {
+            return ['success' => false, 'message' => 'Select an employee to add as admin.'];
+        }
+
+        $employee = $this->employeeRepo->findById($employeeId);
+        if (!$employee) {
+            return ['success' => false, 'message' => 'Employee not found.'];
+        }
+
+        if ($this->adminMemberRepo->exists($employeeId)) {
+            return ['success' => false, 'message' => 'This employee is already an assigned admin.'];
+        }
+
+        $this->adminMemberRepo->add($employeeId, $notes !== '' ? $notes : null, $actorId);
+
+        $name = trim(($employee['firstname'] ?? '') . ' ' . ($employee['surname'] ?? ''));
+        $this->logger->log(
+            'admin.members.add',
+            $actorId,
+            $user['surname'] ?? null,
+            'admin_member',
+            $employeeId,
+            [
+                'employee_id' => $employeeId,
+                'employee_name' => $name !== '' ? $name : null,
+                'notes' => $notes !== '' ? $notes : null,
+            ]
+        );
+
+        return [
+            'success' => true,
+            'message' => 'Admin member added.',
+            'data' => $this->adminAccess->listAdmins(),
+        ];
+    }
+
+    public function updateAdminMember(): array
+    {
+        $user = $this->currentUser();
+        $actorId = (int) $user['id'];
+        $this->requireAdmin($actorId);
+
+        $employeeId = (int) ($_POST['employee_id'] ?? 0);
+        $notes = trim((string) ($_POST['notes'] ?? ''));
+
+        if ($employeeId <= 0) {
+            return ['success' => false, 'message' => 'Invalid employee.'];
+        }
+
+        if (!$this->adminMemberRepo->exists($employeeId)) {
+            return [
+                'success' => false,
+                'message' => 'Only assigned admins can be updated. Default group admins are managed via APP_ADMIN_GROUP_ABBRS.',
+            ];
+        }
+
+        $this->adminMemberRepo->updateNotes($employeeId, $notes !== '' ? $notes : null, $actorId);
+
+        $employee = $this->employeeRepo->findById($employeeId);
+        $name = trim(($employee['firstname'] ?? '') . ' ' . ($employee['surname'] ?? ''));
+        $this->logger->log(
+            'admin.members.update',
+            $actorId,
+            $user['surname'] ?? null,
+            'admin_member',
+            $employeeId,
+            [
+                'employee_id' => $employeeId,
+                'employee_name' => $name !== '' ? $name : null,
+                'notes' => $notes !== '' ? $notes : null,
+            ]
+        );
+
+        return [
+            'success' => true,
+            'message' => 'Admin member updated.',
+            'data' => $this->adminAccess->listAdmins(),
+        ];
+    }
+
+    public function removeAdminMember(): array
+    {
+        $user = $this->currentUser();
+        $actorId = (int) $user['id'];
+        $this->requireAdmin($actorId);
+
+        $employeeId = (int) ($_POST['employee_id'] ?? 0);
+        if ($employeeId <= 0) {
+            return ['success' => false, 'message' => 'Invalid employee.'];
+        }
+
+        if ($employeeId === $actorId) {
+            return ['success' => false, 'message' => 'You cannot remove your own admin access.'];
+        }
+
+        if (!$this->adminMemberRepo->exists($employeeId)) {
+            return [
+                'success' => false,
+                'message' => 'Only assigned admins can be removed. Default group admins cannot be removed here.',
+            ];
+        }
+
+        if ($this->adminAccess->isDefaultGroupAdmin($employeeId)) {
+            $this->adminMemberRepo->remove($employeeId);
+            return [
+                'success' => true,
+                'message' => 'Assigned record removed. This person remains an admin via a default admin group.',
+                'data' => $this->adminAccess->listAdmins(),
+            ];
+        }
+
+        $employee = $this->employeeRepo->findById($employeeId);
+        $this->adminMemberRepo->remove($employeeId);
+
+        $name = trim(($employee['firstname'] ?? '') . ' ' . ($employee['surname'] ?? ''));
+        $this->logger->log(
+            'admin.members.remove',
+            $actorId,
+            $user['surname'] ?? null,
+            'admin_member',
+            $employeeId,
+            [
+                'employee_id' => $employeeId,
+                'employee_name' => $name !== '' ? $name : null,
+            ]
+        );
+
+        return [
+            'success' => true,
+            'message' => 'Admin member removed.',
+            'data' => $this->adminAccess->listAdmins(),
         ];
     }
 
@@ -327,14 +486,9 @@ class AdminController
         return $this->userRepo->findIdByHash($userHash);
     }
 
-    private function isAdmin(int $userId): bool
-    {
-        return in_array($userId, $this->adminUserIds, true);
-    }
-
     private function requireAdmin(int $userId): void
     {
-        if (!$this->isAdmin($userId)) {
+        if (!$this->adminAccess->isAdmin($userId)) {
             http_response_code(403);
             echo json_encode(['success' => false, 'errors' => ['Forbidden']]);
             exit;

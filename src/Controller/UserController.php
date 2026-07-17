@@ -3,22 +3,22 @@ namespace App\Controller;
 
 use App\Repository\GroupApproverRepository;
 use App\Repository\UserRepository;
+use App\Service\AdminAccessService;
 
 class UserController
 {
     private UserRepository $userRepo;
     private GroupApproverRepository $groupApproverRepo;
-    /** @var int[] */
-    private array $adminUserIds;
+    private AdminAccessService $adminAccess;
 
     public function __construct(
         UserRepository $userRepo,
         GroupApproverRepository $groupApproverRepo,
-        array $adminUserIds = []
+        AdminAccessService $adminAccess
     ) {
         $this->userRepo = $userRepo;
         $this->groupApproverRepo = $groupApproverRepo;
-        $this->adminUserIds = array_map('intval', $adminUserIds);
+        $this->adminAccess = $adminAccess;
     }
 
     public function getSession(): array
@@ -33,7 +33,7 @@ class UserController
                 'id' => $userId,
                 'name' => $this->formatDisplayName($user),
             ],
-            'is_admin' => in_array($userId, $this->adminUserIds, true),
+            'is_admin' => $this->adminAccess->isAdmin($userId),
             'is_approver' => $this->isApprover($userId),
         ];
     }

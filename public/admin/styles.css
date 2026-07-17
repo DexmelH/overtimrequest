@@ -607,3 +607,83 @@ body[data-page="admin"] .ot-main {
 [data-theme="dark"] .suggestion-item:hover {
   background: var(--ot-accent-soft);
 }
+
+/* Admin members */
+.admin-member-search-results {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.25rem);
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--ot-surface);
+  border: 1px solid var(--ot-border);
+  border-radius: var(--ot-radius-sm);
+  box-shadow: var(--ot-shadow);
+}
+
+.admin-member-search-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 0;
+  border-bottom: 1px solid var(--ot-border);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ot-text);
+}
+
+.admin-member-search-item:last-child {
+  border-bottom: 0;
+}
+
+.admin-member-search-item:hover {
+  background: var(--ot-accent-soft);
+}
+
+.admin-member-search-empty {
+  padding: 0.75rem 0.85rem;
+  color: var(--ot-muted);
+  font-size: 0.85rem;
+}
+
+.admin-members-list {
+  max-height: min(28rem, 60vh);
+  overflow-y: auto;
+}
+
+.admin-member-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1.15rem;
+  border-bottom: 1px solid var(--ot-border);
+}
+
+.admin-member-row:last-child {
+  border-bottom: 0;
+}
+
+.admin-member-notes {
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--ot-muted);
+}
+
+.admin-member-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.admin-member-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}

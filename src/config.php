@@ -43,9 +43,9 @@ return [
         'name' => Env::get('APP_NAME', 'Overtime Request App'),
         'base_path' => Env::get('APP_BASE_PATH', '/overtime'),
         'url' => Env::get('APP_URL', 'http://localhost/overtime'),
-        'admin_user_ids' => array_values(array_filter(array_map(
-            'intval',
-            array_map('trim', explode(',', Env::get('APP_ADMIN_USER_IDS', '')))
+        'admin_group_abbrs' => array_values(array_filter(array_map(
+            static fn ($abbr) => strtoupper(trim($abbr)),
+            explode(',', Env::get('APP_ADMIN_GROUP_ABBRS', 'MNG,IT,SYS'))
         ))),
     ],
     'connections' => [

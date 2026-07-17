@@ -85,12 +85,39 @@ class EmployeeRepository
 
     public function findById(int $id): array
     {
-        $sql = "SELECT `id`, `surname`, `firstname`, `email`, `group_id` FROM `employee_list` WHERE `id` = :id";
+        $sql = "SELECT el.`id`, el.`surname`, el.`firstname`, el.`email`, el.`group_id`,
+                       gl.`abbreviation` AS `group_abbr`
+                FROM `employee_list` el
+                LEFT JOIN `group_list` gl ON gl.`id` = el.`group_id`
+                WHERE el.`id` = :id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':id' => $id]);
         $row = $stmt->fetch();
 
         return $row ?: [];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function findEmployeesInGroups(array $groupIds): array
+    {
+        $groupIds = array_values(array_unique(array_filter(array_map('intval', $groupIds))));
+        if (!$groupIds) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($groupIds), '?'));
+        $sql = "SELECT DISTINCT el.`id`, el.`surname`, el.`firstname`, el.`email`,
+                       gl.`abbreviation` AS `group_abbr`
+                FROM `employee_list` el
+                LEFT JOIN `group_list` gl ON gl.`id` = el.`group_id`
+                WHERE el.`emp_status` = 1
+                  AND el.`group_id` IN ({$placeholders})
+                ORDER BY el.`surname` ASC, el.`firstname` ASC";
+        $params = array_merge($groupIds);
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll() ?: [];
     }
 
     /** @return int[] */

@@ -2,6 +2,7 @@ import { apiUrl } from "../shared/js/api.js";
 import { apiGet } from "../shared/js/http.js";
 import { showToast } from "../shared/js/toast.js";
 import { initApprovers } from "./approvers.js";
+import { initAdminMembers } from "./members.js";
 import { initShell } from "../shared/js/shell.js";
 
 let currentPage = 1;
@@ -49,11 +50,27 @@ const ACTION_META = {
     icon: "bi-person-dash",
     tone: "muted",
   },
+  "admin.members.add": {
+    label: "Added admin member",
+    icon: "bi-shield-plus",
+    tone: "admin",
+  },
+  "admin.members.update": {
+    label: "Updated admin member",
+    icon: "bi-shield-check",
+    tone: "admin",
+  },
+  "admin.members.remove": {
+    label: "Removed admin member",
+    icon: "bi-shield-x",
+    tone: "danger",
+  },
 };
 
 const ENTITY_META = {
   overtime_request: { label: "Overtime Request", icon: "bi-clock-history" },
   group: { label: "Group", icon: "bi-diagram-3" },
+  admin_member: { label: "Admin Member", icon: "bi-shield-check" },
 };
 
 const DETAIL_LABELS = {
@@ -71,6 +88,7 @@ const DETAIL_LABELS = {
   employee_name: "Employee",
   employee_id: "Employee ID",
   auto_approved: "Auto-approved",
+  notes: "Notes",
 };
 
 function escapeHtml(value) {
@@ -457,5 +475,8 @@ $("#tab-logs").on("shown.bs.tab", () => {
 
 checkAccess().then((ok) => {
   initShell();
-  if (ok) initApprovers();
+  if (ok) {
+    initApprovers();
+    initAdminMembers();
+  }
 });
