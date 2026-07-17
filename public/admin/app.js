@@ -217,6 +217,14 @@ function formatDetailsHtml(action, details) {
           label: "Duration",
           value: formatDetailValue("hours", details.hours),
         });
+      if (Array.isArray(details.projects) && details.projects.length) {
+        items.push({
+          label: "Projects",
+          value: details.projects
+            .map((project) => `#${project.project_id} (${project.hours} hrs)`)
+            .join(", "),
+        });
+      }
       if (details.request_date)
         items.push({
           label: "Date",

@@ -9,22 +9,29 @@ function getHistory($userID) {
 
     $getHistory = "SELECT orq.id, orq.duration, orq.remarks, orq.request_date, orq.status,
                    gl.abbreviation AS group_name,
-                   l.fldLocation AS location_name,
-                   p.fldProject AS project_name,
-                   i.fldItem AS item_name,
-                   j.fldJob AS job_desc, 
-                   w.fldTOW AS work
+                   l.fldLocation AS location_name
                    FROM `overtime_request` orq
                    LEFT JOIN kdtphdb_new.`group_list` gl ON orq.group_id = gl.id
                    LEFT JOIN `dispatch_locations` l ON orq.location_id = l.fldID
-                   LEFT JOIN `projectstable` p ON orq.project_id = p.fldID
-                   LEFT JOIN `itemofworkstable` i ON orq.item_id = i.fldID 
-                   LEFT JOIN `drawingreference` j ON orq.job_id = j.fldID 
-                   LEFT JOIN `typesofworktable` w ON orq.tow_id = w.fldID
                    WHERE orq.user_id = :userID ORDER BY orq.date_created DESC";
     $stmt = $connjmr->prepare($getHistory);
     $stmt->execute(['userID' => $userID]);
-    return $stmt->fetchAll();
+    $rows = $stmt->fetchAll();
+
+    $projectStmt = $connjmr->prepare(
+        "SELECT orp.project_id, pt.fldProject AS project_name, orp.hours
+         FROM overtime_request_projects orp
+         LEFT JOIN projectstable pt ON pt.fldID = orp.project_id
+         WHERE orp.overtime_request_id = :requestID
+         ORDER BY orp.sort_order, orp.id"
+    );
+    foreach ($rows as &$row) {
+        $projectStmt->execute(['requestID' => $row['id']]);
+        $row['projects'] = $projectStmt->fetchAll();
+    }
+    unset($row);
+
+    return $rows;
 }
 
 $data = getHistory(getUserID($userHash));

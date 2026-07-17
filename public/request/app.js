@@ -1,14 +1,10 @@
 import { fetchHistory } from "./api/fetchHistory.js";
 import { fetchLocations } from "./api/fetchLocations.js";
 import { fetchGroups } from "./api/fetchGroups.js";
-import { fetchProjects } from "./api/fetchProjects.js";
-import { fetchItems } from "./api/fetchItems.js";
-import { fetchJobs } from "./api/fetchJobs.js";
-import { fetchWorks } from "./api/fetchWorks.js";
 import { addOvertimeRequest } from "./api/addOvertime.js";
 import { renderHistory } from "./ui/renderHistory.js";
 import { setFilter, setSearchQuery } from "./services/state.js";
-import { resetDependentFields, enableField } from "./ui/selectCascade.js";
+import { createProjectAllocations } from "./ui/projectAllocations.js";
 import { showToast } from "../shared/js/toast.js";
 import { cancelOvertimeRequest } from "./api/cancelOvertime.js";
 import { getCurrentRequestId } from "./components/modal.js";
@@ -21,6 +17,13 @@ import {
   setDefaultRequestDate,
   validateDateInput,
 } from "./ui/requestDate.js";
+
+const projectAllocations = createProjectAllocations({
+  containerId: "projectAllocations",
+  addButtonId: "addProjectAllocation",
+  totalId: "projectHoursTotal",
+  groupSelector: "#group",
+});
 
 function setDefaultDate() {
   setDefaultRequestDate();
@@ -39,37 +42,8 @@ function setSubmitLoading(loading) {
   }
 }
 
-// Cascade selects
 $("#group").on("change", function () {
-  resetDependentFields("project");
-  if ($(this).val()) {
-    enableField("project");
-    fetchProjects().catch(() => {});
-  }
-});
-
-$("#project").on("change", function () {
-  resetDependentFields("item");
-  if ($(this).val()) {
-    enableField("item");
-    fetchItems().catch(() => {});
-  }
-});
-
-$("#item").on("change", function () {
-  resetDependentFields("jobdesc");
-  if ($(this).val()) {
-    enableField("jobdesc");
-    fetchJobs().catch(() => {});
-  }
-});
-
-$("#jobdesc").on("change", function () {
-  resetDependentFields("work");
-  if ($(this).val()) {
-    enableField("work");
-    fetchWorks().catch(() => {});
-  }
+  projectAllocations.loadProjects().catch(() => {});
 });
 
 // History filters & search
@@ -105,11 +79,7 @@ $("#overtimeForm").on("submit", async function (e) {
     date: $("#date").val(),
     group: $("#group").val(),
     location: $("#location").val(),
-    project: $("#project").val(),
-    item: $("#item").val(),
-    jobdesc: $("#jobdesc").val(),
-    work: $("#work").val(),
-    hours: parseFloat($("#hours").val()),
+    projects: projectAllocations.getAllocations(),
     remarks: $("#remarks").val().trim(),
   };
 
@@ -118,12 +88,7 @@ $("#overtimeForm").on("submit", async function (e) {
     !isAllowedRequestDate(payload.date) ||
     !payload.group ||
     !payload.location ||
-    !payload.project ||
-    !payload.item ||
-    !payload.jobdesc ||
-    !payload.work ||
-    !payload.hours ||
-    payload.hours <= 0
+    !projectAllocations.isValid()
   ) {
     if (payload.date && !isAllowedRequestDate(payload.date)) {
       validateDateInput(true);
@@ -140,7 +105,7 @@ $("#overtimeForm").on("submit", async function (e) {
     await addOvertimeRequest(payload);
     this.reset();
     setDefaultDate();
-    resetDependentFields("project");
+    projectAllocations.reset();
   } finally {
     setSubmitLoading(false);
   }
@@ -171,7 +136,7 @@ $("#btnCancelRequest").on("click", async function () {
 $("#resetBtn").on("click", function () {
   $("#overtimeForm")[0].reset();
   setDefaultDate();
-  resetDependentFields("project");
+  projectAllocations.reset();
 });
 
 $("#date").on("change input", function () {

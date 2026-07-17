@@ -111,42 +111,42 @@ class MailService
     {
         return [
             '{{recipient_name}}' => EmailTemplate::escape($queueRow['approver_name'] ?? 'PIC'),
-            '{{requestor_name}}' => EmailTemplate::escape($data['surname'] ?? $data['requestor_name'] ?? '—'),
-            '{{actor_name}}' => EmailTemplate::escape($queueRow['actor_name'] ?? '—'),
-            '{{group_name}}' => EmailTemplate::escape($data['abbreviation'] ?? $data['group_name'] ?? '—'),
-            '{{project_name}}' => EmailTemplate::escape($data['fldProject'] ?? $data['project_name'] ?? '—'),
-            '{{location_name}}' => EmailTemplate::escape($data['location_name'] ?? '—'),
+            '{{requestor_name}}' => EmailTemplate::escape($data['surname'] ?? $data['requestor_name'] ?? '-'),
+            '{{actor_name}}' => EmailTemplate::escape($queueRow['actor_name'] ?? '-'),
+            '{{group_name}}' => EmailTemplate::escape($data['abbreviation'] ?? $data['group_name'] ?? '-'),
+            '{{project_list}}' => $this->buildProjectListHtml($data),
+            '{{location_name}}' => EmailTemplate::escape($data['location_name'] ?? '-'),
             '{{date}}' => EmailTemplate::normalizeDate($data['request_date'] ?? null),
-            '{{hours}}' => EmailTemplate::escape((string) ($data['duration'] ?? '—')),
-            '{{request_id}}' => EmailTemplate::escape((string) ($queueRow['overtime_id'] ?? $data['id'] ?? '—')),
+            '{{hours}}' => EmailTemplate::escape((string) ($data['duration'] ?? '-')),
+            '{{request_id}}' => EmailTemplate::escape((string) ($queueRow['overtime_id'] ?? $data['id'] ?? '-')),
         ];
     }
 
     private function buildNewRequestVars(array $queueRow, array $data): array
     {
-        $requestor = EmailTemplate::escape($data['surname'] ?? $data['requestor_name'] ?? '—');
-        $remarks = EmailTemplate::escape($data['remarks'] ?? '—');
+        $requestor = EmailTemplate::escape($data['surname'] ?? $data['requestor_name'] ?? '-');
+        $remarks = EmailTemplate::escape($data['remarks'] ?? '-');
 
         return [
             '{{recipient_name}}' => EmailTemplate::escape($queueRow['approver_name'] ?? 'Approver'),
             '{{approver_name}}' => EmailTemplate::escape($queueRow['approver_name'] ?? 'Approver'),
             '{{requestor_name}}' => $requestor,
             '{{submitted_at}}' => EmailTemplate::normalizeDate($data['date_created'] ?? null),
-            '{{group_name}}' => EmailTemplate::escape($data['abbreviation'] ?? $data['group_name'] ?? '—'),
-            '{{project_name}}' => EmailTemplate::escape($data['fldProject'] ?? $data['project_name'] ?? '—'),
-            '{{location_name}}' => EmailTemplate::escape($data['location_name'] ?? '—'),
+            '{{group_name}}' => EmailTemplate::escape($data['abbreviation'] ?? $data['group_name'] ?? '-'),
+            '{{project_list}}' => $this->buildProjectListHtml($data),
+            '{{location_name}}' => EmailTemplate::escape($data['location_name'] ?? '-'),
             '{{date}}' => EmailTemplate::normalizeDate($data['request_date'] ?? null),
-            '{{hours}}' => EmailTemplate::escape((string) ($data['duration'] ?? '—')),
-            '{{remarks}}' => $remarks !== '' ? $remarks : '—',
-            '{{request_id}}' => EmailTemplate::escape((string) ($queueRow['overtime_id'] ?? $data['id'] ?? '—')),
+            '{{hours}}' => EmailTemplate::escape((string) ($data['duration'] ?? '-')),
+            '{{remarks}}' => $remarks !== '' ? $remarks : '-',
+            '{{request_id}}' => EmailTemplate::escape((string) ($queueRow['overtime_id'] ?? $data['id'] ?? '-')),
         ];
     }
 
     private function buildStatusVars(array $queueRow, array $data, bool $isApproved): array
     {
         $statusLabel = $isApproved ? 'Approved' : 'Rejected';
-        $actor = EmailTemplate::escape($queueRow['actor_name'] ?? '—');
-        $approverRemarks = EmailTemplate::escape($data['approver_remarks'] ?? '—');
+        $actor = EmailTemplate::escape($queueRow['actor_name'] ?? '-');
+        $approverRemarks = EmailTemplate::escape($data['approver_remarks'] ?? '-');
 
         return [
             '{{recipient_name}}' => EmailTemplate::escape($queueRow['approver_name'] ?? 'Employee'),
@@ -161,16 +161,33 @@ class MailService
                 ? 'linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%)'
                 : 'linear-gradient(135deg,#dc2626 0%,#b91c1c 100%)',
             '{{actor_name}}' => $actor,
-            '{{approver_remarks}}' => $approverRemarks !== '' ? $approverRemarks : '—',
-            '{{group_name}}' => EmailTemplate::escape($data['abbreviation'] ?? $data['group_name'] ?? '—'),
-            '{{project_name}}' => EmailTemplate::escape($data['fldProject'] ?? $data['project_name'] ?? '—'),
-            '{{location_name}}' => EmailTemplate::escape($data['location_name'] ?? '—'),
+            '{{approver_remarks}}' => $approverRemarks !== '' ? $approverRemarks : '-',
+            '{{group_name}}' => EmailTemplate::escape($data['abbreviation'] ?? $data['group_name'] ?? '-'),
+            '{{project_list}}' => $this->buildProjectListHtml($data),
+            '{{location_name}}' => EmailTemplate::escape($data['location_name'] ?? '-'),
             '{{date}}' => EmailTemplate::normalizeDate($data['request_date'] ?? null),
-            '{{hours}}' => EmailTemplate::escape((string) ($data['duration'] ?? '—')),
-            '{{remarks}}' => EmailTemplate::escape($data['remarks'] ?? '—'),
-            '{{request_id}}' => EmailTemplate::escape((string) ($queueRow['overtime_id'] ?? $data['id'] ?? '—')),
+            '{{hours}}' => EmailTemplate::escape((string) ($data['duration'] ?? '-')),
+            '{{remarks}}' => EmailTemplate::escape($data['remarks'] ?? '-'),
+            '{{request_id}}' => EmailTemplate::escape((string) ($queueRow['overtime_id'] ?? $data['id'] ?? '-')),
             '{{submitted_at}}' => EmailTemplate::normalizeDate($data['date_created'] ?? null),
         ];
+    }
+
+    private function buildProjectListHtml(array $data): string
+    {
+        $projects = is_array($data['projects'] ?? null) ? $data['projects'] : [];
+        if (!$projects) {
+            $fallback = EmailTemplate::escape($data['project_name'] ?? '-');
+            return '<div style="margin:0 0 4px">' . $fallback . '</div>';
+        }
+
+        $items = array_map(static function (array $project): string {
+            $name = EmailTemplate::escape($project['project_name'] ?? '-');
+            $hours = EmailTemplate::escape((string) ($project['hours'] ?? 0));
+            return '<div style="margin:0 0 4px">' . $name . ' - <strong>' . $hours . ' hrs</strong></div>';
+        }, $projects);
+
+        return implode('', $items);
     }
 
     private function deliver(string $toEmail, string $toName, string $subject, string $html): bool
@@ -189,7 +206,7 @@ class MailService
         }
 
         if ($testRecipient !== '') {
-            $subject = sprintf('[TEST → was: %s] %s', $toEmail, $subject);
+            $subject = sprintf('[TEST -> was: %s] %s', $toEmail, $subject);
             $toEmail = $testRecipient;
             $toName = 'Test Recipient';
         }

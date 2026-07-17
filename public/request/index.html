@@ -96,22 +96,6 @@
                     />
                   </div>
                   <div class="col-md-6">
-                    <label class="form-label" for="hours">Hours</label>
-                    <div class="input-group">
-                      <input
-                        type="number"
-                        class="form-control"
-                        id="hours"
-                        min="1"
-                        step="1"
-                        placeholder="0"
-                        required
-                      />
-                      <span class="input-group-text">hrs</span>
-                    </div>
-                  </div>
-
-                  <div class="col-md-6">
                     <label class="form-label" for="group">Group</label>
                     <select class="form-select" id="group" required>
                       <option value="">Select group</option>
@@ -124,32 +108,20 @@
                     </select>
                   </div>
 
-                  <div class="col-md-6">
-                    <label class="form-label" for="project">Project</label>
-                    <select class="form-select" id="project" disabled required>
-                      <option value="">Select project</option>
-                    </select>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="item">Item of Work</label>
-                    <select class="form-select" id="item" disabled required>
-                      <option value="">Select item</option>
-                    </select>
-                  </div>
-
-                  <div class="col-md-6">
-                    <label class="form-label" for="jobdesc"
-                      >Job Description</label
+                  <div class="col-12">
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                      <label class="form-label mb-0">Projects and hours</label>
+                      <span class="project-allocation-total">Total: <strong id="projectHoursTotal">0 hrs</strong></span>
+                    </div>
+                    <div id="projectAllocations" class="project-allocations"></div>
+                    <button
+                      type="button"
+                      class="ot-btn ot-btn-secondary btn-sm mt-2"
+                      id="addProjectAllocation"
+                      disabled
                     >
-                    <select class="form-select" id="jobdesc" disabled required>
-                      <option value="">Select job description</option>
-                    </select>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="work">Type of Work</label>
-                    <select class="form-select" id="work" disabled required>
-                      <option value="">Select work type</option>
-                    </select>
+                      <i class="bi bi-plus-circle"></i> Add project
+                    </button>
                   </div>
 
                   <div class="col-12">
@@ -298,21 +270,9 @@
                 <div class="label">Location</div>
                 <div class="value" id="m_location">—</div>
               </div>
-              <div class="detail-item">
-                <div class="label">Project</div>
-                <div class="value" id="m_project">—</div>
-              </div>
-              <div class="detail-item">
-                <div class="label">Item of Work</div>
-                <div class="value" id="m_item">—</div>
-              </div>
-              <div class="detail-item">
-                <div class="label">Job Description</div>
-                <div class="value" id="m_jobdesc">—</div>
-              </div>
-              <div class="detail-item">
-                <div class="label">Type of Work</div>
-                <div class="value" id="m_work">—</div>
+              <div class="detail-item full">
+                <div class="label">Projects and hours</div>
+                <div class="value project-detail-list" id="m_projects">—</div>
               </div>
               <div class="detail-item full">
                 <div class="label">Remarks</div>

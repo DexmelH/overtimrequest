@@ -7,36 +7,71 @@ $userID = getUserID($userHash);
 
 $groupID = isset($_POST['group']) ? $_POST['group'] : 0;
 $locationID = isset($_POST['location']) ? $_POST['location'] : 0;
-$projectID = isset($_POST['project']) ? $_POST['project'] : 0;
-$itemOfWorkID = isset($_POST['item']) ? $_POST['item'] : 0;
-$jobDescriptionID = isset($_POST['jobdesc']) ? $_POST['jobdesc'] : 0;
-$workID = isset($_POST['work']) ? $_POST['work'] : 0;
 $remarks = isset($_POST['remarks']) ? $_POST['remarks'] : '';
-$duration = isset($_POST['hours']) ? $_POST['hours'] : 0;
 $requestDate = isset($_POST['date']) ? $_POST['date'] : date('Y-m-d');
+$projects = json_decode((string) ($_POST['projects'] ?? ''), true);
 
-function insertRequest($userID, $groupID, $locationID, $projectID, $itemOfWorkID, $jobDescriptionID, $workID, $remarks, $duration, $requestDate) {
+function insertRequest($userID, $groupID, $locationID, $remarks, $requestDate, array $projects) {
     global $connjmr;
 
-    $insertRequest = "INSERT INTO `overtime_request` (`user_id`, `location_id`, `group_id`, `project_id`, `item_id`, `job_id`, `tow_id`, 
-                        `duration`, `remarks`, `request_date`) 
-                        VALUES (:userID, :locationID, :groupID, :projectID, :itemOfWorkID, :jobDescriptionID, :workID, :duration, :remarks, :requestDate)";
-    $stmt = $connjmr->prepare($insertRequest);
-    $stmt->execute([
-        'userID' => $userID,
-        'locationID' => $locationID,
-        'groupID' => $groupID,
-        'projectID' => $projectID,
-        'itemOfWorkID' => $itemOfWorkID,
-        'jobDescriptionID' => $jobDescriptionID,
-        'workID' => $workID,
-        'duration' => $duration,
-        'remarks' => $remarks,
-        'requestDate' => $requestDate
-    ]);
-    return $connjmr->lastInsertId();
+    $normalized = [];
+    $seen = [];
+    foreach ($projects as $project) {
+        $projectId = (int) ($project['project_id'] ?? 0);
+        $hours = filter_var($project['hours'] ?? null, FILTER_VALIDATE_INT);
+        if ($projectId <= 0 || $hours === false || $hours <= 0 || isset($seen[$projectId])) {
+            return 0;
+        }
+        $seen[$projectId] = true;
+        $normalized[] = ['project_id' => $projectId, 'hours' => $hours];
+    }
+    if (!$normalized) {
+        return 0;
+    }
+
+    $connjmr->beginTransaction();
+    try {
+        $insertRequest = "INSERT INTO `overtime_request`
+                            (`user_id`, `location_id`, `group_id`, `duration`, `remarks`, `request_date`)
+                          VALUES
+                            (:userID, :locationID, :groupID, :duration, :remarks, :requestDate)";
+        $stmt = $connjmr->prepare($insertRequest);
+        $stmt->execute([
+            'userID' => $userID,
+            'locationID' => $locationID,
+            'groupID' => $groupID,
+            'duration' => array_sum(array_column($normalized, 'hours')),
+            'remarks' => $remarks,
+            'requestDate' => $requestDate,
+        ]);
+        $requestId = (int) $connjmr->lastInsertId();
+
+        $allocation = $connjmr->prepare(
+            "INSERT INTO `overtime_request_projects`
+                (`overtime_request_id`, `project_id`, `hours`, `sort_order`)
+             VALUES (:requestId, :projectId, :hours, :sortOrder)"
+        );
+        foreach ($normalized as $index => $project) {
+            $allocation->execute([
+                'requestId' => $requestId,
+                'projectId' => $project['project_id'],
+                'hours' => $project['hours'],
+                'sortOrder' => $index,
+            ]);
+        }
+
+        $connjmr->commit();
+        return $requestId;
+    } catch (Throwable $e) {
+        if ($connjmr->inTransaction()) {
+            $connjmr->rollBack();
+        }
+        return 0;
+    }
 }
 
-$insert = insertRequest($userID, $groupID, $locationID, $projectID, $itemOfWorkID, $jobDescriptionID, $workID, $remarks, $duration, $requestDate);
+$insert = is_array($projects)
+    ? insertRequest($userID, $groupID, $locationID, $remarks, $requestDate, $projects)
+    : 0;
 
 echo json_encode(['success' => $insert > 0, 'requestID' => $insert]);

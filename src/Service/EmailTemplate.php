@@ -32,7 +32,7 @@ class EmailTemplate
     public static function normalizeDate(?string $date): string
     {
         if (!$date) {
-            return '—';
+            return '-';
         }
         try {
             return (new \DateTime($date))->format('F j, Y');

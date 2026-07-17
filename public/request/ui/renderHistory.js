@@ -14,11 +14,14 @@ function matchesFilter(item) {
 
 function matchesSearch(item) {
   if (!searchQuery) return true;
+  const projectNames = Array.isArray(item.projects)
+    ? item.projects.map((project) => project.project_name)
+    : [];
   const hay = [
     item.group_name,
     item.project_name,
+    ...projectNames,
     item.location_name,
-    item.item_name,
     item.remarks,
     item.request_date,
   ]

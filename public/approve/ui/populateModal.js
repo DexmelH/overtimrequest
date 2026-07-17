@@ -14,6 +14,24 @@ function getInitials(name) {
     .toUpperCase();
 }
 
+function renderProjects(projects, fallback) {
+  const $target = $("#rd-projects").empty();
+  if (!Array.isArray(projects) || projects.length === 0) {
+    $target.text(fallback || "—");
+    return;
+  }
+
+  projects.forEach((project) => {
+    $("<div>")
+      .addClass("project-detail-row")
+      .append(
+        $("<span>").text(project.project_name || "—"),
+        $("<strong>").text(`${project.hours ?? 0} hrs`),
+      )
+      .appendTo($target);
+  });
+}
+
 export function populateModal(requestId) {
   const request = overtime.find((r) => String(r.id) === String(requestId));
   if (!request) return;
@@ -29,10 +47,7 @@ export function populateModal(requestId) {
 
   $("#rd-group").text(request.group_name || "—");
   $("#rd-location").text(request.location_name || "—");
-  $("#rd-project").text(request.project_name || "—");
-  $("#rd-item").text(request.item_name || "—");
-  $("#rd-job").text(request.job_desc || "—");
-  $("#rd-work").text(request.work || "—");
+  renderProjects(request.projects, request.project_name);
   $("#rd-remarks").text(request.remarks || "—");
 
   renderManagers(request.approver_details || []);

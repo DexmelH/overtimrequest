@@ -125,12 +125,7 @@ class OvertimeController
         $employeeId = (int) ($_POST['employee_id'] ?? 0);
         $groupID = (int) ($_POST['group'] ?? 0);
         $locationID = (int) ($_POST['location'] ?? 0);
-        $projectID = (int) ($_POST['project'] ?? 0);
-        $itemOfWorkID = (int) ($_POST['item'] ?? 0);
-        $jobDescriptionID = (int) ($_POST['jobdesc'] ?? 0);
-        $workID = (int) ($_POST['work'] ?? 0);
         $remarks = trim((string) ($_POST['remarks'] ?? ''));
-        $duration = (float) ($_POST['hours'] ?? 0);
         $requestDate = trim((string) ($_POST['date'] ?? date('Y-m-d')));
 
         if (!$this->isApprover($approverId)) {
@@ -150,34 +145,37 @@ class OvertimeController
             return ['success' => false, 'message' => 'The selected group is not assigned to this employee.'];
         }
 
-        if (
-            $locationID <= 0 || $projectID <= 0 || $itemOfWorkID <= 0
-            || $jobDescriptionID <= 0 || $workID <= 0 || $duration <= 0
-        ) {
+        if ($locationID <= 0) {
             return ['success' => false, 'message' => 'Please complete all required fields.'];
         }
+
+        $group = $this->employeeRepo->findGroupById($groupID);
+        $groupAbbrev = (string) ($group['abbreviation'] ?? '');
+        [$projects, $projectError] = $this->parseProjectAllocations(
+            (string) ($_POST['projects'] ?? ''),
+            $groupAbbrev
+        );
+        if ($projectError !== null) {
+            return ['success' => false, 'message' => $projectError];
+        }
+        $duration = array_sum(array_column($projects, 'hours'));
 
         $payload = [
             'user_id' => $employeeId,
             'group_id' => $groupID,
             'location_id' => $locationID,
-            'project_id' => $projectID,
-            'item_id' => $itemOfWorkID,
-            'job_id' => $jobDescriptionID,
-            'work_id' => $workID,
             'remarks' => $remarks,
             'duration' => $duration,
             'request_date' => $requestDate,
         ];
 
-        $group = $this->employeeRepo->findGroupById($groupID);
-        $groupAbbrev = $group['abbreviation'] ?? '';
         $pdo = $this->overtimeRepo->getPdo();
 
         try {
             $pdo->beginTransaction();
 
             $id = (int) $this->overtimeRepo->addOvertime($payload);
+            $this->overtimeRepo->addProjectAllocations($id, $projects);
             $approvers = $this->resolveApprovers($groupID, $groupAbbrev, $employeeId);
 
             foreach ($approvers as $app) {
@@ -207,6 +205,7 @@ class OvertimeController
                     'group_id' => $groupID,
                     'group_abbr' => $groupAbbrev !== '' ? $groupAbbrev : null,
                     'hours' => $duration,
+                    'projects' => $projects,
                     'request_date' => $requestDate,
                     'auto_approved' => true,
                 ]
@@ -236,29 +235,35 @@ class OvertimeController
     {
         $user = $this->currentUser();
         $userID = $user['id'];
-        $groupID = isset($_POST['group']) ? $_POST['group'] : 0;
-        $locationID = isset($_POST['location']) ? $_POST['location'] : 0;
-        $projectID = isset($_POST['project']) ? $_POST['project'] : 0;
-        $itemOfWorkID = isset($_POST['item']) ? $_POST['item'] : 0;
-        $jobDescriptionID = isset($_POST['jobdesc']) ? $_POST['jobdesc'] : 0;
-        $workID = isset($_POST['work']) ? $_POST['work'] : 0;
-        $remarks = isset($_POST['remarks']) ? $_POST['remarks'] : '';
-        $duration = isset($_POST['hours']) ? $_POST['hours'] : 0;
-        $requestDate = isset($_POST['date']) ? $_POST['date'] : date('Y-m-d');
+        $groupID = (int) ($_POST['group'] ?? 0);
+        $locationID = (int) ($_POST['location'] ?? 0);
+        $remarks = trim((string) ($_POST['remarks'] ?? ''));
+        $requestDate = (string) ($_POST['date'] ?? date('Y-m-d'));
 
         $dateError = $this->validateRequestDate($requestDate, (int) $userID);
         if ($dateError !== null) {
             return ['success' => false, 'message' => $dateError];
         }
 
+        if ($groupID <= 0 || $locationID <= 0) {
+            return ['success' => false, 'message' => 'Please complete all required fields.'];
+        }
+
+        $group = $this->employeeRepo->findGroupById($groupID);
+        $groupAbbrev = (string) ($group['abbreviation'] ?? '');
+        [$projects, $projectError] = $this->parseProjectAllocations(
+            (string) ($_POST['projects'] ?? ''),
+            $groupAbbrev
+        );
+        if ($projectError !== null) {
+            return ['success' => false, 'message' => $projectError];
+        }
+        $duration = array_sum(array_column($projects, 'hours'));
+
         $payload = [
             "user_id" => $userID,
             "group_id" => $groupID,
             "location_id" => $locationID,
-            "project_id" => $projectID,
-            "item_id" => $itemOfWorkID,
-            "job_id" => $jobDescriptionID,
-            "work_id" => $workID,
             "remarks" => $remarks,
             "duration" => $duration,
             "request_date" => $requestDate
@@ -270,10 +275,10 @@ class OvertimeController
             $pdo->beginTransaction();
 
             $id = $this->overtimeRepo->addOvertime($payload);
-            $group = $this->employeeRepo->findGroupById((int) $groupID);
+            $this->overtimeRepo->addProjectAllocations((int) $id, $projects);
             $approver = $this->resolveApprovers(
                 (int) $groupID,
-                $group['abbreviation'] ?? '',
+                $groupAbbrev,
                 (int) $userID
             );
             foreach ($approver as $app) {
@@ -298,6 +303,7 @@ class OvertimeController
                 [
                     'group_id' => $groupID,
                     'hours' => $duration,
+                    'projects' => $projects,
                     'request_date' => $requestDate,
                 ]
             );
@@ -524,6 +530,43 @@ class OvertimeController
     {
         $userHash = isset($_COOKIE['userID']) ? $_COOKIE['userID'] : '';
         return $this->userRepo->findIdByHash($userHash);
+    }
+
+    /**
+     * @return array{0: array<int, array{project_id: int, hours: int}>, 1: ?string}
+     */
+    private function parseProjectAllocations(string $json, string $groupAbbreviation): array
+    {
+        $decoded = json_decode($json, true);
+        if (!is_array($decoded) || !$decoded) {
+            return [[], 'Add at least one project with its hours.'];
+        }
+
+        $projects = [];
+        $seen = [];
+        foreach ($decoded as $row) {
+            if (!is_array($row)) {
+                return [[], 'The project allocation list is invalid.'];
+            }
+
+            $projectId = (int) ($row['project_id'] ?? 0);
+            $hours = filter_var($row['hours'] ?? null, FILTER_VALIDATE_INT);
+            if ($projectId <= 0 || $hours === false || $hours <= 0) {
+                return [[], 'Each project must have a positive whole number of hours.'];
+            }
+            if (isset($seen[$projectId])) {
+                return [[], 'Each project can only be selected once.'];
+            }
+
+            $seen[$projectId] = true;
+            $projects[] = ['project_id' => $projectId, 'hours' => $hours];
+        }
+
+        if (!$this->overtimeRepo->projectsBelongToGroup(array_keys($seen), $groupAbbreviation)) {
+            return [[], 'One or more selected projects do not belong to the selected group.'];
+        }
+
+        return [$projects, null];
     }
 
     private function validateRequestDate(string $date, int $employeeId, bool $relaxed = false): ?string

@@ -2,12 +2,8 @@ import { apiUrl } from "../shared/js/api.js";
 import { apiGet, apiPost } from "../shared/js/http.js";
 import { showToast } from "../shared/js/toast.js";
 import { configureFormFields, getFieldId } from "../request/ui/formFields.js";
-import { resetDependentFields, enableField } from "../request/ui/selectCascade.js";
 import { fetchLocations } from "../request/api/fetchLocations.js";
-import { fetchProjects } from "../request/api/fetchProjects.js";
-import { fetchItems } from "../request/api/fetchItems.js";
-import { fetchJobs } from "../request/api/fetchJobs.js";
-import { fetchWorks } from "../request/api/fetchWorks.js";
+import { createProjectAllocations } from "../request/ui/projectAllocations.js";
 import {
   applyDateConstraints,
   configureRequestDate,
@@ -21,11 +17,14 @@ import { fetchRequest } from "./api/fetchRequest.js";
 const ON_BEHALF_FIELDS = {
   group: "obGroup",
   location: "obLocation",
-  project: "obProject",
-  item: "obItem",
-  jobdesc: "obJobdesc",
-  work: "obWork",
 };
+
+const projectAllocations = createProjectAllocations({
+  containerId: "obProjectAllocations",
+  addButtonId: "obAddProjectAllocation",
+  totalId: "obProjectHoursTotal",
+  groupSelector: "#obGroup",
+});
 
 let searchTimer = null;
 /** @type {object[]} */
@@ -80,8 +79,7 @@ function renderEmployeeGroupSelect(groups) {
     $sel.prop("disabled", false);
     if (employeeGroups.length === 1) {
       $sel.val(String(employeeGroups[0].id));
-      resetDependentFields("project");
-      fetchProjects().catch(() => {});
+      projectAllocations.loadProjects().catch(() => {});
     }
   } else {
     $empty.removeClass("d-none");
@@ -147,7 +145,7 @@ async function selectEmployee(employee) {
   if (!employee) return;
   $("#obEmployeeId").val(employee.id);
   $("#obEmployeeSearch").val(`${employee.surname || ""}, ${employee.firstname || ""}`.trim());
-  resetDependentFields("project");
+  projectAllocations.reset();
   await loadEmployeeGroups(employee.id);
   reloadDateRules(employee.id).catch(() => {});
   clearEmployeeSuggestions();
@@ -158,7 +156,7 @@ function resetOnBehalfForm() {
   employeeGroups = [];
   renderEmployeeGroupSelect([]);
   $("#obEmployeeId").val("");
-  resetDependentFields("project");
+  projectAllocations.reset();
   reloadDateRules(null).catch(() => {});
   clearEmployeeSuggestions();
 }
@@ -167,44 +165,16 @@ function isObDateAllowed(isoDate) {
   return isAllowedRequestDate(isoDate);
 }
 
-function bindCascadeHandlers() {
+function bindProjectHandlers() {
   $(`#${getFieldId("group")}`).on("change", function () {
-    resetDependentFields("project");
-    if ($(this).val()) {
-      enableField("project");
-      fetchProjects().catch(() => {});
-    }
-  });
-
-  $(`#${getFieldId("project")}`).on("change", function () {
-    resetDependentFields("item");
-    if ($(this).val()) {
-      enableField("item");
-      fetchItems().catch(() => {});
-    }
-  });
-
-  $(`#${getFieldId("item")}`).on("change", function () {
-    resetDependentFields("jobdesc");
-    if ($(this).val()) {
-      enableField("jobdesc");
-      fetchJobs().catch(() => {});
-    }
-  });
-
-  $(`#${getFieldId("jobdesc")}`).on("change", function () {
-    resetDependentFields("work");
-    if ($(this).val()) {
-      enableField("work");
-      fetchWorks().catch(() => {});
-    }
+    projectAllocations.loadProjects().catch(() => {});
   });
 }
 
 export function initOnBehalf() {
   configureFormFields(ON_BEHALF_FIELDS);
   bindDateField();
-  bindCascadeHandlers();
+  bindProjectHandlers();
   renderEmployeeGroupSelect([]);
 
   checkOnBehalfAccess()
@@ -218,7 +188,7 @@ export function initOnBehalf() {
   $("#obEmployeeSearch").on("input", function () {
     $("#obEmployeeId").val("");
     renderEmployeeGroupSelect([]);
-    resetDependentFields("project");
+    projectAllocations.reset();
     clearTimeout(searchTimer);
     const q = $(this).val().trim();
     if (q.length < 1) {
@@ -269,11 +239,7 @@ export function initOnBehalf() {
       date: $("#obDate").val(),
       group: $(`#${getFieldId("group")}`).val(),
       location: $(`#${getFieldId("location")}`).val(),
-      project: $(`#${getFieldId("project")}`).val(),
-      item: $(`#${getFieldId("item")}`).val(),
-      jobdesc: $(`#${getFieldId("jobdesc")}`).val(),
-      work: $(`#${getFieldId("work")}`).val(),
-      hours: parseFloat($("#obHours").val()),
+      projects: projectAllocations.getAllocations(),
       remarks: $("#obRemarks").val().trim(),
     };
 
@@ -283,12 +249,7 @@ export function initOnBehalf() {
       !isObDateAllowed(payload.date) ||
       !payload.group ||
       !payload.location ||
-      !payload.project ||
-      !payload.item ||
-      !payload.jobdesc ||
-      !payload.work ||
-      !payload.hours ||
-      payload.hours <= 0
+      !projectAllocations.isValid()
     ) {
       if (payload.date && !isObDateAllowed(payload.date)) {
         validateDateInput(true);
@@ -302,7 +263,9 @@ export function initOnBehalf() {
 
     const $btn = $("#obSubmitBtn").prop("disabled", true);
     const body = new FormData();
-    Object.entries(payload).forEach(([key, value]) => body.append(key, String(value)));
+    Object.entries(payload).forEach(([key, value]) => {
+      body.append(key, key === "projects" ? JSON.stringify(value) : String(value));
+    });
 
     try {
       const json = await apiPost(apiUrl("/approve/addovertime"), body);

@@ -9,12 +9,8 @@ export async function addOvertimeRequest(formData) {
   body.append("date", formData.date);
   body.append("group", formData.group);
   body.append("location", formData.location);
-  body.append("project", formData.project);
-  body.append("item", formData.item);
-  body.append("jobdesc", formData.jobdesc);
-  body.append("work", formData.work);
+  body.append("projects", JSON.stringify(formData.projects));
   body.append("remarks", formData.remarks);
-  body.append("hours", formData.hours);
 
   try {
     const payload = await apiPost(apiUrl("/addovertime"), body);
