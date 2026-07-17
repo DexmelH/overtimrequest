@@ -189,6 +189,7 @@ class OvertimeController
             }
 
             $this->overtimeRepo->updateOvertimeStatus($id, 1);
+            $this->overtimeRepo->addAcceptedRequestToDailyReport($id);
             $this->queueRequestorStatusEmail($id, 1, (string) ($approver['surname'] ?? 'Approver'));
 
             $pdo->commit();
@@ -411,16 +412,32 @@ class OvertimeController
         if ($ifApproved) {
             return ['success' => false, 'message' => "This request has already been finalized."];
         }
-        $this->overtimeRepo->approveRequest($overtimeID, $approverID, $remarks, $approved);
 
-        $confirmApproval = $this->overtimeRepo->checkIfForApproval($overtimeID, $approved);
-        if ($confirmApproval) {
-            $this->overtimeRepo->updateOvertimeStatus($overtimeID, $approved);
-            $this->queueRequestorStatusEmail(
-                (int) $overtimeID,
-                (int) $approved,
-                (string) ($user['surname'] ?? 'Approver')
-            );
+        $pdo = $this->overtimeRepo->getPdo();
+        try {
+            $pdo->beginTransaction();
+
+            $this->overtimeRepo->approveRequest($overtimeID, $approverID, $remarks, $approved);
+            $confirmApproval = $this->overtimeRepo->checkIfForApproval($overtimeID, $approved);
+            if ($confirmApproval) {
+                $this->overtimeRepo->updateOvertimeStatus($overtimeID, $approved);
+                if ((int) $approved === 1) {
+                    $this->overtimeRepo->addAcceptedRequestToDailyReport((int) $overtimeID);
+                }
+                $this->queueRequestorStatusEmail(
+                    (int) $overtimeID,
+                    (int) $approved,
+                    (string) ($user['surname'] ?? 'Approver')
+                );
+            }
+
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('Approve overtime failed: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Unable to update the overtime request. Please try again.'];
         }
 
         $action = ((int) $approved === 1) ? 'request.approve' : 'request.reject';

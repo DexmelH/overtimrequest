@@ -379,6 +379,52 @@ class OvertimeRepository
         ]);
     }
 
+    public function addAcceptedRequestToDailyReport(int $overtimeID): void
+    {
+        $sql = "SELECT orq.`id`, orq.`user_id`, orq.`group_id`, orq.`location_id`,
+                       orq.`request_date`, orq.`remarks`, gl.`abbreviation`
+                FROM `overtime_request` orq
+                INNER JOIN kdtphdb_new.`group_list` gl ON gl.`id` = orq.`group_id`
+                WHERE orq.`id` = :overtimeID
+                LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':overtimeID' => $overtimeID]);
+        $request = $stmt->fetch();
+        if (!$request) {
+            throw new \RuntimeException('Accepted overtime request was not found.');
+        }
+
+        $projects = $this->findProjectsByRequestIds([$overtimeID])[$overtimeID] ?? [];
+        if (!$projects) {
+            throw new \RuntimeException('Accepted overtime request has no project allocations.');
+        }
+
+        $insertStmt = $this->pdo->prepare(
+            "INSERT INTO `dailyreport`
+                (`fldEmployeeNum`, `fldGroup`, `fldGroupID`, `fldDate`, `fldLocation`,
+                 `fldProject`, `fldItem`, `fldRevision`, `fldDuration`, `fldMHType`,
+                 `fldRemarks`, `fldChangeLog`)
+             VALUES
+                (:employeeId, :groupAbbr, :groupId, :reportDate, :locationId,
+                 :projectId, 0, 0, :durationMinutes, 1, :remarks, :changeLog)"
+        );
+        $changeLog = date('YmdHis') . '_' . (int) $request['user_id'];
+
+        foreach ($projects as $project) {
+            $insertStmt->execute([
+                ':employeeId' => (int) $request['user_id'],
+                ':groupAbbr' => (string) $request['abbreviation'],
+                ':groupId' => (int) $request['group_id'],
+                ':reportDate' => (string) $request['request_date'],
+                ':locationId' => (int) $request['location_id'],
+                ':projectId' => (int) $project['project_id'],
+                ':durationMinutes' => (int) $project['hours'] * 60,
+                ':remarks' => $request['remarks'] !== '' ? $request['remarks'] : null,
+                ':changeLog' => $changeLog,
+            ]);
+        }
+    }
+
     public function findOwnedPendingRequest(int $overtimeID, int $userID): array
     {
         $sql = "SELECT orq.`id`, orq.`user_id`, orq.`status`, orq.`duration`, orq.`remarks`, orq.`request_date`,
