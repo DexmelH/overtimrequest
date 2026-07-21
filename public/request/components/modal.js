@@ -1,5 +1,6 @@
 import { history } from "../services/state.js";
 import { statusClass, statusText, isPending } from "../../shared/js/status.js";
+import { renderManagers } from "../../approve/components/approvers.js";
 
 const modalEl = document.getElementById("detailModal");
 let bsModal = null;
@@ -45,6 +46,7 @@ export function openModal(id) {
   $("#m_statusBadge").html(
     `<span class="status-badge ${statusClass(item.status)}">${statusText(item.status)}</span>`,
   );
+  renderManagers(item.approver_details || []);
 
   if (isPending(item.status)) {
     $("#btnCancelRequest").removeClass("d-none");

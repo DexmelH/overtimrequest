@@ -64,7 +64,7 @@ class OvertimeRepository
     {
         $sql = "SELECT `remarks` FROM `overtime_accept`
                 WHERE `overtime_id` = :overtimeID AND `status` IS NOT NULL
-                ORDER BY `date_accepted` DESC
+                ORDER BY COALESCE(`approval_level`, 0) DESC, `date_accepted` DESC
                 LIMIT 1";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([":overtimeID" => $overtimeID]);
@@ -86,7 +86,7 @@ class OvertimeRepository
         $stmt->execute([":userID" => $userID]);
         $data = $stmt->fetchAll();
 
-        return $data ? $this->attachProjects($data) : [];
+        return $data ? $this->attachApproverDetails($this->attachProjects($data)) : [];
     }
 
     public function addOvertime(array $payload): int
@@ -352,12 +352,30 @@ class OvertimeRepository
         ]);
         $data = $stmt->fetchAll();
 
-        return $data ? $this->attachProjects($data) : [];
+        return $data ? $this->attachApproverDetails($this->attachProjects($data)) : [];
     }
 
     public function findApproverDetails(int $overtimeID): array
     {
-        $sql = "SELECT oa.`approver_id`, el.`surname`,
+        return $this->findApproverDetailsByRequestIds([$overtimeID])[$overtimeID] ?? [];
+    }
+
+    /**
+     * @param int[] $requestIds
+     * @return array<int, array<int, array<string, mixed>>>
+     */
+    public function findApproverDetailsByRequestIds(array $requestIds): array
+    {
+        $requestIds = array_values(array_unique(array_filter(
+            array_map('intval', $requestIds),
+            static fn (int $id): bool => $id > 0
+        )));
+        if (!$requestIds) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($requestIds), '?'));
+        $sql = "SELECT oa.`overtime_id`, oa.`approver_id`, el.`surname`,
                     COALESCE(
                         CONCAT('Level ', COALESCE(oa.`approval_level`, oga.`approval_level`)),
                         dl.`name`
@@ -370,15 +388,34 @@ class OvertimeRepository
                 LEFT JOIN `overtime_group_approvers` oga
                     ON oga.`approver_id` = oa.`approver_id` AND oga.`group_id` = orq.`group_id`
                 LEFT JOIN kdtphdb_new.`designation_list` dl ON dl.`id` = el.`designation`
-                WHERE oa.`overtime_id` = :overtimeID
-                ORDER BY COALESCE(oa.`approval_level`, oga.`approval_level`) ASC, oa.`approver_id` ASC";
+                WHERE oa.`overtime_id` IN ({$placeholders})
+                ORDER BY oa.`overtime_id` ASC,
+                         COALESCE(oa.`approval_level`, oga.`approval_level`) ASC,
+                         oa.`approver_id` ASC";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
-            ":overtimeID" => $overtimeID
-        ]);
-        $data = $stmt->fetchAll();
+        $stmt->execute($requestIds);
 
-        return $data ? $data : [];
+        $grouped = [];
+        foreach ($stmt->fetchAll() ?: [] as $row) {
+            $requestId = (int) $row['overtime_id'];
+            unset($row['overtime_id']);
+            $grouped[$requestId][] = $row;
+        }
+
+        return $grouped;
+    }
+
+    /** @param array<int, array<string, mixed>> $rows */
+    private function attachApproverDetails(array $rows): array
+    {
+        $detailsByRequest = $this->findApproverDetailsByRequestIds(array_column($rows, 'id'));
+
+        foreach ($rows as &$row) {
+            $row['approver_details'] = $detailsByRequest[(int) $row['id']] ?? [];
+        }
+        unset($row);
+
+        return $rows;
     }
 
     public function approveRequest(int $overtimeID, int $approverID, string $remarks, int $approved): bool

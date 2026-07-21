@@ -4,6 +4,15 @@ import {
   formatDateISO,
 } from "../../shared/js/status.js";
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function renderManagers(managers) {
   const $container = $("#managersList").empty();
 
@@ -16,12 +25,19 @@ export function renderManagers(managers) {
   }
 
   managers.forEach((m) => {
+    const name = escapeHtml(m.surname || "Approver " + m.approver_id);
+    const role = escapeHtml(m.role || "—");
+    const remarks =
+      m.status != null && m.remarks
+        ? `<div class="mgr-remarks ot-muted">${escapeHtml(m.remarks)}</div>`
+        : "";
     const $row = $(`
       <div class="approver-row">
-        <div class="avatar small">${m.approver_id}</div>
+        <div class="avatar small">${escapeHtml(m.approver_id)}</div>
         <div class="flex-grow-1 min-w-0">
-          <div class="mgr-name">${m.surname || "Approver " + m.approver_id}</div>
-          <div class="mgr-role">${m.role || "—"}</div>
+          <div class="mgr-name">${name}</div>
+          <div class="mgr-role">${role}</div>
+          ${remarks}
         </div>
         <div class="text-end">
           <span class="status-badge ${statusClass(m.status)}">${badgeText(m.status)}</span>

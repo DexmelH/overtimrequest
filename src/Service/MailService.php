@@ -146,7 +146,26 @@ class MailService
     {
         $statusLabel = $isApproved ? 'Approved' : 'Rejected';
         $actor = EmailTemplate::escape($queueRow['actor_name'] ?? '-');
-        $approverRemarks = EmailTemplate::escape($data['approver_remarks'] ?? '-');
+        $rawApproverRemarks = trim((string) ($data['approver_remarks'] ?? ''));
+        $approverRemarks = EmailTemplate::escape($rawApproverRemarks !== '' ? $rawApproverRemarks : '-');
+        $rejectionRemarksBlock = '';
+
+        if (!$isApproved) {
+            $rejectionRemarksBlock = '
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                  style="margin:0 0 22px 0;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;">
+                  <tr>
+                    <td style="padding:14px 18px;">
+                      <div style="font-size:12px;font-weight:700;color:#9a3412;text-transform:uppercase;letter-spacing:0.04em;margin:0 0 8px 0;">
+                        Rejection Remarks
+                      </div>
+                      <div style="font-size:14px;line-height:1.6;color:#7c2d12;">'
+                . $approverRemarks .
+                      '</div>
+                    </td>
+                  </tr>
+                </table>';
+        }
 
         return [
             '{{recipient_name}}' => EmailTemplate::escape($queueRow['approver_name'] ?? 'Employee'),
@@ -161,7 +180,8 @@ class MailService
                 ? 'linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%)'
                 : 'linear-gradient(135deg,#dc2626 0%,#b91c1c 100%)',
             '{{actor_name}}' => $actor,
-            '{{approver_remarks}}' => $approverRemarks !== '' ? $approverRemarks : '-',
+            '{{approver_remarks}}' => $approverRemarks,
+            '{{rejection_remarks_block}}' => $rejectionRemarksBlock,
             '{{group_name}}' => EmailTemplate::escape($data['abbreviation'] ?? $data['group_name'] ?? '-'),
             '{{project_list}}' => $this->buildProjectListHtml($data),
             '{{location_name}}' => EmailTemplate::escape($data['location_name'] ?? '-'),

@@ -811,8 +811,30 @@ body.ot-sidebar-open {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
-  max-height: 280px;
+  /* Fit 4 approver rows (with remarks) without scrolling */
+  min-height: 23.5rem;
+  max-height: 23.5rem;
   overflow-y: auto;
+}
+
+@media (max-width: 991.98px) {
+  .approvals-list {
+    min-height: 0;
+    max-height: min(23.5rem, 50vh);
+  }
+
+  .ot-modal .modal-body {
+    min-height: 0;
+  }
+}
+
+.ot-modal .modal-dialog.modal-xl {
+  --bs-modal-width: 1140px;
+  max-width: min(1140px, calc(100vw - 1.5rem));
+}
+
+.ot-modal .modal-body {
+  min-height: 28rem;
 }
 
 .approver-row {
@@ -839,6 +861,14 @@ body.ot-sidebar-open {
   font-size: 0.76rem;
   color: var(--ot-muted);
   font-weight: 500;
+}
+
+.approver-row .mgr-remarks {
+  font-size: 0.78rem;
+  margin-top: 0.25rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* Detail grid (modals) */

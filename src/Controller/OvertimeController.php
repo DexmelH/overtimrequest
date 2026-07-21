@@ -406,13 +406,21 @@ class OvertimeController
     public function getOvertimeToApprove(): array
     {
         $user = $this->currentUser();
-        $approverID = $user['id'];
+        $approverID = (int) $user['id'];
         $overtimeToApprove = $this->overtimeRepo->findOvertimeToApprove($approverID);
 
         foreach ($overtimeToApprove as &$request) {
-            $request['is_approved'] = $this->overtimeRepo->checkIfAlreadyApproved($request['id'], $approverID);
-            $request['approver_details'] = $this->overtimeRepo->findApproverDetails($request['id']);
+            $alreadyFinalized = $request['status'] !== null && $request['status'] !== '';
+            $myDecision = null;
+            foreach ($request['approver_details'] ?? [] as $detail) {
+                if ((int) ($detail['approver_id'] ?? 0) === $approverID) {
+                    $myDecision = $detail['status'] ?? null;
+                    break;
+                }
+            }
+            $request['is_approved'] = $alreadyFinalized || ($myDecision !== null && $myDecision !== '');
         }
+        unset($request);
 
         return ["success" => true, "data" => $overtimeToApprove];
     }
