@@ -113,8 +113,15 @@ switch ($routeInfo[0]) {
                 'App\Controller\GroupController' => function() use ($kdtphNewPdo, $kdtphPdo) {
                     return new \App\Controller\GroupController($kdtphNewPdo, $kdtphPdo);
                 },
-                'App\Controller\OvertimeController' => function() use ($webjmrPdo, $kdtphPdo, $formsPdo, $kdtphNewPdo, $activityLogger) {
-                    return new \App\Controller\OvertimeController($webjmrPdo, $kdtphPdo, $formsPdo, $kdtphNewPdo, $activityLogger);
+                'App\Controller\OvertimeController' => function() use ($webjmrPdo, $kdtphPdo, $formsPdo, $kdtphNewPdo, $activityLogger, $config) {
+                    return new \App\Controller\OvertimeController(
+                        $webjmrPdo,
+                        $kdtphPdo,
+                        $formsPdo,
+                        $kdtphNewPdo,
+                        $activityLogger,
+                        (string) ($config['app']['approval_cutoff_time'] ?? '15:00')
+                    );
                 },
                 'App\Controller\AdminController' => function() use ($webjmrPdo, $kdtphPdo, $kdtphNewPdo, $activityLogger, $config) {
                     $adminMemberRepo = new \App\Repository\AdminMemberRepository($webjmrPdo);

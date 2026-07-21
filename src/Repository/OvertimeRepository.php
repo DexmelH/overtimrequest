@@ -257,14 +257,79 @@ class OvertimeRepository
         return $stmt->fetchAll() ?: [];
     }
 
-    public function addAcceptance(int $overtime, int $approverID): bool
+    public function addAcceptance(int $overtime, int $approverID, ?int $approvalLevel = 1): bool
     {
-        $sql = "INSERT INTO `overtime_accept` (`overtime_id`, `approver_id`) VALUES (:overtimeID, :approverID)";
+        $level = $approvalLevel !== null && $approvalLevel >= 1 && $approvalLevel <= 4
+            ? $approvalLevel
+            : 1;
+        $sql = "INSERT INTO `overtime_accept` (`overtime_id`, `approver_id`, `approval_level`)
+                VALUES (:overtimeID, :approverID, :approvalLevel)";
         $stmt = $this->pdo->prepare($sql);
         return (bool)$stmt->execute([
             ":overtimeID" => $overtime,
-            ":approverID" => $approverID
+            ":approverID" => $approverID,
+            ":approvalLevel" => $level,
         ]);
+    }
+
+    public function findAcceptanceLevel(int $overtimeID, int $approverID): ?int
+    {
+        $sql = "SELECT `approval_level` FROM `overtime_accept`
+                WHERE `overtime_id` = :overtimeID AND `approver_id` = :approverID
+                LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':overtimeID' => $overtimeID,
+            ':approverID' => $approverID,
+        ]);
+        $level = $stmt->fetchColumn();
+        if ($level === false || $level === null) {
+            return null;
+        }
+
+        return (int) $level;
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function findPendingRequestsForDate(string $date): array
+    {
+        $sql = "SELECT orq.`id`, orq.`user_id`, orq.`group_id`, orq.`request_date`, orq.`status`
+                FROM `overtime_request` orq
+                WHERE orq.`request_date` = :requestDate AND orq.`status` IS NULL
+                ORDER BY orq.`id` ASC";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':requestDate' => $date]);
+
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /**
+     * Decisions already cast by approvers, with snapshot levels.
+     *
+     * @return array<int, array{approver_id: int, surname: string, status: int, remarks: string, approval_level: int, date_accepted: ?string}>
+     */
+    public function findDecisionsWithLevels(int $overtimeID): array
+    {
+        $sql = "SELECT oa.`approver_id`, el.`surname`, oa.`status`, oa.`remarks`,
+                       oa.`approval_level`, oa.`date_accepted`
+                FROM `overtime_accept` oa
+                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = oa.`approver_id`
+                WHERE oa.`overtime_id` = :overtimeID AND oa.`status` IS NOT NULL
+                ORDER BY oa.`approval_level` DESC, oa.`date_accepted` DESC, oa.`approver_id` ASC";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':overtimeID' => $overtimeID]);
+        $rows = $stmt->fetchAll() ?: [];
+
+        return array_map(static function (array $row): array {
+            return [
+                'approver_id' => (int) $row['approver_id'],
+                'surname' => (string) ($row['surname'] ?? 'Approver'),
+                'status' => (int) $row['status'],
+                'remarks' => (string) ($row['remarks'] ?? ''),
+                'approval_level' => (int) ($row['approval_level'] ?? 1),
+                'date_accepted' => $row['date_accepted'] ?? null,
+            ];
+        }, $rows);
     }
 
     public function findOvertimeToApprove(int $approverID): array
@@ -293,8 +358,12 @@ class OvertimeRepository
     public function findApproverDetails(int $overtimeID): array
     {
         $sql = "SELECT oa.`approver_id`, el.`surname`,
-                    COALESCE(CONCAT('Level ', oga.`approval_level`), dl.`name`) AS `role`,
-                    oa.`status`, oa.`remarks`, oa.`date_accepted`, oga.`approval_level`
+                    COALESCE(
+                        CONCAT('Level ', COALESCE(oa.`approval_level`, oga.`approval_level`)),
+                        dl.`name`
+                    ) AS `role`,
+                    oa.`status`, oa.`remarks`, oa.`date_accepted`,
+                    COALESCE(oa.`approval_level`, oga.`approval_level`) AS `approval_level`
                 FROM `overtime_accept` oa
                 LEFT JOIN `overtime_request` orq ON orq.`id` = oa.`overtime_id`
                 LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = oa.`approver_id`
@@ -302,7 +371,7 @@ class OvertimeRepository
                     ON oga.`approver_id` = oa.`approver_id` AND oga.`group_id` = orq.`group_id`
                 LEFT JOIN kdtphdb_new.`designation_list` dl ON dl.`id` = el.`designation`
                 WHERE oa.`overtime_id` = :overtimeID
-                ORDER BY oga.`approval_level` ASC, oa.`approver_id` ASC";
+                ORDER BY COALESCE(oa.`approval_level`, oga.`approval_level`) ASC, oa.`approver_id` ASC";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
             ":overtimeID" => $overtimeID

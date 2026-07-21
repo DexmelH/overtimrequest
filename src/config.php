@@ -32,6 +32,10 @@ $makeConnection = static function (string $database) use ($makeDsn, $dbUser, $db
 };
 
 $environment = Env::environment();
+$timezone = Env::get('APP_TIMEZONE', 'Asia/Manila');
+if ($timezone !== '') {
+    date_default_timezone_set($timezone);
+}
 
 return [
     'app' => [
@@ -43,6 +47,8 @@ return [
         'name' => Env::get('APP_NAME', 'Overtime Request App'),
         'base_path' => Env::get('APP_BASE_PATH', '/overtime'),
         'url' => Env::get('APP_URL', 'http://localhost/overtime'),
+        'timezone' => $timezone,
+        'approval_cutoff_time' => Env::get('APPROVAL_CUTOFF_TIME', '15:00'),
         'admin_group_abbrs' => array_values(array_filter(array_map(
             static fn ($abbr) => strtoupper(trim($abbr)),
             explode(',', Env::get('APP_ADMIN_GROUP_ABBRS', 'MNG,IT,SYS'))

@@ -29,8 +29,8 @@ async function handleApproval(status) {
   const confirmed = await confirmAction({
     title: isApprove ? "Approve this request?" : "Reject this request?",
     message: isApprove
-      ? "The employee will be notified once this request is finalized."
-      : "The employee will be notified that their request was rejected.",
+      ? "Your decision will be recorded. Final status is set at cutoff (or immediately if you are Level 4)."
+      : "Your rejection will be recorded. Final status is set at cutoff (or immediately if you are Level 4).",
     confirmText: isApprove ? "Approve" : "Reject",
     cancelText: "Go back",
     variant: isApprove ? "success" : "danger",

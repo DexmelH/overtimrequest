@@ -8,6 +8,7 @@ use App\Repository\LeaveRepository;
 use App\Repository\OvertimeRepository;
 use App\Repository\UserRepository;
 use App\Service\ActivityLogger;
+use App\Service\ApprovalFinalizer;
 use PDO;
 
 class OvertimeController
@@ -19,9 +20,16 @@ class OvertimeController
     private LeaveRepository $leaveRepo;
     private EmployeeRepository $employeeRepo;
     private ActivityLogger $logger;
+    private ApprovalFinalizer $approvalFinalizer;
 
-    public function __construct(PDO $overtimePDO, PDO $userPDO, PDO $formsPDO, PDO $kdtphNewPdo, ActivityLogger $logger)
-    {
+    public function __construct(
+        PDO $overtimePDO,
+        PDO $userPDO,
+        PDO $formsPDO,
+        PDO $kdtphNewPdo,
+        ActivityLogger $logger,
+        string $approvalCutoffTime = '15:00'
+    ) {
         $this->overtimeRepo = new OvertimeRepository($overtimePDO);
         $this->userRepo = new UserRepository($userPDO);
         $this->groupApproverRepo = new GroupApproverRepository($overtimePDO);
@@ -29,6 +37,11 @@ class OvertimeController
         $this->leaveRepo = new LeaveRepository($formsPDO);
         $this->employeeRepo = new EmployeeRepository($kdtphNewPdo);
         $this->logger = $logger;
+        $this->approvalFinalizer = new ApprovalFinalizer(
+            $this->overtimeRepo,
+            $this->logger,
+            $approvalCutoffTime
+        );
     }
 
     public function getHolidays(): array
@@ -179,7 +192,11 @@ class OvertimeController
             $approvers = $this->resolveApprovers($groupID, $groupAbbrev, $employeeId);
 
             foreach ($approvers as $app) {
-                $this->overtimeRepo->addAcceptance($id, (int) $app['id']);
+                $this->overtimeRepo->addAcceptance(
+                    $id,
+                    (int) $app['id'],
+                    isset($app['approval_level']) ? (int) $app['approval_level'] : 1
+                );
                 $this->overtimeRepo->approveRequest(
                     $id,
                     (int) $app['id'],
@@ -290,7 +307,11 @@ class OvertimeController
                     'email_type' => 'new_request',
                 ];
                 $this->overtimeRepo->insertEmailQueue($emailPayload);
-                $this->overtimeRepo->addAcceptance($id, $app['id']);
+                $this->overtimeRepo->addAcceptance(
+                    $id,
+                    (int) $app['id'],
+                    isset($app['approval_level']) ? (int) $app['approval_level'] : 1
+                );
             }
 
             $pdo->commit();
@@ -414,21 +435,24 @@ class OvertimeController
         }
 
         $pdo = $this->overtimeRepo->getPdo();
+        $finalized = false;
+        $level = null;
         try {
             $pdo->beginTransaction();
 
             $this->overtimeRepo->approveRequest($overtimeID, $approverID, $remarks, $approved);
-            $confirmApproval = $this->overtimeRepo->checkIfForApproval($overtimeID, $approved);
-            if ($confirmApproval) {
-                $this->overtimeRepo->updateOvertimeStatus($overtimeID, $approved);
-                if ((int) $approved === 1) {
-                    $this->overtimeRepo->addAcceptedRequestToDailyReport((int) $overtimeID);
-                }
-                $this->queueRequestorStatusEmail(
+            $level = $this->overtimeRepo->findAcceptanceLevel((int) $overtimeID, (int) $approverID) ?? 1;
+
+            if ($level === 4) {
+                $this->approvalFinalizer->finalizeImmediate(
                     (int) $overtimeID,
                     (int) $approved,
-                    (string) ($user['surname'] ?? 'Approver')
+                    $remarks,
+                    (string) ($user['surname'] ?? 'Approver'),
+                    (int) $approverID,
+                    4
                 );
+                $finalized = true;
             }
 
             $pdo->commit();
@@ -447,10 +471,29 @@ class OvertimeController
             $user['surname'] ?? null,
             'overtime_request',
             (int) $overtimeID,
-            ['remarks' => $remarks, 'finalized' => $confirmApproval]
+            [
+                'remarks' => $remarks,
+                'finalized' => $finalized,
+                'approval_level' => $level,
+            ]
         );
 
-        return ['success' => true, 'message' => "Overtime request updated successfully."];
+        if ($finalized) {
+            return [
+                'success' => true,
+                'finalized' => true,
+                'message' => 'Overtime request finalized successfully.',
+            ];
+        }
+
+        return [
+            'success' => true,
+            'finalized' => false,
+            'message' => sprintf(
+                'Decision recorded. Final status will be set at %s (or sooner if Level 4 acts).',
+                $this->approvalFinalizer->getCutoffTime()
+            ),
+        ];
     }
 
     private function queueRequestorStatusEmail(int $overtimeID, int $decision, string $actorName): void
@@ -474,7 +517,7 @@ class OvertimeController
     }
 
     /**
-     * @return array<int, array{id: int, surname: string, email: string}>
+     * @return array<int, array{id: int, surname: string, email: string, approval_level?: int}>
      */
     private function resolveApprovers(int $groupId, string $groupAbbrev, int $userId): array
     {
