@@ -10,6 +10,8 @@ import { cancelOvertimeRequest } from "./api/cancelOvertime.js";
 import { getCurrentRequestId } from "./components/modal.js";
 import { confirmAction } from "../shared/js/confirm.js";
 import { initShell } from "../shared/js/shell.js";
+import { apiUrl } from "../shared/js/api.js";
+import { apiGet } from "../shared/js/http.js";
 import {
   applyDateConstraints,
   isAllowedRequestDate,
@@ -25,6 +27,10 @@ const projectAllocations = createProjectAllocations({
   groupSelector: "#group",
 });
 
+let requestLocked = false;
+let requestLockMessage =
+  "Overtime requests are locked from 3:00 PM onwards. Please ask your approver to submit on your behalf if you still need to request overtime.";
+
 function setDefaultDate() {
   setDefaultRequestDate();
 }
@@ -35,6 +41,10 @@ function setSubmitLoading(loading) {
     $btn
       .prop("disabled", true)
       .html('<span class="ot-spinner"></span> Submitting...');
+  } else if (requestLocked) {
+    $btn
+      .prop("disabled", true)
+      .html('<i class="bi bi-lock-fill"></i> Locked after cutoff');
   } else {
     $btn
       .prop("disabled", false)
@@ -42,7 +52,46 @@ function setSubmitLoading(loading) {
   }
 }
 
+function applyRequestCutoffLock(locked, message) {
+  requestLocked = !!locked;
+  if (message) {
+    requestLockMessage = message;
+  }
+
+  const $banner = $("#requestCutoffLock");
+  const $form = $("#overtimeForm");
+  const $fields = $form.find("input, select, textarea, button");
+
+  if (requestLocked) {
+    $("#requestCutoffLockMessage").text(requestLockMessage);
+    $banner.removeClass("d-none");
+    $form.addClass("is-cutoff-locked");
+    $fields.prop("disabled", true);
+    $("#submitBtn")
+      .prop("disabled", true)
+      .html('<i class="bi bi-lock-fill"></i> Locked after cutoff');
+  } else {
+    $banner.addClass("d-none");
+    $form.removeClass("is-cutoff-locked");
+    $fields.prop("disabled", false);
+    setSubmitLoading(false);
+  }
+}
+
+async function loadRequestCutoffLock() {
+  try {
+    const json = await apiGet(apiUrl("/session"));
+    applyRequestCutoffLock(
+      !!json?.request_locked,
+      json?.request_lock_message || requestLockMessage,
+    );
+  } catch {
+    /* keep form usable if session probe fails; server still enforces lock */
+  }
+}
+
 $("#group").on("change", function () {
+  if (requestLocked) return;
   projectAllocations.loadProjects().catch(() => {});
 });
 
@@ -61,6 +110,7 @@ $("#historySearch").on("input", function () {
 
 function refreshHistoryOnRevisit() {
   fetchHistory().catch(() => {});
+  loadRequestCutoffLock().catch(() => {});
 }
 
 $(window).on("focus", refreshHistoryOnRevisit);
@@ -74,6 +124,11 @@ document.addEventListener("visibilitychange", () => {
 // Form submit
 $("#overtimeForm").on("submit", async function (e) {
   e.preventDefault();
+
+  if (requestLocked) {
+    showToast(requestLockMessage, { type: "warning" });
+    return;
+  }
 
   const payload = {
     date: $("#date").val(),
@@ -134,12 +189,14 @@ $("#btnCancelRequest").on("click", async function () {
 });
 
 $("#resetBtn").on("click", function () {
+  if (requestLocked) return;
   $("#overtimeForm")[0].reset();
   setDefaultDate();
   projectAllocations.reset();
 });
 
 $("#date").on("change input", function () {
+  if (requestLocked) return;
   validateDateInput(true);
 });
 
@@ -148,6 +205,7 @@ initShell();
 applyDateConstraints();
 setDefaultDate();
 loadBlockedHolidays().catch(() => {});
+loadRequestCutoffLock().catch(() => {});
 fetchHistory().catch(() => {});
 fetchLocations().catch(() => {});
 fetchGroups().catch(() => {});

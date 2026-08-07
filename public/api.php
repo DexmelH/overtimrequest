@@ -107,7 +107,8 @@ switch ($routeInfo[0]) {
                     return new \App\Controller\UserController(
                         new \App\Repository\UserRepository($kdtphPdo),
                         new \App\Repository\GroupApproverRepository($webjmrPdo),
-                        $adminAccess
+                        $adminAccess,
+                        (string) ($config['app']['approval_cutoff_time'] ?? '15:00')
                     );
                 },
                 'App\Controller\GroupController' => function() use ($kdtphNewPdo, $kdtphPdo) {

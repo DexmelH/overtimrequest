@@ -3,12 +3,13 @@ namespace App\Service;
 
 use App\Repository\OvertimeRepository;
 use App\Service\ActivityLogger;
+use App\Service\ApprovalCutoff;
 
 class ApprovalFinalizer
 {
     private OvertimeRepository $overtimeRepo;
     private ActivityLogger $logger;
-    private string $cutoffTime;
+    private ApprovalCutoff $cutoff;
 
     public function __construct(
         OvertimeRepository $overtimeRepo,
@@ -17,26 +18,17 @@ class ApprovalFinalizer
     ) {
         $this->overtimeRepo = $overtimeRepo;
         $this->logger = $logger;
-        $this->cutoffTime = $this->normalizeCutoffTime($cutoffTime);
+        $this->cutoff = new ApprovalCutoff($cutoffTime);
     }
 
     public function getCutoffTime(): string
     {
-        return $this->cutoffTime;
+        return $this->cutoff->getCutoffTime();
     }
 
     public function isPastCutoff(?\DateTimeInterface $now = null): bool
     {
-        $now = $now ?? new \DateTimeImmutable('now');
-        $cutoff = \DateTimeImmutable::createFromFormat(
-            'Y-m-d H:i',
-            $now->format('Y-m-d') . ' ' . $this->cutoffTime
-        );
-        if (!$cutoff) {
-            return false;
-        }
-
-        return $now >= $cutoff;
+        return $this->cutoff->isPastCutoff($now);
     }
 
     /**
@@ -113,7 +105,7 @@ class ApprovalFinalizer
 
         $remarks = sprintf(
             'No approver action by cutoff (%s).',
-            $this->cutoffTime
+            $this->cutoff->getCutoffTime()
         );
         $this->applyFinalDecision(
             $overtimeId,
@@ -220,7 +212,7 @@ class ApprovalFinalizer
                 'remarks' => $remarks,
                 'auto_rejected' => $autoRejected,
                 'approval_level' => $approvalLevel,
-                'cutoff_time' => $this->cutoffTime,
+                'cutoff_time' => $this->cutoff->getCutoffTime(),
             ]
         );
     }
@@ -242,19 +234,5 @@ class ApprovalFinalizer
             'decision' => $decision,
             'actor_name' => $actorName,
         ]);
-    }
-
-    private function normalizeCutoffTime(string $cutoffTime): string
-    {
-        $cutoffTime = trim($cutoffTime);
-        if (!preg_match('/^\d{1,2}:\d{2}$/', $cutoffTime)) {
-            return '15:00';
-        }
-        [$h, $m] = array_map('intval', explode(':', $cutoffTime));
-        if ($h < 0 || $h > 23 || $m < 0 || $m > 59) {
-            return '15:00';
-        }
-
-        return sprintf('%02d:%02d', $h, $m);
     }
 }

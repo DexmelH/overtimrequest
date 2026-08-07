@@ -4,21 +4,25 @@ namespace App\Controller;
 use App\Repository\GroupApproverRepository;
 use App\Repository\UserRepository;
 use App\Service\AdminAccessService;
+use App\Service\ApprovalCutoff;
 
 class UserController
 {
     private UserRepository $userRepo;
     private GroupApproverRepository $groupApproverRepo;
     private AdminAccessService $adminAccess;
+    private ApprovalCutoff $approvalCutoff;
 
     public function __construct(
         UserRepository $userRepo,
         GroupApproverRepository $groupApproverRepo,
-        AdminAccessService $adminAccess
+        AdminAccessService $adminAccess,
+        string $approvalCutoffTime = '15:00'
     ) {
         $this->userRepo = $userRepo;
         $this->groupApproverRepo = $groupApproverRepo;
         $this->adminAccess = $adminAccess;
+        $this->approvalCutoff = new ApprovalCutoff($approvalCutoffTime);
     }
 
     public function getSession(): array
@@ -26,6 +30,7 @@ class UserController
         $userHash = $_COOKIE['userID'] ?? '';
         $user = $this->userRepo->findIdByHash($userHash);
         $userId = (int) ($user['id'] ?? 0);
+        $locked = $this->approvalCutoff->isPastCutoff();
 
         return [
             'success' => true,
@@ -35,6 +40,10 @@ class UserController
             ],
             'is_admin' => $this->adminAccess->isAdmin($userId),
             'is_approver' => $this->isApprover($userId),
+            'approval_cutoff_time' => $this->approvalCutoff->getCutoffTime(),
+            'approval_cutoff_label' => $this->approvalCutoff->getCutoffLabel(),
+            'request_locked' => $locked,
+            'request_lock_message' => $locked ? $this->approvalCutoff->employeeLockMessage() : null,
         ];
     }
 
