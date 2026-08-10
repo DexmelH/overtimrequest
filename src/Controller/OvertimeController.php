@@ -422,6 +422,18 @@ class OvertimeController
         }
         unset($request);
 
+        usort($overtimeToApprove, static function (array $a, array $b): int {
+            $aPending = !empty($a['is_approved']) ? 1 : 0;
+            $bPending = !empty($b['is_approved']) ? 1 : 0;
+            if ($aPending !== $bPending) {
+                return $aPending <=> $bPending;
+            }
+
+            $aDate = (string) ($a['date_created'] ?? $a['request_date'] ?? '');
+            $bDate = (string) ($b['date_created'] ?? $b['request_date'] ?? '');
+            return strcmp($bDate, $aDate);
+        });
+
         return ["success" => true, "data" => $overtimeToApprove];
     }
 

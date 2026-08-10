@@ -335,6 +335,7 @@ class OvertimeRepository
     public function findOvertimeToApprove(int $approverID): array
     {
         $sql = "SELECT orq.id, orq.duration, orq.remarks, orq.request_date, orq.status,
+                   orq.date_created,
                    el.id AS employee_id,
                    el.surname AS employee_name,
                    gl.abbreviation AS group_name,
@@ -345,7 +346,12 @@ class OvertimeRepository
                 LEFT JOIN `dispatch_locations` l ON orq.location_id = l.fldID
                 LEFT JOIN kdtphdb_new.`employee_list` el ON el.id = orq.user_id
                 WHERE oa.approver_id = :approverID AND (orq.status != 2 OR orq.status IS NULL)
-                ORDER BY orq.date_created DESC";
+                ORDER BY
+                    CASE
+                        WHEN orq.status IS NOT NULL OR oa.status IS NOT NULL THEN 1
+                        ELSE 0
+                    END ASC,
+                    orq.date_created DESC";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
             ":approverID" => $approverID
