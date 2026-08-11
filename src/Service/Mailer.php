@@ -40,7 +40,7 @@ class Mailer
             $mail->setFrom($this->config['from_email'], $this->config['from_name']);
 
             // Recipient
-            $mail->addAddress('hernandez-kdt@global.kawasaki.com', $toName);
+            $mail->addAddress($toEmail, $toName);
 
             // Content
             $mail->isHTML(true);
