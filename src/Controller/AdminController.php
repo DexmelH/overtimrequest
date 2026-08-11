@@ -225,11 +225,13 @@ class AdminController
         $result = $this->logRepo->findLogs($filters);
         $this->enrichLogRows($result['data']);
 
-        return [
-            'success' => true,
-            'summary' => $this->logRepo->getActionSummary(),
-            ...$result,
-        ];
+        return array_merge(
+            [
+                'success' => true,
+                'summary' => $this->logRepo->getActionSummary(),
+            ],
+            $result
+        );
     }
 
     /** @param array<int, array<string, mixed>> $rows */
