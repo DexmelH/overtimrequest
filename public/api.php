@@ -145,8 +145,8 @@ switch ($routeInfo[0]) {
                 'App\Controller\LocationController' => function() use ($webjmrPdo) {
                     return new \App\Controller\LocationController($webjmrPdo);
                 },
-                'App\Controller\ProjectController' => function() use ($webjmrPdo) {
-                    return new \App\Controller\ProjectController($webjmrPdo);
+                'App\Controller\ProjectController' => function() use ($webjmrPdo, $kdtphPdo) {
+                    return new \App\Controller\ProjectController($webjmrPdo, $kdtphPdo);
                 },
                 'App\Controller\ItemController' => function() use ($webjmrPdo) {
                     return new \App\Controller\ItemController($webjmrPdo);
