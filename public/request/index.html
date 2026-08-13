@@ -39,9 +39,13 @@
         </div>
         <nav class="ot-sidebar-nav" id="otNav" aria-label="App sections"></nav>
         <div class="ot-sidebar-footer">
-          <a class="ot-sidebar-link ot-sidebar-home" href="../request/" title="Home">
-            <i class="bi bi-house-door" aria-hidden="true"></i>
-            <span>Home</span>
+          <a
+            class="ot-sidebar-link ot-sidebar-home"
+            href="/../webjmr/DailyReport/"
+            title="Daily Report"
+          >
+            <i class="bi bi-calendar-event" aria-hidden="true"></i>
+            <span>Daily Report</span>
           </a>
         </div>
       </aside>
@@ -73,178 +77,198 @@
         </header>
 
         <main class="container ot-main">
-      <div class="row g-4">
-        <!-- Request form -->
-        <div class="col-lg-7">
-          <div class="ot-card h-100">
-            <div class="ot-card-header">
-              <div>
-                <h2>New Overtime Request</h2>
-                <p class="ot-muted mb-0">Complete all required fields below</p>
+          <div class="row g-4">
+            <!-- Request form -->
+            <div class="col-lg-7">
+              <div class="ot-card h-100">
+                <div class="ot-card-header">
+                  <div>
+                    <h2>New Overtime Request</h2>
+                    <p class="ot-muted mb-0">
+                      Complete all required fields below
+                    </p>
+                  </div>
+                </div>
+                <div class="ot-card-body">
+                  <div
+                    id="requestCutoffLock"
+                    class="request-cutoff-lock d-none"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <div class="request-cutoff-lock-icon" aria-hidden="true">
+                      <i class="bi bi-lock-fill"></i>
+                    </div>
+                    <div>
+                      <strong>Requests locked for today</strong>
+                      <p class="mb-0" id="requestCutoffLockMessage">
+                        Overtime requests are locked from 3:00 PM onwards.
+                        Please ask your approver to submit on your behalf if you
+                        still need to request overtime.
+                      </p>
+                    </div>
+                  </div>
+                  <form id="overtimeForm" novalidate autocomplete="off">
+                    <div class="row g-3">
+                      <div class="col-md-6">
+                        <label class="form-label" for="date">Date</label>
+                        <input
+                          type="date"
+                          class="form-control"
+                          id="date"
+                          required
+                        />
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="group">Group</label>
+                        <select class="form-select" id="group" required>
+                          <option value="">Select group</option>
+                        </select>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="location"
+                          >Location</label
+                        >
+                        <select class="form-select" id="location" required>
+                          <option value="">Select location</option>
+                        </select>
+                      </div>
+
+                      <div class="col-12">
+                        <div
+                          class="d-flex align-items-center justify-content-between gap-2 mb-2"
+                        >
+                          <label class="form-label mb-0"
+                            >Projects and hours</label
+                          >
+                          <span class="project-allocation-total"
+                            >Total:
+                            <strong id="projectHoursTotal">0 hrs</strong></span
+                          >
+                        </div>
+                        <div
+                          id="projectAllocations"
+                          class="project-allocations"
+                        ></div>
+                        <button
+                          type="button"
+                          class="ot-btn ot-btn-secondary btn-sm mt-2"
+                          id="addProjectAllocation"
+                          disabled
+                        >
+                          <i class="bi bi-plus-circle"></i> Add project
+                        </button>
+                      </div>
+
+                      <div class="col-12">
+                        <label class="form-label" for="remarks">Remarks</label>
+                        <textarea
+                          class="form-control"
+                          id="remarks"
+                          rows="3"
+                          placeholder="Optional notes for approvers"
+                        ></textarea>
+                      </div>
+                    </div>
+
+                    <div
+                      class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-4 pt-3 border-top"
+                    >
+                      <div class="d-flex gap-2">
+                        <button
+                          type="button"
+                          class="ot-btn ot-btn-secondary"
+                          id="resetBtn"
+                        >
+                          <i class="bi bi-arrow-counterclockwise"></i> Clear
+                        </button>
+                        <button
+                          type="submit"
+                          class="ot-btn ot-btn-primary"
+                          id="submitBtn"
+                        >
+                          <i class="bi bi-send"></i> Submit Request
+                        </button>
+                      </div>
+                      <small class="ot-muted"
+                        >Required fields must be filled</small
+                      >
+                    </div>
+                  </form>
+                </div>
               </div>
             </div>
-            <div class="ot-card-body">
-              <div
-                id="requestCutoffLock"
-                class="request-cutoff-lock d-none"
-                role="status"
-                aria-live="polite"
-              >
-                <div class="request-cutoff-lock-icon" aria-hidden="true">
-                  <i class="bi bi-lock-fill"></i>
+
+            <!-- History -->
+            <div class="col-lg-5">
+              <div class="ot-card h-100 d-flex flex-column">
+                <div class="ot-card-header flex-wrap">
+                  <div>
+                    <h2>Your History</h2>
+                    <p class="ot-muted mb-0">Click a row to view details</p>
+                  </div>
+                  <div
+                    class="ot-filter-group"
+                    role="group"
+                    aria-label="Filter history"
+                  >
+                    <button
+                      class="ot-filter-btn active"
+                      data-filter="all"
+                      type="button"
+                    >
+                      All
+                    </button>
+                    <button
+                      class="ot-filter-btn"
+                      data-filter="pending"
+                      type="button"
+                    >
+                      Pending
+                    </button>
+                    <button
+                      class="ot-filter-btn"
+                      data-filter="approved"
+                      type="button"
+                    >
+                      Approved
+                    </button>
+                    <button
+                      class="ot-filter-btn"
+                      data-filter="denied"
+                      type="button"
+                    >
+                      Denied
+                    </button>
+                    <button
+                      class="ot-filter-btn"
+                      data-filter="cancelled"
+                      type="button"
+                    >
+                      Cancelled
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <strong>Requests locked for today</strong>
-                  <p class="mb-0" id="requestCutoffLockMessage">
-                    Overtime requests are locked from 3:00 PM onwards. Please ask
-                    your approver to submit on your behalf if you still need to
-                    request overtime.
-                  </p>
-                </div>
-              </div>
-              <form id="overtimeForm" novalidate autocomplete="off">
-                <div class="row g-3">
-                  <div class="col-md-6">
-                    <label class="form-label" for="date">Date</label>
+                <div class="ot-card-body flex-grow-1 d-flex flex-column p-0">
+                  <div class="px-3 pt-2 pb-2 border-bottom">
                     <input
-                      type="date"
-                      class="form-control"
-                      id="date"
-                      required
+                      type="search"
+                      class="form-control form-control-sm"
+                      id="historySearch"
+                      placeholder="Search group, project, location..."
+                      aria-label="Search history"
                     />
                   </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="group">Group</label>
-                    <select class="form-select" id="group" required>
-                      <option value="">Select group</option>
-                    </select>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="location">Location</label>
-                    <select class="form-select" id="location" required>
-                      <option value="">Select location</option>
-                    </select>
-                  </div>
-
-                  <div class="col-12">
-                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                      <label class="form-label mb-0">Projects and hours</label>
-                      <span class="project-allocation-total">Total: <strong id="projectHoursTotal">0 hrs</strong></span>
-                    </div>
-                    <div id="projectAllocations" class="project-allocations"></div>
-                    <button
-                      type="button"
-                      class="ot-btn ot-btn-secondary btn-sm mt-2"
-                      id="addProjectAllocation"
-                      disabled
-                    >
-                      <i class="bi bi-plus-circle"></i> Add project
-                    </button>
-                  </div>
-
-                  <div class="col-12">
-                    <label class="form-label" for="remarks">Remarks</label>
-                    <textarea
-                      class="form-control"
-                      id="remarks"
-                      rows="3"
-                      placeholder="Optional notes for approvers"
-                    ></textarea>
-                  </div>
+                  <div
+                    class="history-list flex-grow-1"
+                    id="historyList"
+                    role="list"
+                  ></div>
                 </div>
-
-                <div
-                  class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-4 pt-3 border-top"
-                >
-                  <div class="d-flex gap-2">
-                    <button
-                      type="button"
-                      class="ot-btn ot-btn-secondary"
-                      id="resetBtn"
-                    >
-                      <i class="bi bi-arrow-counterclockwise"></i> Clear
-                    </button>
-                    <button
-                      type="submit"
-                      class="ot-btn ot-btn-primary"
-                      id="submitBtn"
-                    >
-                      <i class="bi bi-send"></i> Submit Request
-                    </button>
-                  </div>
-                  <small class="ot-muted">Required fields must be filled</small>
-                </div>
-              </form>
+              </div>
             </div>
           </div>
-        </div>
-
-        <!-- History -->
-        <div class="col-lg-5">
-          <div class="ot-card h-100 d-flex flex-column">
-            <div class="ot-card-header flex-wrap">
-              <div>
-                <h2>Your History</h2>
-                <p class="ot-muted mb-0">Click a row to view details</p>
-              </div>
-              <div class="ot-filter-group" role="group" aria-label="Filter history">
-                  <button
-                    class="ot-filter-btn active"
-                    data-filter="all"
-                    type="button"
-                  >
-                    All
-                  </button>
-                  <button
-                    class="ot-filter-btn"
-                    data-filter="pending"
-                    type="button"
-                  >
-                    Pending
-                  </button>
-                  <button
-                    class="ot-filter-btn"
-                    data-filter="approved"
-                    type="button"
-                  >
-                    Approved
-                  </button>
-                  <button
-                    class="ot-filter-btn"
-                    data-filter="denied"
-                    type="button"
-                  >
-                    Denied
-                  </button>
-                  <button
-                    class="ot-filter-btn"
-                    data-filter="cancelled"
-                    type="button"
-                  >
-                    Cancelled
-                  </button>
-                </div>
-            </div>
-            <div class="ot-card-body flex-grow-1 d-flex flex-column p-0">
-              <div class="px-3 pt-2 pb-2 border-bottom">
-                <input
-                  type="search"
-                  class="form-control form-control-sm"
-                  id="historySearch"
-                  placeholder="Search group, project, location..."
-                  aria-label="Search history"
-                />
-              </div>
-              <div
-                class="history-list flex-grow-1"
-                id="historyList"
-                role="list"
-              ></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
+        </main>
       </div>
     </div>
 
@@ -292,7 +316,9 @@
                   </div>
                   <div class="detail-item full">
                     <div class="label">Projects and hours</div>
-                    <div class="value project-detail-list" id="m_projects">—</div>
+                    <div class="value project-detail-list" id="m_projects">
+                      —
+                    </div>
                   </div>
                   <div class="detail-item full">
                     <div class="label">Remarks</div>
@@ -319,7 +345,9 @@
               </div>
             </div>
           </div>
-          <div class="modal-footer border-0 d-flex justify-content-between w-100">
+          <div
+            class="modal-footer border-0 d-flex justify-content-between w-100"
+          >
             <button
               type="button"
               class="ot-btn ot-btn-danger d-none"

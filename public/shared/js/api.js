@@ -1,5 +1,5 @@
 /**
- * Resolves API base URL for pages under /overtime/public/* or /overtime/*
+ * Resolves API base URL for pages under /overtime/* (clean URLs).
  */
 export function getApiBase() {
   const meta = document.querySelector('meta[name="api-base"]');

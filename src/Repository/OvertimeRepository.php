@@ -76,7 +76,7 @@ class OvertimeRepository
                 FROM `overtime_request` orq
                 LEFT JOIN kdtphdb_new.`group_list` gl ON orq.group_id = gl.id
                 LEFT JOIN `dispatch_locations` l ON orq.location_id = l.fldID
-                WHERE orq.user_id = :userID ORDER BY orq.date_created DESC";
+                WHERE orq.user_id = :userID ORDER BY orq.request_date DESC, orq.id DESC";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([":userID" => $userID]);
         $data = $stmt->fetchAll();

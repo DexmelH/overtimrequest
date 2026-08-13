@@ -1,7 +1,14 @@
 RewriteEngine On
-# rewrite /overtime/request/* to /overtime/public/request/*
-# RewriteRule ^request(/.*)?$ public/request$1 [L,QSA]
-# RewriteRule ^approve(/.*)?$ public/approve$1 [L,QSA]
-# route /overtime/api/... to public/api.php
-RewriteRule ^api/(.*)$ public/api.php?r=$1 [L,QSA]
+RewriteBase /overtime/
 
+# /overtime → request page (clean URL, no /public/)
+RewriteRule ^$ /overtime/request/ [R=302,L]
+
+# Strip /public/ from the browser URL.
+# Uncomment AFTER restarting Apache from XAMPP Control Panel
+# (new Alias rules in httpd-vhosts.conf must be loaded first).
+RewriteCond %{THE_REQUEST} \s/overtime/public/ [NC]
+RewriteRule ^public/(.*)$ /overtime/$1 [R=302,L]
+
+# /overtime/api/... → public/api.php
+RewriteRule ^api/(.*)$ public/api.php?r=$1 [L,QSA]
