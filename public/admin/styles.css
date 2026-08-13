@@ -492,51 +492,8 @@ body[data-page="admin"] .ot-main {
   flex-shrink: 0;
 }
 
-.employee-suggestions {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
-  z-index: 1050;
-  background: var(--ot-surface);
-  border: 1px solid var(--ot-border);
-  border-radius: var(--ot-radius-sm);
-  box-shadow: var(--ot-shadow-lg);
-  max-height: 220px;
-  overflow-y: auto;
-  margin-top: 4px;
-}
-
 .approver-level-row .position-relative {
   overflow: visible;
-}
-
-.suggestion-item {
-  display: block;
-  width: 100%;
-  text-align: left;
-  border: none;
-  background: transparent;
-  padding: 0.6rem 0.85rem;
-  font-size: 0.85rem;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.12s ease;
-}
-
-.suggestion-item:hover {
-  background: var(--ot-accent-soft);
-}
-
-.suggestion-item .ot-muted {
-  display: block;
-  font-size: 0.75rem;
-}
-
-.suggestion-empty {
-  padding: 0.7rem 0.85rem;
-  font-size: 0.85rem;
-  color: var(--ot-muted);
 }
 
 .approver-preview-list {
@@ -598,14 +555,6 @@ body[data-page="admin"] .ot-main {
 
 [data-theme="dark"] .summary-card .label {
   color: var(--ot-muted);
-}
-
-[data-theme="dark"] .suggestion-item {
-  color: var(--ot-text);
-}
-
-[data-theme="dark"] .suggestion-item:hover {
-  background: var(--ot-accent-soft);
 }
 
 /* Admin members */

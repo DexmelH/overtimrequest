@@ -4,6 +4,7 @@ import { showToast } from "../shared/js/toast.js";
 import { initApprovers } from "./approvers.js";
 import { initAdminMembers } from "./members.js";
 import { initShell } from "../shared/js/shell.js";
+import { escapeHtml } from "../shared/js/escapeHtml.js";
 
 let currentPage = 1;
 let totalPages = 1;
@@ -90,14 +91,6 @@ const DETAIL_LABELS = {
   auto_approved: "Auto-approved",
   notes: "Notes",
 };
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 function getActionMeta(action) {
   return (

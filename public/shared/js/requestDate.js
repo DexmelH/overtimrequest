@@ -1,6 +1,6 @@
-import { showToast } from "../../shared/js/toast.js";
-import { apiUrl } from "../../shared/js/api.js";
-import { apiGet } from "../../shared/js/http.js";
+import { showToast } from "./toast.js";
+import { apiUrl } from "./api.js";
+import { apiGet } from "./http.js";
 
 /** @type {Map<string, string>} */
 let blockedHolidays = new Map();

@@ -1,13 +1,6 @@
-import { apiUrl } from "../../shared/js/api.js";
-import { apiGet, normalizePayload } from "../../shared/js/http.js";
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+import { apiUrl } from "./api.js";
+import { apiGet, normalizePayload } from "./http.js";
+import { escapeHtml } from "./escapeHtml.js";
 
 export function createProjectAllocations({
   containerId,

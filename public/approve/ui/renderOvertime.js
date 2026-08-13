@@ -7,15 +7,7 @@ import {
 } from "../services/state.js";
 import { populateModal } from "./populateModal.js";
 import { statusClass, formatDateShort } from "../../shared/js/status.js";
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+import { escapeHtml } from "../../shared/js/escapeHtml.js";
 
 export function syncBulkBar() {
   const count = getSelectedCount();

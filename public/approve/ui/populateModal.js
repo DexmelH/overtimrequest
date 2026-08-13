@@ -1,5 +1,5 @@
 import { overtime } from "../services/state.js";
-import { renderManagers } from "../components/approvers.js";
+import { renderManagers } from "../../shared/js/approvers.js";
 import { modal } from "../components/modal.js";
 import { formatDateShort } from "../../shared/js/status.js";
 

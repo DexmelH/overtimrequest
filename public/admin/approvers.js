@@ -1,6 +1,7 @@
 import { apiUrl } from "../shared/js/api.js";
 import { apiGet, apiPost } from "../shared/js/http.js";
 import { showToast } from "../shared/js/toast.js";
+import { escapeHtml } from "../shared/js/escapeHtml.js";
 
 const LEVELS = ["L1", "L2", "L3", "L4"];
 
@@ -14,14 +15,6 @@ let searchResults = {};
 
 function levelNum(label) {
   return parseInt(label.replace("L", ""), 10);
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 function getCurrentGroupId() {

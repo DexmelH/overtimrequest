@@ -4,7 +4,7 @@ import { fetchGroups } from "./api/fetchGroups.js";
 import { addOvertimeRequest } from "./api/addOvertime.js";
 import { renderHistory } from "./ui/renderHistory.js";
 import { setFilter, setSearchQuery } from "./services/state.js";
-import { createProjectAllocations } from "./ui/projectAllocations.js";
+import { createProjectAllocations } from "../shared/js/projectAllocations.js";
 import { showToast } from "../shared/js/toast.js";
 import { cancelOvertimeRequest } from "./api/cancelOvertime.js";
 import { getCurrentRequestId } from "./components/modal.js";
@@ -18,7 +18,7 @@ import {
   loadBlockedHolidays,
   setDefaultRequestDate,
   validateDateInput,
-} from "./ui/requestDate.js";
+} from "../shared/js/requestDate.js";
 
 const projectAllocations = createProjectAllocations({
   containerId: "projectAllocations",

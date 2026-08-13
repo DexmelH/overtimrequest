@@ -1,0 +1,131 @@
+<?php
+namespace App\Service;
+
+use App\Repository\OvertimeRepository;
+
+class OvertimeApprovalService
+{
+    private OvertimeRepository $overtimeRepo;
+    private ApprovalFinalizer $approvalFinalizer;
+    private ActivityLogger $logger;
+
+    public function __construct(
+        OvertimeRepository $overtimeRepo,
+        ApprovalFinalizer $approvalFinalizer,
+        ActivityLogger $logger
+    ) {
+        $this->overtimeRepo = $overtimeRepo;
+        $this->approvalFinalizer = $approvalFinalizer;
+        $this->logger = $logger;
+    }
+
+    public function getOvertimeToApprove(int $approverId): array
+    {
+        $overtimeToApprove = $this->overtimeRepo->findOvertimeToApprove($approverId);
+
+        foreach ($overtimeToApprove as &$request) {
+            $alreadyFinalized = $request['status'] !== null && $request['status'] !== '';
+            $myDecision = null;
+            foreach ($request['approver_details'] ?? [] as $detail) {
+                if ((int) ($detail['approver_id'] ?? 0) === $approverId) {
+                    $myDecision = $detail['status'] ?? null;
+                    break;
+                }
+            }
+            $request['is_approved'] = $alreadyFinalized || ($myDecision !== null && $myDecision !== '');
+        }
+        unset($request);
+
+        usort($overtimeToApprove, static function (array $a, array $b): int {
+            $aPending = !empty($a['is_approved']) ? 1 : 0;
+            $bPending = !empty($b['is_approved']) ? 1 : 0;
+            if ($aPending !== $bPending) {
+                return $aPending <=> $bPending;
+            }
+
+            $aDate = (string) ($a['date_created'] ?? $a['request_date'] ?? '');
+            $bDate = (string) ($b['date_created'] ?? $b['request_date'] ?? '');
+            return strcmp($bDate, $aDate);
+        });
+
+        return ["success" => true, "data" => $overtimeToApprove];
+    }
+
+    /**
+     * @param mixed $overtimeID
+     * @param mixed $approved
+     */
+    public function approveOvertime(array $user, $overtimeID, $approved, string $remarks): array
+    {
+        if ((int) $approved === 0 && $remarks === '') {
+            return ['success' => false, 'message' => 'Remarks are required when rejecting a request.'];
+        }
+
+        $approverID = $user['id'];
+        $ifApproved = $this->overtimeRepo->checkIfFullyApproved($overtimeID);
+        if ($ifApproved) {
+            return ['success' => false, 'message' => "This request has already been finalized."];
+        }
+
+        $pdo = $this->overtimeRepo->getPdo();
+        $finalized = false;
+        $level = null;
+        try {
+            $pdo->beginTransaction();
+
+            $this->overtimeRepo->approveRequest($overtimeID, $approverID, $remarks, $approved);
+            $level = $this->overtimeRepo->findAcceptanceLevel((int) $overtimeID, (int) $approverID) ?? 1;
+
+            if ($level === 4) {
+                $this->approvalFinalizer->finalizeImmediate(
+                    (int) $overtimeID,
+                    (int) $approved,
+                    $remarks,
+                    (string) ($user['surname'] ?? 'Approver'),
+                    (int) $approverID,
+                    4
+                );
+                $finalized = true;
+            }
+
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('Approve overtime failed: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Unable to update the overtime request. Please try again.'];
+        }
+
+        $action = ((int) $approved === 1) ? 'request.approve' : 'request.reject';
+        $this->logger->log(
+            $action,
+            (int) $approverID,
+            $user['surname'] ?? null,
+            'overtime_request',
+            (int) $overtimeID,
+            [
+                'remarks' => $remarks,
+                'finalized' => $finalized,
+                'approval_level' => $level,
+            ]
+        );
+
+        if ($finalized) {
+            return [
+                'success' => true,
+                'finalized' => true,
+                'message' => 'Overtime request finalized successfully.',
+            ];
+        }
+
+        return [
+            'success' => true,
+            'finalized' => false,
+            'message' => sprintf(
+                'Decision recorded. Final status will be set at %s (or sooner if Level 4 acts).',
+                $this->approvalFinalizer->getCutoffTime()
+            ),
+        ];
+    }
+}

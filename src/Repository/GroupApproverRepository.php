@@ -48,41 +48,6 @@ class GroupApproverRepository
         return $data ?: [];
     }
 
-    public function findApproversByGroupAbbreviation(string $abbreviation, int $excludeUserId): array
-    {
-        $sql = "SELECT el.`id`, el.`surname`, el.`email`, oga.`approval_level`
-                FROM `overtime_group_approvers` oga
-                INNER JOIN kdtphdb_new.`group_list` gl ON gl.`id` = oga.`group_id`
-                INNER JOIN kdtphdb_new.`employee_list` el ON el.`id` = oga.`approver_id`
-                WHERE gl.`abbreviation` = :abbreviation AND el.`id` != :userId
-                ORDER BY oga.`approval_level` ASC";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
-            ':abbreviation' => $abbreviation,
-            ':userId' => $excludeUserId,
-        ]);
-        $data = $stmt->fetchAll();
-
-        return $data ?: [];
-    }
-
-    /** @return int[] */
-    public function findAssignedGroupIds(int $approverId): array
-    {
-        $sql = "SELECT DISTINCT oga.`group_id`
-                FROM `overtime_group_approvers` oga
-                WHERE oga.`approver_id` = :approverId
-                ORDER BY oga.`group_id` ASC";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':approverId' => $approverId]);
-        $ids = [];
-        foreach ($stmt->fetchAll() ?: [] as $row) {
-            $ids[] = (int) $row['group_id'];
-        }
-
-        return $ids;
-    }
-
     public function findApproverGroupDetails(int $approverId): array
     {
         $sql = "SELECT DISTINCT gl.`id`, gl.`abbreviation`, gl.`name`
@@ -96,30 +61,11 @@ class GroupApproverRepository
         return $stmt->fetchAll() ?: [];
     }
 
-    /** @deprecated Use findAssignedGroupIds() */
-    public function findManagedGroupIds(int $approverId): array
-    {
-        return $this->findAssignedGroupIds($approverId);
-    }
-
     public function isAssignedApprover(int $approverId): bool
     {
         $sql = "SELECT COUNT(*) FROM `overtime_group_approvers` WHERE `approver_id` = :approverId";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':approverId' => $approverId]);
-
-        return (int) $stmt->fetchColumn() > 0;
-    }
-
-    public function isApproverForGroup(int $approverId, int $groupId): bool
-    {
-        $sql = "SELECT COUNT(*) FROM `overtime_group_approvers`
-                WHERE `approver_id` = :approverId AND `group_id` = :groupId";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
-            ':approverId' => $approverId,
-            ':groupId' => $groupId,
-        ]);
 
         return (int) $stmt->fetchColumn() > 0;
     }

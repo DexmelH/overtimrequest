@@ -1,3 +1,5 @@
+import { escapeHtml } from "./escapeHtml.js";
+
 export function showToast(message, { type = "default", duration = 4200 } = {}) {
   try {
     const container = document.getElementById("toastContainer");
@@ -37,10 +39,4 @@ export function showToast(message, { type = "default", duration = 4200 } = {}) {
     console.warn("showToast error", err);
     alert(message);
   }
-}
-
-function escapeHtml(str) {
-  return String(str ?? "").replace(/[&<>"']/g, (m) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[m],
-  );
 }

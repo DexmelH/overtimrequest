@@ -2,16 +2,8 @@ import {
   statusClass,
   badgeText,
   formatDateISO,
-} from "../../shared/js/status.js";
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+} from "./status.js";
+import { escapeHtml } from "./escapeHtml.js";
 
 export function renderManagers(managers) {
   const $container = $("#managersList").empty();

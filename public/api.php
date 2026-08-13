@@ -32,13 +32,9 @@ $dispatcher = simpleDispatcher(function(RouteCollector $r) {
     $r->addRoute('GET', '/api/groups', ['App\Controller\GroupController', 'getGroupsByUserId']);
     $r->addRoute('GET', '/api/locations', ['App\Controller\LocationController', 'getLocations']);
     $r->addRoute('GET', '/api/projects', ['App\Controller\ProjectController', 'getProjects']);
-    $r->addRoute('GET', '/api/items', ['App\Controller\ItemController', 'getItems']);
-    $r->addRoute('GET', '/api/jobs', ['App\Controller\JobController', 'getJobs']);
-    $r->addRoute('GET', '/api/works', ['App\Controller\WorkController', 'getWorks']);
     $r->addRoute('GET', '/api/holidays', ['App\Controller\OvertimeController', 'getHolidays']);
     $r->addRoute('GET', '/api/approve/employee-groups', ['App\Controller\OvertimeController', 'getEmployeeGroups']);
     $r->addRoute('GET', '/api/approve/approver-groups', ['App\Controller\OvertimeController', 'getApproverGroups']);
-    $r->addRoute('GET', '/api/approve/managed-groups', ['App\Controller\OvertimeController', 'getApproverGroups']);
     $r->addRoute('GET', '/api/approve/employees', ['App\Controller\OvertimeController', 'searchApproverEmployees']);
     $r->addRoute('POST', '/api/approve/addovertime', ['App\Controller\OvertimeController', 'addOvertimeOnBehalf']);
     $r->addRoute('GET', '/api/overtimehistory', ['App\Controller\OvertimeController', 'getUserHistory']);
@@ -87,7 +83,6 @@ switch ($routeInfo[0]) {
         $vars = $routeInfo[2];
 
         try {
-            // controller factory: map controllers to the PDO they need
             $webjmrPdo = $dbManager->getConnection('webjmr');
             $kdtphPdo = $dbManager->getConnection('kdtph');
             $kdtphNewPdo = $dbManager->getConnection('kdtphnew');
@@ -148,21 +143,11 @@ switch ($routeInfo[0]) {
                 'App\Controller\ProjectController' => function() use ($webjmrPdo, $kdtphPdo) {
                     return new \App\Controller\ProjectController($webjmrPdo, $kdtphPdo);
                 },
-                'App\Controller\ItemController' => function() use ($webjmrPdo) {
-                    return new \App\Controller\ItemController($webjmrPdo);
-                },
-                'App\Controller\JobController' => function() use ($webjmrPdo) {
-                    return new \App\Controller\JobController($webjmrPdo);
-                },
-                'App\Controller\WorkController' => function() use ($webjmrPdo) {
-                    return new \App\Controller\WorkController($webjmrPdo);
-                },
             ];
 
             if (isset($controllerFactory[$class])) {
                 $controller = $controllerFactory[$class]();
             } else {
-                // fallback: instantiate controller with default PDO
                 $defaultPdo = $dbManager->getDefault();
                 $controller = new $class($defaultPdo);
             }

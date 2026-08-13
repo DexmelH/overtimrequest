@@ -3,7 +3,7 @@ import { apiGet, apiPost } from "../shared/js/http.js";
 import { showToast } from "../shared/js/toast.js";
 import { configureFormFields, getFieldId } from "../request/ui/formFields.js";
 import { fetchLocations } from "../request/api/fetchLocations.js";
-import { createProjectAllocations } from "../request/ui/projectAllocations.js";
+import { createProjectAllocations } from "../shared/js/projectAllocations.js";
 import {
   applyDateConstraints,
   configureRequestDate,
@@ -11,7 +11,8 @@ import {
   loadBlockedHolidays,
   setDefaultRequestDate,
   validateDateInput,
-} from "../request/ui/requestDate.js";
+} from "../shared/js/requestDate.js";
+import { escapeHtml } from "../shared/js/escapeHtml.js";
 import { fetchRequest } from "./api/fetchRequest.js";
 
 const ON_BEHALF_FIELDS = {
@@ -31,14 +32,6 @@ let searchTimer = null;
 let employeeResults = [];
 /** @type {object[]} */
 let employeeGroups = [];
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 function bindDateField() {
   configureRequestDate({ dateFieldId: "obDate", relaxed: true });

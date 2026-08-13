@@ -188,7 +188,7 @@ class ApprovalFinalizer
             if ($decision === 1) {
                 $this->overtimeRepo->addAcceptedRequestToDailyReport($overtimeId);
             }
-            $this->queueRequestorStatusEmail($overtimeId, $decision, $actorName);
+            $this->overtimeRepo->queueRequestorStatusEmail($overtimeId, $decision, $actorName);
 
             if ($ownTransaction) {
                 $pdo->commit();
@@ -215,24 +215,5 @@ class ApprovalFinalizer
                 'cutoff_time' => $this->cutoff->getCutoffTime(),
             ]
         );
-    }
-
-    private function queueRequestorStatusEmail(int $overtimeId, int $decision, string $actorName): void
-    {
-        $requestor = $this->overtimeRepo->findRequestorByOvertimeId($overtimeId);
-        $email = trim((string) ($requestor['email'] ?? ''));
-        if ($email === '') {
-            error_log("Overtime {$overtimeId}: no requestor email; status notification skipped.");
-            return;
-        }
-
-        $this->overtimeRepo->insertEmailQueue([
-            'email_to' => $email,
-            'approver_name' => $requestor['surname'] ?? 'Employee',
-            'overtime_id' => $overtimeId,
-            'email_type' => 'status_update',
-            'decision' => $decision,
-            'actor_name' => $actorName,
-        ]);
     }
 }

@@ -17,11 +17,6 @@ class OvertimeRepository
         return $this->pdo;
     }
 
-    public function findRequestById(string $requestID): array
-    {
-        return $this->findRequestEmailDetails((int) $requestID);
-    }
-
     public function findRequestEmailDetails(int $requestID): array
     {
         $sql = "SELECT orq.`id`, orq.`remarks`, orq.`duration`, orq.`request_date`, orq.`date_created`, orq.`status`,
@@ -225,22 +220,24 @@ class OvertimeRepository
         ]);
     }
 
-    /** @return int[] */
-    public function findAssignedGroupIds(int $approverId): array
+    public function queueRequestorStatusEmail(int $overtimeID, int $decision, string $actorName): void
     {
-        $sql = "SELECT DISTINCT orq.`group_id`
-                FROM `overtime_accept` oa
-                INNER JOIN `overtime_request` orq ON orq.`id` = oa.`overtime_id`
-                WHERE oa.`approver_id` = :approverId AND orq.`group_id` IS NOT NULL
-                ORDER BY orq.`group_id` ASC";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':approverId' => $approverId]);
-        $ids = [];
-        foreach ($stmt->fetchAll() ?: [] as $row) {
-            $ids[] = (int) $row['group_id'];
+        $requestor = $this->findRequestorByOvertimeId($overtimeID);
+        $email = trim((string) ($requestor['email'] ?? ''));
+
+        if ($email === '') {
+            error_log("Overtime {$overtimeID}: no requestor email; status notification skipped.");
+            return;
         }
 
-        return $ids;
+        $this->insertEmailQueue([
+            'email_to' => $email,
+            'approver_name' => $requestor['surname'] ?? 'Employee',
+            'overtime_id' => $overtimeID,
+            'email_type' => 'status_update',
+            'decision' => $decision,
+            'actor_name' => $actorName,
+        ]);
     }
 
     public function findApproverGroupDetails(int $approverId): array
@@ -437,25 +434,6 @@ class OvertimeRepository
         ]);
     }
 
-    public function checkIfAlreadyApproved(int $overtimeID, int $approverID): bool
-    {
-        $sql = "SELECT COUNT(*) FROM `overtime_accept` WHERE `overtime_id` = :overtimeID AND `approver_id` = :approverID
-                AND `status` IS NOT NULL";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
-            ":overtimeID" => $overtimeID,
-            ":approverID" => $approverID
-        ]);
-        $count = $stmt->fetchColumn();
-
-        $sql2 = "SELECT COUNT(*) FROM `overtime_request` WHERE `id` = :overtimeID AND `status` IS NOT NULL";
-        $stmt2 = $this->pdo->prepare($sql2);
-        $stmt2->execute([":overtimeID" => $overtimeID]);
-        $count2 = $stmt2->fetchColumn();
-
-        return $count > 0 || $count2 > 0;
-    }
-
     public function checkIfFullyApproved(int $overtimeID): bool
     {
         $sql = "SELECT `status` FROM `overtime_request` WHERE `id` = :overtimeID";
@@ -466,19 +444,6 @@ class OvertimeRepository
         $req = $stmt->fetchColumn();
 
         return $req !== NULL;
-    }
-
-    public function checkIfForApproval(int $overtimeID, string $ostatus): bool
-    {
-        $sql = "SELECT COUNT(*) FROM `overtime_accept` WHERE `overtime_id` = :overtimeID AND `status` = :ostatus";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
-            ":overtimeID" => $overtimeID,
-            ":ostatus" => $ostatus
-        ]);
-        $count = $stmt->fetchColumn();
-
-        return $count == 1;
     }
 
     public function updateOvertimeStatus(int $overtimeID, string $ostatus): bool

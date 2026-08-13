@@ -112,10 +112,4 @@ class LeaveRepository
 
         return [$start->format('Y-m-d'), $end->format('Y-m-d')];
     }
-
-    /** @deprecated Use workWeekBoundsForDate() */
-    public static function weekBoundsForDate(string $date): array
-    {
-        return self::workWeekBoundsForDate($date);
-    }
 }

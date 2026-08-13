@@ -2,19 +2,12 @@ import { apiUrl } from "../shared/js/api.js";
 import { apiGet, apiPost } from "../shared/js/http.js";
 import { showToast } from "../shared/js/toast.js";
 import { confirmAction } from "../shared/js/confirm.js";
+import { escapeHtml } from "../shared/js/escapeHtml.js";
 
 let searchTimer = null;
 let selectedEmployee = null;
 let membersLoaded = false;
 let currentMembers = [];
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 function displayName(member) {
   const first = String(member.firstname || "").trim();

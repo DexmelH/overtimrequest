@@ -1,6 +1,6 @@
 import { history } from "../services/state.js";
 import { statusClass, statusText, isPending } from "../../shared/js/status.js";
-import { renderManagers } from "../../approve/components/approvers.js";
+import { renderManagers } from "../../shared/js/approvers.js";
 
 const modalEl = document.getElementById("detailModal");
 let bsModal = null;
