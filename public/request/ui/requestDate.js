@@ -87,8 +87,10 @@ function isRestrictedDay(isoDate) {
 export function isAllowedRequestDate(isoDate) {
   if (!isoDate) return false;
   const date = parseLocalDate(isoDate);
-  if (isBeforeToday(date)) return false;
+  if (Number.isNaN(date.getTime())) return false;
+  // On-behalf (relaxed) allows any valid date, including past dates.
   if (relaxedMode) return true;
+  if (isBeforeToday(date)) return false;
   if (!isRestrictedDay(isoDate)) return true;
   if (!isInCurrentWorkWeek(isoDate)) return false;
   return !hasLeaveInWeek(isoDate);
@@ -103,7 +105,12 @@ function nextAllowedDate(fromDate = startOfToday()) {
 }
 
 export function applyDateConstraints() {
-  $dateField().attr("min", formatLocalDate(startOfToday()));
+  const $date = $dateField();
+  if (relaxedMode) {
+    $date.removeAttr("min");
+    return;
+  }
+  $date.attr("min", formatLocalDate(startOfToday()));
 }
 
 export function setDefaultRequestDate() {
@@ -124,7 +131,7 @@ export function validateDateInput(showMessage = true) {
 
   if (showMessage) {
     const date = parseLocalDate(value);
-    if (isBeforeToday(date)) {
+    if (!relaxedMode && isBeforeToday(date)) {
       showToast("Past dates are not allowed.", { type: "warning" });
     } else if (
       !relaxedMode &&
