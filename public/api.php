@@ -9,6 +9,19 @@ use function FastRoute\simpleDispatcher;
 
 header('Content-Type: application/json; charset=utf-8');
 
+$isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off')
+    || ((int) ($_SERVER['SERVER_PORT'] ?? 0) === 443);
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'secure' => $isHttps,
+    'httponly' => true,
+    'samesite' => 'Lax',
+]);
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+
 // --- normalize request URI relative to app base ---
 $basePath = $config['app']['base_path'] ?? '/overtime';
 $rawUri = $_SERVER['REQUEST_URI'] ?? '/';
@@ -28,6 +41,7 @@ if ($uri[0] !== '/') {
 
 // --- build dispatcher ---
 $dispatcher = simpleDispatcher(function(RouteCollector $r) {
+    $r->addRoute('GET', '/api/csrf', ['App\Controller\SecurityController', 'csrfToken']);
     $r->addRoute('GET', '/api/session', ['App\Controller\UserController', 'getSession']);
     $r->addRoute('GET', '/api/groups', ['App\Controller\GroupController', 'getGroupsByUserId']);
     $r->addRoute('GET', '/api/locations', ['App\Controller\LocationController', 'getLocations']);
@@ -69,6 +83,46 @@ function jsonResponse(int $code, array $payload): void {
     exit;
 }
 
+function ensureCsrfToken(): string
+{
+    if (!isset($_SESSION['csrf_token']) || !is_string($_SESSION['csrf_token']) || $_SESSION['csrf_token'] === '') {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    return $_SESSION['csrf_token'];
+}
+
+function getRequestHeader(string $name): string
+{
+    $serverKey = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
+    if (isset($_SERVER[$serverKey])) {
+        return trim((string) $_SERVER[$serverKey]);
+    }
+    if (function_exists('getallheaders')) {
+        foreach (getallheaders() as $key => $value) {
+            if (strcasecmp($key, $name) === 0) {
+                return trim((string) $value);
+            }
+        }
+    }
+
+    return '';
+}
+
+function validateCsrfForPost(): bool
+{
+    $sessionToken = ensureCsrfToken();
+    $requestToken = getRequestHeader('X-CSRF-Token');
+    if ($requestToken === '') {
+        $requestToken = trim((string) ($_POST['_csrf'] ?? ''));
+    }
+    if ($requestToken === '') {
+        return false;
+    }
+
+    return hash_equals($sessionToken, $requestToken);
+}
+
 switch ($routeInfo[0]) {
     case \FastRoute\Dispatcher::NOT_FOUND:
         jsonResponse(404, ['success' => false, 'errors' => ['Not found']]);
@@ -81,6 +135,14 @@ switch ($routeInfo[0]) {
     case \FastRoute\Dispatcher::FOUND:
         [$class, $method] = $routeInfo[1];
         $vars = $routeInfo[2];
+
+        if ($httpMethod === 'GET' && $class === 'App\Controller\SecurityController' && $method === 'csrfToken') {
+            jsonResponse(200, ['success' => true, 'token' => ensureCsrfToken()]);
+        }
+
+        if ($httpMethod === 'POST' && !validateCsrfForPost()) {
+            jsonResponse(403, ['success' => false, 'errors' => ['Forbidden']]);
+        }
 
         try {
             $webjmrPdo = $dbManager->getConnection('webjmr');
