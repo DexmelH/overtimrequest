@@ -137,8 +137,8 @@ switch ($routeInfo[0]) {
                         $activityLogger
                     );
                 },
-                'App\Controller\LocationController' => function() use ($webjmrPdo) {
-                    return new \App\Controller\LocationController($webjmrPdo);
+                'App\Controller\LocationController' => function() use ($webjmrPdo, $kdtphPdo) {
+                    return new \App\Controller\LocationController($webjmrPdo, $kdtphPdo);
                 },
                 'App\Controller\ProjectController' => function() use ($webjmrPdo, $kdtphPdo) {
                     return new \App\Controller\ProjectController($webjmrPdo, $kdtphPdo);
