@@ -51,9 +51,9 @@ class GroupApproverRepository
     public function findApproverGroupDetails(int $approverId): array
     {
         $sql = "SELECT DISTINCT gl.`id`, gl.`abbreviation`, gl.`name`
-                FROM `overtime_group_approvers` oga
-                INNER JOIN kdtphdb_new.`group_list` gl ON gl.`id` = oga.`group_id`
-                WHERE oga.`approver_id` = :approverId
+                FROM kdtphdb_new.`employee_group` eg
+                LEFT JOIN kdtphdb_new.`group_list` gl ON gl.`id` = eg.`group_id`
+                WHERE eg.`employee_number` = :approverId
                 ORDER BY gl.`abbreviation` ASC";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':approverId' => $approverId]);
