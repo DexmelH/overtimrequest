@@ -122,8 +122,14 @@ class OvertimeRepository
         }
     }
 
-    /** @param int[] $projectIds */
-    public function projectsBelongToGroup(array $projectIds, string $groupAbbreviation): bool
+    /**
+     * Validate that projects are either:
+     * - owned by selected group (active + not deleted), or
+     * - explicitly shared to the requesting user via project_share.
+     *
+     * @param int[] $projectIds
+     */
+    public function projectsBelongToGroup(array $projectIds, string $groupAbbreviation, int $userId = 0): bool
     {
         $projectIds = array_values(array_unique(array_filter(array_map('intval', $projectIds))));
         if (!$projectIds || trim($groupAbbreviation) === '') {
@@ -131,14 +137,19 @@ class OvertimeRepository
         }
 
         $placeholders = implode(',', array_fill(0, count($projectIds), '?'));
-        $sql = "SELECT COUNT(DISTINCT `fldID`)
-                FROM `projectstable`
-                WHERE `fldID` IN ({$placeholders})
-                  AND `fldGroup` = ?
-                  AND `fldActive` = 1
-                  AND `fldDelete` = 0";
+        $sql = "SELECT COUNT(DISTINCT pt.`fldID`)
+                FROM `projectstable` pt
+                LEFT JOIN `project_share` ps
+                  ON ps.`fldProject` = pt.`fldID` AND ps.`fldEmployeeNum` = ?
+                WHERE pt.`fldID` IN ({$placeholders})
+                  AND pt.`fldActive` = 1
+                  AND pt.`fldDelete` = 0
+                  AND (
+                      pt.`fldGroup` = ?
+                      OR ps.`fldEmployeeNum` IS NOT NULL
+                  )";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([...$projectIds, $groupAbbreviation]);
+        $stmt->execute([$userId, ...$projectIds, $groupAbbreviation]);
 
         return (int) $stmt->fetchColumn() === count($projectIds);
     }

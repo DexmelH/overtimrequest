@@ -62,7 +62,8 @@ class OvertimeSubmissionService
         $groupAbbrev = (string) ($group['abbreviation'] ?? '');
         [$projects, $projectError] = $this->parseProjectAllocations(
             (string) ($input['projectsJson'] ?? ''),
-            $groupAbbrev
+            $groupAbbrev,
+            (int) $userID
         );
         if ($projectError !== null) {
             return ['success' => false, 'message' => $projectError];
@@ -180,7 +181,8 @@ class OvertimeSubmissionService
         $groupAbbrev = (string) ($group['abbreviation'] ?? '');
         [$projects, $projectError] = $this->parseProjectAllocations(
             (string) ($input['projectsJson'] ?? ''),
-            $groupAbbrev
+            $groupAbbrev,
+            $employeeId
         );
         if ($projectError !== null) {
             return ['success' => false, 'message' => $projectError];
@@ -327,7 +329,7 @@ class OvertimeSubmissionService
     /**
      * @return array{0: array<int, array{project_id: int, hours: int}>, 1: ?string}
      */
-    private function parseProjectAllocations(string $json, string $groupAbbreviation): array
+    private function parseProjectAllocations(string $json, string $groupAbbreviation, int $actorUserId = 0): array
     {
         $decoded = json_decode($json, true);
         if (!is_array($decoded) || !$decoded) {
@@ -354,7 +356,7 @@ class OvertimeSubmissionService
             $projects[] = ['project_id' => $projectId, 'hours' => $hours];
         }
 
-        if (!$this->overtimeRepo->projectsBelongToGroup(array_keys($seen), $groupAbbreviation)) {
+        if (!$this->overtimeRepo->projectsBelongToGroup(array_keys($seen), $groupAbbreviation, $actorUserId)) {
             return [[], 'One or more selected projects do not belong to the selected group.'];
         }
 

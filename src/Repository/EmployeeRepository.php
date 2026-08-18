@@ -169,6 +169,32 @@ class EmployeeRepository
         return $stmt->fetchAll() ?: [];
     }
 
+    /**
+     * Employee's assigned groups (employee_group only), restricted to allowed group IDs.
+     *
+     * @param int[] $allowedGroupIds
+     * @return array<int, array{id: int, abbreviation: string, name: string}>
+     */
+    public function findGroupsByEmployeeIdInGroups(int $employeeId, array $allowedGroupIds): array
+    {
+        $allowedGroupIds = array_values(array_unique(array_filter(array_map('intval', $allowedGroupIds))));
+        if ($employeeId <= 0 || !$allowedGroupIds) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($allowedGroupIds), '?'));
+        $sql = "SELECT DISTINCT gl.`id`, gl.`abbreviation`, gl.`name`
+                FROM `employee_group` eg
+                INNER JOIN `group_list` gl ON gl.`id` = eg.`group_id`
+                WHERE eg.`employee_number` = ?
+                  AND eg.`group_id` IN ({$placeholders})
+                ORDER BY gl.`abbreviation` ASC";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(array_merge([$employeeId], $allowedGroupIds));
+
+        return $stmt->fetchAll() ?: [];
+    }
+
     public function isEmployeeInEmployeeGroup(int $employeeId, int $groupId): bool
     {
         if ($employeeId <= 0 || $groupId <= 0) {
@@ -242,14 +268,16 @@ class EmployeeRepository
 
         $placeholders = implode(',', array_fill(0, count($groupIds), '?'));
         $query = trim($query);
-        $sql = "SELECT DISTINCT el.`id`, el.`surname`, el.`firstname`, el.`email`,
-                       gl.`abbreviation` AS group_abbr,
-                       eg.`group_id` AS approver_group_id
-                FROM `employee_group` eg
-                INNER JOIN `employee_list` el ON el.`id` = eg.`employee_number`
-                LEFT JOIN `group_list` gl ON gl.`id` = eg.`group_id`
+        $sql = "SELECT el.`id`, el.`surname`, el.`firstname`, el.`email`,
+                       gl.`abbreviation` AS group_abbr
+                FROM `employee_list` el
+                LEFT JOIN `group_list` gl ON gl.`id` = el.`group_id`
                 WHERE el.`emp_status` = 1
-                  AND eg.`group_id` IN ({$placeholders})";
+                  AND el.`id` IN (
+                      SELECT DISTINCT eg.`employee_number`
+                      FROM `employee_group` eg
+                      WHERE eg.`group_id` IN ({$placeholders})
+                  )";
         $params = $groupIds;
 
         if ($query !== '') {

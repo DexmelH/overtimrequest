@@ -120,24 +120,11 @@ class OvertimeController
             return ['success' => false, 'message' => 'Employee not found.'];
         }
 
-        $approverGroupIds = $this->approverDirectory->getApproverGroupIds($approverId);
-        if (!$approverGroupIds) {
-            return ['success' => true, 'data' => []];
-        }
-
-        if (!$this->employeeRepo->isEmployeeInGroupsViaEmployeeGroup($employeeId, $approverGroupIds)) {
-            return ['success' => false, 'message' => 'This employee is not under your handled groups.'];
-        }
-
-        $employeeGroups = $this->employeeRepo->findGroupsByEmployeeId($employeeId);
-        $allowed = array_values(array_filter(
-            $employeeGroups,
-            static fn(array $group): bool => in_array((int) $group['id'], $approverGroupIds, true)
-        ));
+        $groups = $this->employeeRepo->findGroupsByEmployeeId($employeeId);
 
         return [
             'success' => true,
-            'data' => $allowed,
+            'data' => $groups,
         ];
     }
 
