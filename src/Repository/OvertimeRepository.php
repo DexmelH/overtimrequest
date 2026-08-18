@@ -426,12 +426,23 @@ class OvertimeRepository
         $sql = "UPDATE `overtime_accept` SET `status` = :approved, `remarks` = :remarks, `date_accepted` = NOW() 
                 WHERE `overtime_id` = :overtimeID AND `approver_id` = :approverID";
         $stmt = $this->pdo->prepare($sql);
-        return (bool)$stmt->execute([
+        $ok = $stmt->execute([
             ":remarks" => $remarks,
             ":overtimeID" => $overtimeID,
             ":approverID" => $approverID,
             ":approved" => $approved
         ]);
+
+        return $ok && $stmt->rowCount() > 0;
+    }
+
+    public function requestExists(int $overtimeID): bool
+    {
+        $sql = "SELECT 1 FROM `overtime_request` WHERE `id` = :overtimeID LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':overtimeID' => $overtimeID]);
+
+        return (bool) $stmt->fetchColumn();
     }
 
     public function checkIfFullyApproved(int $overtimeID): bool
@@ -443,7 +454,11 @@ class OvertimeRepository
         ]);
         $req = $stmt->fetchColumn();
 
-        return $req !== NULL;
+        if ($req === false) {
+            return false;
+        }
+
+        return $req !== null && $req !== '';
     }
 
     public function updateOvertimeStatus(int $overtimeID, string $ostatus): bool

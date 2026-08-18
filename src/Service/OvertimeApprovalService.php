@@ -61,7 +61,16 @@ class OvertimeApprovalService
             return ['success' => false, 'message' => 'Remarks are required when rejecting a request.'];
         }
 
-        $approverID = $user['id'];
+        $overtimeID = (int) $overtimeID;
+        $approverID = (int) $user['id'];
+        if ($overtimeID <= 0 || $approverID <= 0) {
+            return ['success' => false, 'message' => 'Invalid overtime request.'];
+        }
+
+        if (!$this->overtimeRepo->requestExists($overtimeID)) {
+            return ['success' => false, 'message' => 'Overtime request not found.'];
+        }
+
         $ifApproved = $this->overtimeRepo->checkIfFullyApproved($overtimeID);
         if ($ifApproved) {
             return ['success' => false, 'message' => "This request has already been finalized."];
@@ -73,8 +82,17 @@ class OvertimeApprovalService
         try {
             $pdo->beginTransaction();
 
-            $this->overtimeRepo->approveRequest($overtimeID, $approverID, $remarks, $approved);
-            $level = $this->overtimeRepo->findAcceptanceLevel((int) $overtimeID, (int) $approverID) ?? 1;
+            $updated = $this->overtimeRepo->approveRequest($overtimeID, $approverID, $remarks, (int) $approved);
+            if (!$updated) {
+                $pdo->rollBack();
+                return ['success' => false, 'message' => 'You are not assigned to approve this request.'];
+            }
+
+            $level = $this->overtimeRepo->findAcceptanceLevel($overtimeID, $approverID);
+            if ($level === null) {
+                $pdo->rollBack();
+                return ['success' => false, 'message' => 'You are not assigned to approve this request.'];
+            }
 
             if ($level === 4) {
                 $this->approvalFinalizer->finalizeImmediate(
