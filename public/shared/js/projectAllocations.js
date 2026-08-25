@@ -7,6 +7,7 @@ export function createProjectAllocations({
   addButtonId,
   totalId,
   groupSelector,
+  employeeIdSelector = null,
 }) {
   const containerSelector = `#${containerId}`;
   const addButtonSelector = `#${addButtonId}`;
@@ -112,7 +113,14 @@ export function createProjectAllocations({
 
     $(containerSelector).html('<div class="ot-muted small">Loading projects...</div>');
     try {
-      const json = await apiGet(apiUrl("/projects") + "?group=" + encodeURIComponent(group));
+      let url = apiUrl("/projects") + "?group=" + encodeURIComponent(group);
+      if (employeeIdSelector) {
+        const employeeId = String($(employeeIdSelector).val() || "").trim();
+        if (employeeId) {
+          url += "&employee_id=" + encodeURIComponent(employeeId);
+        }
+      }
+      const json = await apiGet(url);
       projects = normalizePayload(json);
       $(containerSelector).empty();
       addRow();

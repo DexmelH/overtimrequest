@@ -215,7 +215,8 @@ switch ($routeInfo[0]) {
                 'App\Controller\ProjectController' => function() use ($dbManager) {
                     return new \App\Controller\ProjectController(
                         $dbManager->getConnection('webjmr'),
-                        $dbManager->getConnection('kdtph')
+                        $dbManager->getConnection('kdtph'),
+                        $dbManager->getConnection('kdtphnew')
                     );
                 },
             ];

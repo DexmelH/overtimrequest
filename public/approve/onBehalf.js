@@ -25,6 +25,7 @@ const projectAllocations = createProjectAllocations({
   addButtonId: "obAddProjectAllocation",
   totalId: "obProjectHoursTotal",
   groupSelector: "#obGroup",
+  employeeIdSelector: "#obEmployeeId",
 });
 
 let searchTimer = null;
