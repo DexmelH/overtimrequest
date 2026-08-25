@@ -3,7 +3,6 @@ namespace App\Service;
 
 use App\Repository\EmployeeRepository;
 use App\Repository\GroupApproverRepository;
-use App\Repository\OvertimeRepository;
 use App\Repository\UserRepository;
 
 class ApproverDirectoryService
@@ -11,18 +10,15 @@ class ApproverDirectoryService
     private GroupApproverRepository $groupApproverRepo;
     private UserRepository $userRepo;
     private EmployeeRepository $employeeRepo;
-    private OvertimeRepository $overtimeRepo;
 
     public function __construct(
         GroupApproverRepository $groupApproverRepo,
         UserRepository $userRepo,
-        EmployeeRepository $employeeRepo,
-        OvertimeRepository $overtimeRepo
+        EmployeeRepository $employeeRepo
     ) {
         $this->groupApproverRepo = $groupApproverRepo;
         $this->userRepo = $userRepo;
         $this->employeeRepo = $employeeRepo;
-        $this->overtimeRepo = $overtimeRepo;
     }
 
     public function isApprover(int $approverId): bool
@@ -35,7 +31,13 @@ class ApproverDirectoryService
             || $this->userRepo->isFormPicApprover($approverId);
     }
 
-    /** @return array<int, array{id: int, abbreviation: string, name: string}> */
+    /**
+     * Groups the user may handle for on-behalf / search:
+     * - groups where they are configured in overtime_group_approvers
+     * - Form PIC groups that do not yet have OGA configuration
+     *
+     * @return array<int, array{id: int, abbreviation: string, name: string}>
+     */
     public function findApproverGroupsForUser(int $approverId): array
     {
         $groups = [];
@@ -52,10 +54,6 @@ class ApproverDirectoryService
             if (!isset($configured[$groupId])) {
                 $groups[$groupId] = $row;
             }
-        }
-
-        foreach ($this->overtimeRepo->findApproverGroupDetails($approverId) as $row) {
-            $groups[(int) $row['id']] = $row;
         }
 
         $list = array_values($groups);

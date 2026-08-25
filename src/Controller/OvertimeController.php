@@ -42,8 +42,7 @@ class OvertimeController
         $this->approverDirectory = new ApproverDirectoryService(
             $groupApproverRepo,
             $this->userRepo,
-            $this->employeeRepo,
-            $overtimeRepo
+            $this->employeeRepo
         );
 
         $this->submissionService = new OvertimeSubmissionService(

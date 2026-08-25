@@ -144,6 +144,10 @@ class OvertimeSubmissionService
         $remarks = trim((string) ($input['remarks'] ?? ''));
         $requestDate = trim((string) ($input['date'] ?? date('Y-m-d')));
 
+        if (!$this->approverDirectory->isApprover($approverId)) {
+            return ['success' => false, 'message' => 'You are not authorized to submit member overtime requests.'];
+        }
+
         $approverGroupIds = $this->approverDirectory->getApproverGroupIds($approverId);
         if (!$approverGroupIds) {
             return ['success' => false, 'message' => 'You are not authorized to submit member overtime requests.'];
@@ -158,8 +162,18 @@ class OvertimeSubmissionService
             return ['success' => false, 'message' => 'Employee not found.'];
         }
 
-        if ($groupID <= 0 || !in_array($groupID, $approverGroupIds, true)) {
-            return ['success' => false, 'message' => 'You can only submit for groups you handle.'];
+        // Handled-group check is against the employee's main group only.
+        $mainGroupId = (int) ($employee['group_id'] ?? 0);
+        $mainGroupAbbrev = trim((string) ($employee['group_abbr'] ?? ''));
+        if ($mainGroupId <= 0) {
+            return ['success' => false, 'message' => 'The selected employee has no main group assigned.'];
+        }
+        if (!in_array($mainGroupId, $approverGroupIds, true)) {
+            return ['success' => false, 'message' => 'You can only submit for employees whose main group you handle.'];
+        }
+
+        if ($groupID <= 0) {
+            return ['success' => false, 'message' => 'Please select a group.'];
         }
 
         if (!$this->employeeRepo->isEmployeeInEmployeeGroup($employeeId, $groupID)) {
@@ -198,7 +212,12 @@ class OvertimeSubmissionService
 
             $id = (int) $this->overtimeRepo->addOvertime($payload);
             $this->overtimeRepo->addProjectAllocations($id, $projects);
-            $approvers = $this->approverDirectory->resolveApprovers($groupID, $groupAbbrev, $employeeId);
+            // OGA / Form PIC chain follows the employee's main group, not the selected OT group.
+            $approvers = $this->approverDirectory->resolveApprovers(
+                $mainGroupId,
+                $mainGroupAbbrev,
+                $employeeId
+            );
 
             foreach ($approvers as $app) {
                 $this->overtimeRepo->addAcceptance(
@@ -231,6 +250,8 @@ class OvertimeSubmissionService
                     'employee_name' => trim(($employee['surname'] ?? '') . ' ' . ($employee['firstname'] ?? '')),
                     'group_id' => $groupID,
                     'group_abbr' => $groupAbbrev !== '' ? $groupAbbrev : null,
+                    'main_group_id' => $mainGroupId > 0 ? $mainGroupId : null,
+                    'main_group_abbr' => $mainGroupAbbrev !== '' ? $mainGroupAbbrev : null,
                     'hours' => $duration,
                     'projects' => $projects,
                     'request_date' => $requestDate,

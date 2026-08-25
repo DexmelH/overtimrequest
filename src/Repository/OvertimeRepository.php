@@ -251,20 +251,6 @@ class OvertimeRepository
         ]);
     }
 
-    public function findApproverGroupDetails(int $approverId): array
-    {
-        $sql = "SELECT DISTINCT gl.`id`, gl.`abbreviation`, gl.`name`
-                FROM `overtime_accept` oa
-                INNER JOIN `overtime_request` orq ON orq.`id` = oa.`overtime_id`
-                INNER JOIN kdtphdb_new.`group_list` gl ON gl.`id` = orq.`group_id`
-                WHERE oa.`approver_id` = :approverId AND orq.`group_id` IS NOT NULL
-                ORDER BY gl.`abbreviation` ASC";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':approverId' => $approverId]);
-
-        return $stmt->fetchAll() ?: [];
-    }
-
     public function addAcceptance(int $overtime, int $approverID, ?int $approvalLevel = 1): bool
     {
         $level = $approvalLevel !== null && $approvalLevel >= 1 && $approvalLevel <= 4
