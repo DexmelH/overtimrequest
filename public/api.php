@@ -55,6 +55,7 @@ $dispatcher = simpleDispatcher(function(RouteCollector $r) {
     $r->addRoute('POST', '/api/addovertime', ['App\Controller\OvertimeController', 'addOvertime']);
     $r->addRoute('GET', '/api/overtimetoapprove', ['App\Controller\OvertimeController', 'getOvertimeToApprove']);
     $r->addRoute('POST', '/api/approveovertime', ['App\Controller\OvertimeController', 'approveOvertime']);
+    $r->addRoute('POST', '/api/approve/bulk', ['App\Controller\OvertimeController', 'approveOvertimeBulk']);
     $r->addRoute('POST', '/api/cancelovertime', ['App\Controller\OvertimeController', 'cancelOvertime']);
     $r->addRoute('GET', '/api/admin/session', ['App\Controller\AdminController', 'getSession']);
     $r->addRoute('GET', '/api/admin/logs', ['App\Controller\AdminController', 'getActivityLogs']);
@@ -145,17 +146,11 @@ switch ($routeInfo[0]) {
         }
 
         try {
-            $webjmrPdo = $dbManager->getConnection('webjmr');
-            $kdtphPdo = $dbManager->getConnection('kdtph');
-            $kdtphNewPdo = $dbManager->getConnection('kdtphnew');
-            $formsPdo = $dbManager->getConnection('forms');
-
-            $activityLogger = new \App\Service\ActivityLogger(
-                new \App\Repository\ActivityLogRepository($webjmrPdo)
-            );
-
             $controllerFactory = [
-                'App\Controller\UserController' => function() use ($kdtphPdo, $webjmrPdo, $kdtphNewPdo, $config) {
+                'App\Controller\UserController' => function() use ($dbManager, $config) {
+                    $webjmrPdo = $dbManager->getConnection('webjmr');
+                    $kdtphPdo = $dbManager->getConnection('kdtph');
+                    $kdtphNewPdo = $dbManager->getConnection('kdtphnew');
                     $adminAccess = new \App\Service\AdminAccessService(
                         new \App\Repository\AdminMemberRepository($webjmrPdo),
                         new \App\Repository\EmployeeRepository($kdtphNewPdo),
@@ -168,20 +163,29 @@ switch ($routeInfo[0]) {
                         (string) ($config['app']['approval_cutoff_time'] ?? '15:00')
                     );
                 },
-                'App\Controller\GroupController' => function() use ($kdtphNewPdo, $kdtphPdo) {
-                    return new \App\Controller\GroupController($kdtphNewPdo, $kdtphPdo);
+                'App\Controller\GroupController' => function() use ($dbManager) {
+                    return new \App\Controller\GroupController(
+                        $dbManager->getConnection('kdtphnew'),
+                        $dbManager->getConnection('kdtph')
+                    );
                 },
-                'App\Controller\OvertimeController' => function() use ($webjmrPdo, $kdtphPdo, $formsPdo, $kdtphNewPdo, $activityLogger, $config) {
+                'App\Controller\OvertimeController' => function() use ($dbManager, $config) {
+                    $webjmrPdo = $dbManager->getConnection('webjmr');
+                    $activityLogger = new \App\Service\ActivityLogger(
+                        new \App\Repository\ActivityLogRepository($webjmrPdo)
+                    );
                     return new \App\Controller\OvertimeController(
                         $webjmrPdo,
-                        $kdtphPdo,
-                        $formsPdo,
-                        $kdtphNewPdo,
+                        $dbManager->getConnection('kdtph'),
+                        $dbManager->getConnection('forms'),
+                        $dbManager->getConnection('kdtphnew'),
                         $activityLogger,
                         (string) ($config['app']['approval_cutoff_time'] ?? '15:00')
                     );
                 },
-                'App\Controller\AdminController' => function() use ($webjmrPdo, $kdtphPdo, $kdtphNewPdo, $activityLogger, $config) {
+                'App\Controller\AdminController' => function() use ($dbManager, $config) {
+                    $webjmrPdo = $dbManager->getConnection('webjmr');
+                    $kdtphNewPdo = $dbManager->getConnection('kdtphnew');
                     $adminMemberRepo = new \App\Repository\AdminMemberRepository($webjmrPdo);
                     $employeeRepo = new \App\Repository\EmployeeRepository($kdtphNewPdo);
                     $adminAccess = new \App\Service\AdminAccessService(
@@ -189,9 +193,12 @@ switch ($routeInfo[0]) {
                         $employeeRepo,
                         $config['app']['admin_group_abbrs'] ?? []
                     );
+                    $activityLogger = new \App\Service\ActivityLogger(
+                        new \App\Repository\ActivityLogRepository($webjmrPdo)
+                    );
                     return new \App\Controller\AdminController(
                         new \App\Repository\ActivityLogRepository($webjmrPdo),
-                        new \App\Repository\UserRepository($kdtphPdo),
+                        new \App\Repository\UserRepository($dbManager->getConnection('kdtph')),
                         $employeeRepo,
                         new \App\Repository\GroupApproverRepository($webjmrPdo),
                         $adminMemberRepo,
@@ -199,11 +206,17 @@ switch ($routeInfo[0]) {
                         $activityLogger
                     );
                 },
-                'App\Controller\LocationController' => function() use ($webjmrPdo, $kdtphPdo) {
-                    return new \App\Controller\LocationController($webjmrPdo, $kdtphPdo);
+                'App\Controller\LocationController' => function() use ($dbManager) {
+                    return new \App\Controller\LocationController(
+                        $dbManager->getConnection('webjmr'),
+                        $dbManager->getConnection('kdtph')
+                    );
                 },
-                'App\Controller\ProjectController' => function() use ($webjmrPdo, $kdtphPdo) {
-                    return new \App\Controller\ProjectController($webjmrPdo, $kdtphPdo);
+                'App\Controller\ProjectController' => function() use ($dbManager) {
+                    return new \App\Controller\ProjectController(
+                        $dbManager->getConnection('webjmr'),
+                        $dbManager->getConnection('kdtph')
+                    );
                 },
             ];
 

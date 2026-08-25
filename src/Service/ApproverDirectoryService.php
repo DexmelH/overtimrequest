@@ -44,9 +44,12 @@ class ApproverDirectoryService
         }
 
         $picAbbrs = $this->userRepo->findFormPicGroupAbbreviationsByEmployeeId($approverId);
-        foreach ($this->employeeRepo->findGroupsByAbbreviations($picAbbrs) as $row) {
+        $picGroups = $this->employeeRepo->findGroupsByAbbreviations($picAbbrs);
+        $picGroupIds = array_map(static fn(array $row): int => (int) $row['id'], $picGroups);
+        $configured = array_flip($this->groupApproverRepo->findGroupsWithConfiguredApprovers($picGroupIds));
+        foreach ($picGroups as $row) {
             $groupId = (int) $row['id'];
-            if (!$this->groupApproverRepo->hasConfiguredApprovers($groupId)) {
+            if (!isset($configured[$groupId])) {
                 $groups[$groupId] = $row;
             }
         }

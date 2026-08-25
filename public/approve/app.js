@@ -213,15 +213,23 @@ $("#selectAllPending").on("change", function () {
   renderTable();
 });
 
-$("#refreshBtn").on("click", function () {
-  const $btn = $(this);
-  $btn.prop("disabled", true);
-  fetchRequest()
-    .then(() =>
-      showToast("List refreshed.", { type: "success", duration: 2500 }),
-    )
-    .catch(() => showToast("Could not refresh requests.", { type: "error" }))
-    .finally(() => $btn.prop("disabled", false));
+let lastListRefreshAt = 0;
+const LIST_REFRESH_MIN_MS = 5000;
+
+function refreshListOnRevisit() {
+  if (actionInProgress) return;
+  const now = Date.now();
+  if (now - lastListRefreshAt < LIST_REFRESH_MIN_MS) {
+    return;
+  }
+  lastListRefreshAt = now;
+  fetchRequest().catch(() => {});
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    refreshListOnRevisit();
+  }
 });
 
 $(".ot-filter-btn").on("click", function () {
@@ -245,6 +253,7 @@ async function bootstrapApprovePage() {
 
   initShell();
   initOnBehalf();
+  lastListRefreshAt = Date.now();
   fetchRequest().catch(() => {});
 }
 

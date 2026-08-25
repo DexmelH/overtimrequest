@@ -457,9 +457,9 @@ class AdminController
             }
         }
 
+        $employees = $this->employeeRepo->findByIds(array_values($levels));
         foreach ($levels as $level => $approverId) {
-            $employee = $this->employeeRepo->findById($approverId);
-            if (!$employee) {
+            if (!isset($employees[$approverId])) {
                 return ['success' => false, 'message' => "Invalid employee for L{$level}."];
             }
         }

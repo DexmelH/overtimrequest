@@ -146,4 +146,43 @@ class OvertimeApprovalService
             ),
         ];
     }
+
+    /**
+     * @param mixed $ids
+     * @param mixed $approved
+     */
+    public function approveOvertimeBulk(array $user, $ids, $approved, string $remarks): array
+    {
+        $requestIds = array_values(array_unique(array_filter(array_map('intval', (array) $ids))));
+        if (!$requestIds) {
+            return ['success' => false, 'message' => 'No overtime requests selected.', 'ok' => 0, 'failed' => 0];
+        }
+
+        $ok = 0;
+        $failed = 0;
+        $errors = [];
+
+        foreach ($requestIds as $overtimeID) {
+            $result = $this->approveOvertime($user, $overtimeID, $approved, $remarks);
+            if (!empty($result['success'])) {
+                $ok++;
+            } else {
+                $failed++;
+                $errors[] = [
+                    'id' => $overtimeID,
+                    'message' => (string) ($result['message'] ?? 'Unable to update the overtime request.'),
+                ];
+            }
+        }
+
+        return [
+            'success' => $failed === 0,
+            'ok' => $ok,
+            'failed' => $failed,
+            'errors' => $errors,
+            'message' => $failed === 0
+                ? sprintf('Updated %d request(s).', $ok)
+                : sprintf('Updated %d request(s), %d failed.', $ok, $failed),
+        ];
+    }
 }

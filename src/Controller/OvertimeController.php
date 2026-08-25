@@ -77,13 +77,11 @@ class OvertimeController
             $from = date('Y-m-d');
         }
 
-        $employeeId = (int) ($_GET['employee_id'] ?? 0);
-        if ($employeeId <= 0) {
-            $employeeId = (int) $user['id'];
-        }
+        $employeeId = (int) $user['id'];
 
         return [
             'success' => true,
+            'id' => $employeeId,
             'data' => $this->holidayRepo->findFromDate($from),
             'leave_weeks' => $this->leaveRepo->findAcceptedLeaveWeekRanges($employeeId, $from),
         ];
@@ -202,6 +200,19 @@ class OvertimeController
         $approved = isset($_POST['status']) ? $_POST['status'] : null;
 
         return $this->approvalService->approveOvertime($user, $overtimeID, $approved, $remarks);
+    }
+
+    public function approveOvertimeBulk(): array
+    {
+        $user = $this->currentUser();
+        $ids = $_POST['overtimeIDs'] ?? [];
+        if (!is_array($ids)) {
+            $ids = [$ids];
+        }
+        $remarks = trim((string) ($_POST['remarks'] ?? ''));
+        $approved = $_POST['status'] ?? null;
+
+        return $this->approvalService->approveOvertimeBulk($user, $ids, $approved, $remarks);
     }
 
     private function currentUser(): array

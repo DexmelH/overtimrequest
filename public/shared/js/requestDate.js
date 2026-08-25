@@ -170,7 +170,7 @@ export function validateDateInput(showMessage = true) {
   return false;
 }
 
-export async function loadBlockedHolidays(employeeId = null) {
+export async function loadBlockedHolidays() {
   if (relaxedMode) {
     applyDateConstraints();
     const current = $dateField().val();
@@ -181,10 +181,7 @@ export async function loadBlockedHolidays(employeeId = null) {
   }
 
   const from = formatLocalDate(startOfToday());
-  let url = apiUrl("/holidays") + "?from=" + encodeURIComponent(from);
-  if (employeeId) {
-    url += "&employee_id=" + encodeURIComponent(String(employeeId));
-  }
+  const url = apiUrl("/holidays") + "?from=" + encodeURIComponent(from);
   try {
     const json = await apiGet(url);
     blockedHolidays = new Map();

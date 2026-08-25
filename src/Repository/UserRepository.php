@@ -60,9 +60,11 @@ class UserRepository
                 FROM `formspic` fp
                 INNER JOIN kdtphdb_new.`employee_list` el ON el.`id` = fp.`fldEmployeeNum`
                 WHERE el.`emp_status` = 1
+                  AND fp.`fldGroups` LIKE :abbrLike
                 ORDER BY fp.`fldRole` ASC, el.`surname` ASC";
-        $stmt = $this->pdo->query($sql);
-        $rows = $stmt ? ($stmt->fetchAll() ?: []) : [];
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':abbrLike' => '%' . $abbreviation . '%']);
+        $rows = $stmt->fetchAll() ?: [];
 
         $matches = [];
         foreach ($rows as $row) {

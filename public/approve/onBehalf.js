@@ -43,8 +43,8 @@ function bindDateField() {
   });
 }
 
-async function reloadDateRules(employeeId) {
-  await loadBlockedHolidays(employeeId || null);
+async function reloadDateRules() {
+  await loadBlockedHolidays();
   setDefaultRequestDate();
 }
 
@@ -140,7 +140,7 @@ async function selectEmployee(employee) {
   $("#obEmployeeSearch").val(`${employee.surname || ""}, ${employee.firstname || ""}`.trim());
   projectAllocations.reset();
   await loadEmployeeGroups(employee.id);
-  reloadDateRules(employee.id).catch(() => {});
+  reloadDateRules().catch(() => {});
   clearEmployeeSuggestions();
 }
 
@@ -150,7 +150,7 @@ function resetOnBehalfForm() {
   renderEmployeeGroupSelect([]);
   $("#obEmployeeId").val("");
   projectAllocations.reset();
-  reloadDateRules(null).catch(() => {});
+  reloadDateRules().catch(() => {});
   clearEmployeeSuggestions();
 }
 
@@ -174,7 +174,7 @@ export function initOnBehalf() {
     .then((isApprover) => {
       if (!isApprover) return;
       fetchLocations().catch(() => {});
-      reloadDateRules(null).catch(() => {});
+      reloadDateRules().catch(() => {});
     })
     .catch(() => {});
 
@@ -220,7 +220,7 @@ export function initOnBehalf() {
       if (employeeId) {
         loadEmployeeGroups(employeeId).catch(() => {});
       }
-      reloadDateRules(employeeId || null).catch(() => {});
+        reloadDateRules().catch(() => {});
     });
   }
 

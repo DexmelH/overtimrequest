@@ -1,7 +1,6 @@
 import { history, filter, searchQuery } from "../services/state.js";
 import { statusClass, statusText } from "../../shared/js/status.js";
 import { openModal } from "../components/modal.js";
-import { fetchHistory } from "../api/fetchHistory.js";
 
 function matchesFilter(item) {
   if (filter === "all") return true;
@@ -56,9 +55,7 @@ export function renderHistory() {
         (e.type === "keypress" && (e.key === "Enter" || e.key === " "))
       ) {
         e.preventDefault();
-        fetchHistory()
-          .then(() => openModal(item.id))
-          .catch(() => openModal(item.id));
+        openModal(item.id);
       }
     });
 

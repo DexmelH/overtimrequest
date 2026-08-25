@@ -108,13 +108,19 @@ $("#historySearch").on("input", function () {
   renderHistory();
 });
 
+let lastHistoryRefreshAt = 0;
+const HISTORY_REFRESH_MIN_MS = 5000;
+
 function refreshHistoryOnRevisit() {
+  const now = Date.now();
+  if (now - lastHistoryRefreshAt < HISTORY_REFRESH_MIN_MS) {
+    return;
+  }
+  lastHistoryRefreshAt = now;
   fetchHistory().catch(() => {});
   loadRequestCutoffLock().catch(() => {});
 }
 
-$(window).on("focus", refreshHistoryOnRevisit);
-$(window).on("pageshow", refreshHistoryOnRevisit);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
     refreshHistoryOnRevisit();

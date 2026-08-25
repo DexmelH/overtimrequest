@@ -14,7 +14,7 @@ class LocationRepository
 
     public function findLocations(): array
     {
-        $sql = "SELECT * FROM `dispatch_locations` WHERE `fldActive` = 1";
+        $sql = "SELECT `fldID`, `fldLocation` FROM `dispatch_locations` WHERE `fldActive` = 1";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute();
         $data = $stmt->fetchAll();

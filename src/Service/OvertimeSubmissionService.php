@@ -144,7 +144,8 @@ class OvertimeSubmissionService
         $remarks = trim((string) ($input['remarks'] ?? ''));
         $requestDate = trim((string) ($input['date'] ?? date('Y-m-d')));
 
-        if (!$this->approverDirectory->isApprover($approverId)) {
+        $approverGroupIds = $this->approverDirectory->getApproverGroupIds($approverId);
+        if (!$approverGroupIds) {
             return ['success' => false, 'message' => 'You are not authorized to submit member overtime requests.'];
         }
 
@@ -155,14 +156,6 @@ class OvertimeSubmissionService
         $employee = $this->employeeRepo->findById($employeeId);
         if (!$employee) {
             return ['success' => false, 'message' => 'Employee not found.'];
-        }
-
-        $approverGroupIds = $this->approverDirectory->getApproverGroupIds($approverId);
-        if (
-            !$approverGroupIds
-            || !$this->employeeRepo->isEmployeeInGroupsViaEmployeeGroup($employeeId, $approverGroupIds)
-        ) {
-            return ['success' => false, 'message' => 'This employee is not under your handled groups.'];
         }
 
         if ($groupID <= 0 || !in_array($groupID, $approverGroupIds, true)) {

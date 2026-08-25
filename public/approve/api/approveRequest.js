@@ -54,30 +54,27 @@ export async function approveOvertimeRequestsBulk(
   remarks = "",
   { onProgress } = {},
 ) {
-  let ok = 0;
-  let failed = 0;
-  const total = requestIds.length;
-
-  for (let i = 0; i < requestIds.length; i++) {
-    const id = requestIds[i];
-    if (typeof onProgress === "function") {
-      onProgress(i + 1, total);
-    }
-    try {
-      const payload = await approveOvertimeRequest(id, status, remarks, {
-        refresh: false,
-        toast: false,
-      });
-      if (payload?.success) {
-        ok += 1;
-      } else {
-        failed += 1;
-      }
-    } catch {
-      failed += 1;
-    }
+  const ids = Array.isArray(requestIds) ? requestIds : [];
+  const total = ids.length;
+  if (typeof onProgress === "function") {
+    onProgress(total, total);
   }
 
-  await fetchRequest();
-  return { ok, failed };
+  const body = new FormData();
+  body.append("status", String(status));
+  body.append("remarks", remarks);
+  ids.forEach((id) => body.append("overtimeIDs[]", String(id)));
+
+  try {
+    const payload = await apiPost(apiUrl("/approve/bulk"), body, { timeout: 60000 });
+    await fetchRequest();
+    return {
+      ok: Number(payload?.ok ?? 0),
+      failed: Number(payload?.failed ?? (payload?.success ? 0 : ids.length)),
+    };
+  } catch (error) {
+    console.error("Error bulk-approving overtime requests:", error);
+    await fetchRequest().catch(() => {});
+    throw error;
+  }
 }

@@ -97,6 +97,34 @@ class EmployeeRepository
         return $row ?: [];
     }
 
+    /**
+     * @param int[] $ids
+     * @return array<int, array<string, mixed>> keyed by employee id
+     */
+    public function findByIds(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if (!$ids) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT el.`id`, el.`surname`, el.`firstname`, el.`email`, el.`group_id`,
+                       gl.`abbreviation` AS `group_abbr`
+                FROM `employee_list` el
+                LEFT JOIN `group_list` gl ON gl.`id` = el.`group_id`
+                WHERE el.`id` IN ({$placeholders})";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($ids);
+
+        $map = [];
+        foreach ($stmt->fetchAll() ?: [] as $row) {
+            $map[(int) $row['id']] = $row;
+        }
+
+        return $map;
+    }
+
     /** @return array<int, array<string, mixed>> */
     public function findEmployeesInGroups(array $groupIds): array
     {
@@ -268,16 +296,13 @@ class EmployeeRepository
 
         $placeholders = implode(',', array_fill(0, count($groupIds), '?'));
         $query = trim($query);
-        $sql = "SELECT el.`id`, el.`surname`, el.`firstname`, el.`email`,
+        $sql = "SELECT DISTINCT el.`id`, el.`surname`, el.`firstname`, el.`email`,
                        gl.`abbreviation` AS group_abbr
-                FROM `employee_list` el
+                FROM `employee_group` eg
+                INNER JOIN `employee_list` el ON el.`id` = eg.`employee_number`
                 LEFT JOIN `group_list` gl ON gl.`id` = el.`group_id`
                 WHERE el.`emp_status` = 1
-                  AND el.`id` IN (
-                      SELECT DISTINCT eg.`employee_number`
-                      FROM `employee_group` eg
-                      WHERE eg.`group_id` IN ({$placeholders})
-                  )";
+                  AND eg.`group_id` IN ({$placeholders})";
         $params = $groupIds;
 
         if ($query !== '') {
