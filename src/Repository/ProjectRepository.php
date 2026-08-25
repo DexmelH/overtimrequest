@@ -28,7 +28,7 @@ class ProjectRepository
     {
         $sql = "SELECT pt.`fldID`, CONCAT(pt.`fldProject`, ' (', pt.`fldGroup`, ')') as `fldProject` FROM `projectstable` as `pt`
         LEFT JOIN `project_share` as `ps` ON pt.`fldID` = ps.`fldProject`
-        WHERE ps.`fldEmployeeNum` = :userID";
+        WHERE ps.`fldEmployeeNum` = :userID AND pt.`fldActive` = 1 AND pt.`fldDelete` = 0";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([":userID" => $userID]);
         $data = $stmt->fetchAll();
