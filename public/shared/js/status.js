@@ -23,6 +23,31 @@ export function isPending(status) {
   return status == null || status === "";
 }
 
+const REQUEST_STATUS_CLASSES = {
+  pending: "status-pending",
+  approved: "status-approved",
+  auto_approved: "status-auto-approved",
+  rejected: "status-denied",
+  auto_rejected: "status-auto-rejected",
+  cancelled: "status-cancelled",
+};
+
+const APPROVER_ACTION_CLASSES = {
+  action_needed: "status-action-needed",
+  you_approved: "status-you-approved",
+  you_rejected: "status-you-rejected",
+};
+
+/** Badge class for a `status_code` computed by the API. */
+export function requestStatusClass(code) {
+  return REQUEST_STATUS_CLASSES[code] || "status-pending";
+}
+
+/** Badge class for an `action_code` computed by the API. */
+export function approverActionClass(code) {
+  return APPROVER_ACTION_CLASSES[code] || "status-action-needed";
+}
+
 export function formatDateISO(iso) {
   if (!iso) return "No action yet";
   const d = new Date(iso);

@@ -1,7 +1,11 @@
 import { overtime } from "../services/state.js";
 import { renderManagers } from "../../shared/js/approvers.js";
 import { modal } from "../components/modal.js";
-import { formatDateShort } from "../../shared/js/status.js";
+import {
+  approverActionClass,
+  requestStatusClass,
+  formatDateShort,
+} from "../../shared/js/status.js";
 
 function getInitials(name) {
   if (!name) return "?";
@@ -50,12 +54,47 @@ export function populateModal(requestId) {
   renderProjects(request.projects, request.project_name);
   $("#rd-remarks").text(request.remarks || "—");
 
+  $("#rd-status")
+    .attr("class", `status-badge ${requestStatusClass(request.status_code)}`)
+    .text(request.status_label || "Pending");
+
+  // The approver's own action is a separate badge; it is absent once a request
+  // closes without them acting.
+  $("#rd-action")
+    .attr(
+      "class",
+      `status-badge ${approverActionClass(request.action_code)}${
+        request.action_code ? "" : " d-none"
+      }`,
+    )
+    .text(request.action_label || "");
+
   renderManagers(request.approver_details || []);
   $("#approvalRemarks").val("");
 
-  const alreadyActed = !!request.is_approved;
-  $("#approvalActions").toggleClass("d-none", alreadyActed);
-  $("#approvalRemarksWrap").toggleClass("d-none", alreadyActed);
+  // Decisions stay editable until the request is finalized, so acting again is
+  // a reversal rather than a first decision.
+  const canAct = !!request.can_change;
+  const hasDecision = request.my_decision !== null && request.my_decision !== undefined;
+  $("#approvalActions").toggleClass("d-none", !canAct);
+  $("#approvalRemarksWrap").toggleClass("d-none", !canAct);
+  $("#btnApproveRequest").html(
+    hasDecision
+      ? '<i class="bi bi-check-circle"></i> Change to Approve'
+      : '<i class="bi bi-check-circle"></i> Approve',
+  );
+  $("#btnRejectRequest").html(
+    hasDecision
+      ? '<i class="bi bi-x-circle"></i> Change to Reject'
+      : '<i class="bi bi-x-circle"></i> Reject',
+  );
+  $("#btnApproveRequest").prop("disabled", request.my_decision === 1);
+  $("#btnRejectRequest").prop("disabled", request.my_decision === 0);
+
+  $("#followUpActions").toggleClass(
+    "d-none",
+    request.status_code !== "auto_rejected",
+  );
 
   modal?.show();
 }

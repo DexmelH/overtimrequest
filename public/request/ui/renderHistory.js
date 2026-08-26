@@ -1,5 +1,6 @@
 import { history, filter, searchQuery } from "../services/state.js";
 import { statusClass, statusText } from "../../shared/js/status.js";
+import { escapeHtml } from "../../shared/js/escapeHtml.js";
 import { openModal } from "../components/modal.js";
 
 function matchesFilter(item) {
@@ -37,15 +38,15 @@ export function renderHistory() {
   filtered.forEach((item) => {
     const dateBadge = item.request_date ? item.request_date.slice(5) : "—";
     const $row = $(`
-      <div class="history-item" data-id="${item.id}" role="listitem" tabindex="0">
+      <div class="history-item" data-id="${escapeHtml(item.id)}" role="listitem" tabindex="0">
         <div class="history-left">
-          <div class="history-date-badge">${dateBadge}</div>
+          <div class="history-date-badge">${escapeHtml(dateBadge)}</div>
           <div>
-            <div class="history-title">${item.group_name || "—"}</div>
-            <div class="history-sub">${item.request_date || ""} · ${item.duration ?? 0} hrs · ${item.location_name || ""}</div>
+            <div class="history-title">${escapeHtml(item.group_name || "—")}</div>
+            <div class="history-sub">${escapeHtml(item.request_date || "")} · ${escapeHtml(item.duration ?? 0)} hrs · ${escapeHtml(item.location_name || "")}</div>
           </div>
         </div>
-        <span class="status-badge ${statusClass(item.status)}">${statusText(item.status)}</span>
+        <span class="status-badge ${statusClass(item.status)}">${escapeHtml(statusText(item.status))}</span>
       </div>
     `);
 

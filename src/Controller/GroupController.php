@@ -3,17 +3,16 @@ namespace App\Controller;
 
 use App\Repository\GroupRepository;
 use App\Repository\UserRepository;
-use PDO;
 
 class GroupController
 {
     private GroupRepository $groupRepo;
     private UserRepository $userRepo;
 
-    public function __construct(PDO $groupPdo, PDO $authPdo)
+    public function __construct(GroupRepository $groupRepo, UserRepository $userRepo)
     {
-        $this->groupRepo = new GroupRepository($groupPdo);
-        $this->userRepo  = new UserRepository($authPdo);
+        $this->groupRepo = $groupRepo;
+        $this->userRepo = $userRepo;
     }
 
     public function getGroupsByUserId(): array

@@ -68,31 +68,53 @@ class OvertimeRepository
         return $remarks ? (string) $remarks : '';
     }
 
+    /**
+     * Remarks for the requestor's status email. An auto-rejected request has no
+     * approver decision to quote, so the system reason is used instead.
+     */
+    public function findStatusNotificationRemarks(int $overtimeID, int $decision, string $cutoffTime): string
+    {
+        $remarks = $this->findLatestDecisionRemarks($overtimeID);
+        if ($remarks !== '' || $decision === 1) {
+            return $remarks;
+        }
+
+        return sprintf(
+            'No approver action was recorded before the %s cutoff, so this request was automatically rejected.',
+            $cutoffTime
+        );
+    }
+
     public function findHistoryByUserId(string $userID): array
     {
-        $sql = "SELECT orq.id, orq.duration, orq.remarks, orq.request_date, orq.status,
-                   gl.abbreviation AS group_name,
-                   l.fldLocation AS location_name
+        $sql = "SELECT orq.`id`, orq.`duration`, orq.`remarks`, orq.`request_date`, orq.`status`,
+                       gl.`abbreviation` AS `group_name`,
+                       l.`fldLocation` AS `location_name`
                 FROM `overtime_request` orq
-                LEFT JOIN kdtphdb_new.`group_list` gl ON orq.group_id = gl.id
-                LEFT JOIN `dispatch_locations` l ON orq.location_id = l.fldID
-                WHERE orq.user_id = :userID ORDER BY orq.request_date DESC, orq.id DESC";
+                LEFT JOIN kdtphdb_new.`group_list` gl ON orq.`group_id` = gl.`id`
+                LEFT JOIN `dispatch_locations` l ON orq.`location_id` = l.`fldID`
+                WHERE orq.`user_id` = :userID
+                ORDER BY orq.`request_date` DESC, orq.`id` DESC";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([":userID" => $userID]);
+        $stmt->execute([':userID' => $userID]);
         $data = $stmt->fetchAll();
 
-        return $data ? $this->attachApproverDetails($this->attachProjects($data)) : [];
+        return $data ? $this->attachRequestDetails($data) : [];
     }
 
     public function addOvertime(array $payload): int
     {
         $sql = "INSERT INTO `overtime_request`
-                    (`user_id`, `location_id`, `group_id`, `duration`, `remarks`, `request_date`)
+                    (`user_id`, `submitted_by`, `origin_request_id`, `location_id`, `group_id`,
+                     `duration`, `remarks`, `request_date`)
                 VALUES
-                    (:userID, :locationID, :groupID, :duration, :remarks, :requestDate)";
+                    (:userID, :submittedBy, :originRequestID, :locationID, :groupID,
+                     :duration, :remarks, :requestDate)";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
             ":userID" => $payload["user_id"],
+            ":submittedBy" => $payload["submitted_by"] ?? null,
+            ":originRequestID" => $payload["origin_request_id"] ?? null,
             ":locationID" => $payload["location_id"],
             ":groupID" => $payload["group_id"],
             ":duration" => $payload["duration"],
@@ -157,7 +179,7 @@ class OvertimeRepository
     /** @return array<int, array<int, array{project_id: int, project_name: string, hours: int}>> */
     public function findProjectsByRequestIds(array $requestIds): array
     {
-        $requestIds = array_values(array_unique(array_filter(array_map('intval', $requestIds))));
+        $requestIds = $this->normalizeRequestIds($requestIds);
         if (!$requestIds) {
             return [];
         }
@@ -186,20 +208,53 @@ class OvertimeRepository
         return $projectsByRequest;
     }
 
-    /** @param array<int, array<string, mixed>> $rows */
-    private function attachProjects(array $rows): array
+    /**
+     * Batch-load projects and approver details for list rows (fixed 2 queries, not N+1).
+     *
+     * @param int[]|string[] $requestIds
+     * @return array{projects: array<int, array<int, array{project_id: int, project_name: string, hours: int}>>, approvers: array<int, array<int, array<string, mixed>>>}
+     */
+    private function fetchRelatedByRequestIds(array $requestIds): array
     {
-        $projectsByRequest = $this->findProjectsByRequestIds(array_column($rows, 'id'));
+        $requestIds = $this->normalizeRequestIds($requestIds);
+        if (!$requestIds) {
+            return ['projects' => [], 'approvers' => []];
+        }
+
+        return [
+            'projects' => $this->findProjectsByRequestIds($requestIds),
+            'approvers' => $this->findApproverDetailsByRequestIds($requestIds),
+        ];
+    }
+
+    /** @param array<int, array<string, mixed>> $rows */
+    private function attachRequestDetails(array $rows): array
+    {
+        if (!$rows) {
+            return [];
+        }
+
+        $related = $this->fetchRelatedByRequestIds(array_column($rows, 'id'));
 
         foreach ($rows as &$row) {
             $requestId = (int) $row['id'];
-            $projects = $projectsByRequest[$requestId] ?? [];
+            $projects = $related['projects'][$requestId] ?? [];
             $row['projects'] = $projects;
             $row['project_name'] = $this->formatProjectSummary($projects);
+            $row['approver_details'] = $related['approvers'][$requestId] ?? [];
         }
         unset($row);
 
         return $rows;
+    }
+
+    /** @param int[]|string[] $ids */
+    private function normalizeRequestIds(array $ids): array
+    {
+        return array_values(array_unique(array_filter(
+            array_map('intval', $ids),
+            static fn (int $id): bool => $id > 0
+        )));
     }
 
     /** @param array<int, array{project_name: string, hours: int}> $projects */
@@ -266,6 +321,34 @@ class OvertimeRepository
         ]);
     }
 
+    /**
+     * The approver's assignment row, or null when they are not assigned at all.
+     * Unlike findAcceptanceLevel(), a row with a NULL level is still returned.
+     *
+     * @return array{approval_level: ?int, status: ?int, remarks: ?string}|null
+     */
+    public function findAcceptance(int $overtimeID, int $approverID): ?array
+    {
+        $sql = "SELECT `approval_level`, `status`, `remarks` FROM `overtime_accept`
+                WHERE `overtime_id` = :overtimeID AND `approver_id` = :approverID
+                LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':overtimeID' => $overtimeID,
+            ':approverID' => $approverID,
+        ]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            return null;
+        }
+
+        return [
+            'approval_level' => $row['approval_level'] !== null ? (int) $row['approval_level'] : null,
+            'status' => ($row['status'] === null || $row['status'] === '') ? null : (int) $row['status'],
+            'remarks' => $row['remarks'] !== null ? (string) $row['remarks'] : null,
+        ];
+    }
+
     public function findAcceptanceLevel(int $overtimeID, int $approverID): ?int
     {
         $sql = "SELECT `approval_level` FROM `overtime_accept`
@@ -328,31 +411,30 @@ class OvertimeRepository
 
     public function findOvertimeToApprove(int $approverID): array
     {
-        $sql = "SELECT orq.id, orq.duration, orq.remarks, orq.request_date, orq.status,
-                   orq.date_created,
-                   el.id AS employee_id,
-                   el.surname AS employee_name,
-                   gl.abbreviation AS group_name,
-                   l.fldLocation AS location_name
+        $sql = "SELECT orq.`id`, orq.`duration`, orq.`remarks`, orq.`request_date`, orq.`status`,
+                       orq.`date_created`, orq.`submitted_by`, orq.`origin_request_id`,
+                       el.`id` AS `employee_id`,
+                       el.`surname` AS `employee_name`,
+                       gl.`abbreviation` AS `group_name`,
+                       l.`fldLocation` AS `location_name`
                 FROM `overtime_accept` oa
-                LEFT JOIN `overtime_request` orq ON oa.overtime_id = orq.id
-                LEFT JOIN kdtphdb_new.`group_list` gl ON orq.group_id = gl.id
-                LEFT JOIN `dispatch_locations` l ON orq.location_id = l.fldID
-                LEFT JOIN kdtphdb_new.`employee_list` el ON el.id = orq.user_id
-                WHERE oa.approver_id = :approverID AND (orq.status != 2 OR orq.status IS NULL)
+                INNER JOIN `overtime_request` orq ON oa.`overtime_id` = orq.`id`
+                LEFT JOIN kdtphdb_new.`group_list` gl ON orq.`group_id` = gl.`id`
+                LEFT JOIN `dispatch_locations` l ON orq.`location_id` = l.`fldID`
+                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = orq.`user_id`
+                WHERE oa.`approver_id` = :approverID
+                  AND (orq.`status` != 2 OR orq.`status` IS NULL)
                 ORDER BY
                     CASE
-                        WHEN orq.status IS NOT NULL OR oa.status IS NOT NULL THEN 1
+                        WHEN orq.`status` IS NOT NULL OR oa.`status` IS NOT NULL THEN 1
                         ELSE 0
                     END ASC,
-                    orq.date_created DESC";
+                    orq.`date_created` DESC";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
-            ":approverID" => $approverID
-        ]);
+        $stmt->execute([':approverID' => $approverID]);
         $data = $stmt->fetchAll();
 
-        return $data ? $this->attachApproverDetails($this->attachProjects($data)) : [];
+        return $data ? $this->attachRequestDetails($data) : [];
     }
 
     public function findApproverDetails(int $overtimeID): array
@@ -366,10 +448,7 @@ class OvertimeRepository
      */
     public function findApproverDetailsByRequestIds(array $requestIds): array
     {
-        $requestIds = array_values(array_unique(array_filter(
-            array_map('intval', $requestIds),
-            static fn (int $id): bool => $id > 0
-        )));
+        $requestIds = $this->normalizeRequestIds($requestIds);
         if (!$requestIds) {
             return [];
         }
@@ -405,32 +484,22 @@ class OvertimeRepository
         return $grouped;
     }
 
-    /** @param array<int, array<string, mixed>> $rows */
-    private function attachApproverDetails(array $rows): array
-    {
-        $detailsByRequest = $this->findApproverDetailsByRequestIds(array_column($rows, 'id'));
-
-        foreach ($rows as &$row) {
-            $row['approver_details'] = $detailsByRequest[(int) $row['id']] ?? [];
-        }
-        unset($row);
-
-        return $rows;
-    }
-
     public function approveRequest(int $overtimeID, int $approverID, string $remarks, int $approved): bool
     {
-        $sql = "UPDATE `overtime_accept` SET `status` = :approved, `remarks` = :remarks, `date_accepted` = NOW() 
+        $sql = "UPDATE `overtime_accept`
+                SET `status` = :approved, `remarks` = :remarks, `date_accepted` = NOW()
                 WHERE `overtime_id` = :overtimeID AND `approver_id` = :approverID";
         $stmt = $this->pdo->prepare($sql);
-        $ok = $stmt->execute([
-            ":remarks" => $remarks,
-            ":overtimeID" => $overtimeID,
-            ":approverID" => $approverID,
-            ":approved" => $approved
+        $stmt->execute([
+            ':remarks' => $remarks,
+            ':overtimeID' => $overtimeID,
+            ':approverID' => $approverID,
+            ':approved' => $approved,
         ]);
 
-        return $ok && $stmt->rowCount() > 0;
+        // rowCount() is also 0 when the approver re-submits an identical decision,
+        // so callers must verify assignment with findAcceptance() instead.
+        return $stmt->rowCount() > 0;
     }
 
     public function requestExists(int $overtimeID): bool
@@ -512,6 +581,37 @@ class OvertimeRepository
                 ':changeLog' => $changeLog,
             ]);
         }
+    }
+
+    /**
+     * A request plus how many approvers actually acted on it, so callers can tell an
+     * auto-rejection (nobody acted by the cutoff) from a real approver rejection.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findRequestWithDecisionCount(int $overtimeID): ?array
+    {
+        $sql = "SELECT orq.`id`, orq.`user_id`, orq.`group_id`, orq.`location_id`,
+                       orq.`remarks`, orq.`request_date`, orq.`status`,
+                       (SELECT COUNT(*) FROM `overtime_accept` oa
+                         WHERE oa.`overtime_id` = orq.`id` AND oa.`status` IS NOT NULL) AS `acted_count`
+                FROM `overtime_request` orq
+                WHERE orq.`id` = :overtimeID";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':overtimeID' => $overtimeID]);
+        $data = $stmt->fetch();
+
+        return $data ? $data : null;
+    }
+
+    public function hasFollowUp(int $originRequestID): bool
+    {
+        $sql = "SELECT 1 FROM `overtime_request`
+                WHERE `origin_request_id` = :originRequestID LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':originRequestID' => $originRequestID]);
+
+        return (bool) $stmt->fetchColumn();
     }
 
     public function findOwnedPendingRequest(int $overtimeID, int $userID): array

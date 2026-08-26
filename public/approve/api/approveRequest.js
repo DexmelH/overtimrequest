@@ -44,6 +44,33 @@ export async function approveOvertimeRequest(
   }
 }
 
+/** Re-file an auto-rejected request as a new, auto-approved on-behalf submission. */
+export async function followUpRequest(requestID) {
+  const body = new FormData();
+  body.append("overtimeID", requestID);
+
+  try {
+    const payload = await apiPost(apiUrl("/approve/followup"), body);
+    if (payload?.success) {
+      await fetchRequest();
+      showToast(payload.message || "Request re-submitted and approved.", {
+        type: "success",
+      });
+      return payload;
+    }
+    showToast(payload?.message || "Could not re-submit this request.", {
+      type: "warning",
+    });
+    return payload;
+  } catch (error) {
+    console.error("Error re-submitting overtime request:", error);
+    showToast("Failed to re-submit request. Please try again.", {
+      type: "error",
+    });
+    throw error;
+  }
+}
+
 /**
  * Process many requests sequentially with a single list refresh at the end.
  * @returns {Promise<{ok: number, failed: number}>}

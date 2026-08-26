@@ -10,24 +10,15 @@
  * Schedule via Windows Task Scheduler / cron at or after APPROVAL_CUTOFF_TIME (default 15:00).
  */
 
-use App\Repository\ActivityLogRepository;
-use App\Repository\OvertimeRepository;
-use App\Service\ActivityLogger;
 use App\Service\ApprovalFinalizer;
 
-require __DIR__ . '/../../../vendor/autoload.php';
-
-$config = require __DIR__ . '/../../config.php';
+/** @var \App\Container $container */
+$container = require __DIR__ . '/../../bootstrap.php';
 
 $force = in_array('--force', $argv ?? [], true);
 
-$dbManager = new \App\Database($config['connections'] ?? $config);
-$pdo = $dbManager->getConnection('webjmr');
-
-$overtimeRepo = new OvertimeRepository($pdo);
-$logger = new ActivityLogger(new ActivityLogRepository($pdo));
-$cutoffTime = (string) ($config['app']['approval_cutoff_time'] ?? '15:00');
-$finalizer = new ApprovalFinalizer($overtimeRepo, $logger, $cutoffTime);
+$config = $container->get('config');
+$finalizer = $container->get(ApprovalFinalizer::class);
 
 $now = new DateTimeImmutable('now');
 $today = $now->format('Y-m-d');

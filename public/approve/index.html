@@ -142,6 +142,20 @@
                 <button class="ot-filter-btn" data-filter="done" type="button">
                   Acted
                 </button>
+                <button
+                  class="ot-filter-btn"
+                  data-filter="auto_rejected"
+                  type="button"
+                >
+                  Auto-rejected
+                </button>
+                <button
+                  class="ot-filter-btn"
+                  data-filter="auto_approved"
+                  type="button"
+                >
+                  Auto-approved
+                </button>
               </div>
             </div>
             <div class="ot-card-body p-0">
@@ -265,6 +279,8 @@
                     <div class="ot-muted" id="rd-meta">—</div>
                   </div>
                   <div class="ms-auto d-flex gap-2 modal-hero-badges">
+                    <span class="status-badge" id="rd-status">—</span>
+                    <span class="status-badge d-none" id="rd-action"></span>
                     <span class="ot-badge rounded-pill" id="rd-date">—</span>
                     <span
                       class="ot-badge ot-badge-accent rounded-pill"
@@ -345,6 +361,16 @@
               id="btnApproveRequest"
             >
               <i class="bi bi-check-circle"></i> Approve
+            </button>
+          </div>
+
+          <div class="modal-footer border-0 d-none" id="followUpActions">
+            <button
+              type="button"
+              class="ot-btn ot-btn-primary flex-fill"
+              id="btnFollowUpRequest"
+            >
+              <i class="bi bi-arrow-repeat"></i> Re-submit as approved
             </button>
           </div>
         </div>

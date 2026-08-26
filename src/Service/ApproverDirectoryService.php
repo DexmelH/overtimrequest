@@ -32,9 +32,10 @@ class ApproverDirectoryService
     }
 
     /**
-     * Groups the user may handle for on-behalf / search:
+     * Groups the user approves for, used for on-behalf / search:
      * - groups where they are configured in overtime_group_approvers
-     * - Form PIC groups that do not yet have OGA configuration
+     * - groups where they are a Form PIC, even if that group also has OGA
+     *   configuration; being either kind of approver is enough
      *
      * @return array<int, array{id: int, abbreviation: string, name: string}>
      */
@@ -46,14 +47,8 @@ class ApproverDirectoryService
         }
 
         $picAbbrs = $this->userRepo->findFormPicGroupAbbreviationsByEmployeeId($approverId);
-        $picGroups = $this->employeeRepo->findGroupsByAbbreviations($picAbbrs);
-        $picGroupIds = array_map(static fn(array $row): int => (int) $row['id'], $picGroups);
-        $configured = array_flip($this->groupApproverRepo->findGroupsWithConfiguredApprovers($picGroupIds));
-        foreach ($picGroups as $row) {
-            $groupId = (int) $row['id'];
-            if (!isset($configured[$groupId])) {
-                $groups[$groupId] = $row;
-            }
+        foreach ($this->employeeRepo->findGroupsByAbbreviations($picAbbrs) as $row) {
+            $groups[(int) $row['id']] = $row;
         }
 
         $list = array_values($groups);
@@ -72,6 +67,10 @@ class ApproverDirectoryService
     }
 
     /**
+     * Resolve approvers for a group (OGA first, then Form PIC fallback).
+     * Self-filed and on-behalf submit both pass the employee's main group, not
+     * the selected OT group.
+     *
      * @return array<int, array{id: int, surname: string, email: string, approval_level?: int}>
      */
     public function resolveApprovers(int $groupId, string $groupAbbrev, int $userId): array

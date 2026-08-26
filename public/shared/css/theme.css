@@ -521,6 +521,52 @@ body.ot-sidebar-open {
   color: #475569;
 }
 
+/* The approver's own action sits beside the request status. Outlined instead of
+   filled so the two badges read as separate dimensions. */
+.status-action-needed {
+  background: transparent;
+  color: var(--ot-accent);
+  border: 1px solid var(--ot-accent);
+}
+
+.status-you-approved {
+  background: transparent;
+  color: var(--ot-success);
+  border: 1px solid var(--ot-success);
+}
+
+.status-you-rejected {
+  background: transparent;
+  color: var(--ot-danger);
+  border: 1px solid var(--ot-danger);
+}
+
+.status-badge-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+/* Dashed border marks outcomes the system set without an approver acting */
+.status-auto-approved {
+  background: rgba(5, 150, 105, 0.12);
+  color: var(--ot-success);
+  border: 1px dashed var(--ot-success);
+}
+
+.status-auto-rejected {
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--ot-danger);
+  border: 1px dashed var(--ot-danger);
+}
+
+.status-followup {
+  background: var(--ot-surface-muted);
+  color: var(--ot-muted);
+  text-transform: none;
+  font-weight: 600;
+}
+
 /* Toasts */
 .ot-toast-container {
   position: fixed;

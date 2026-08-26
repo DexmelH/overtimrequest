@@ -26,13 +26,32 @@ class OvertimeApprovalService
         foreach ($overtimeToApprove as &$request) {
             $alreadyFinalized = $request['status'] !== null && $request['status'] !== '';
             $myDecision = null;
+            $anyoneActed = false;
             foreach ($request['approver_details'] ?? [] as $detail) {
+                $decision = $detail['status'] ?? null;
+                if ($decision !== null && $decision !== '') {
+                    $anyoneActed = true;
+                }
                 if ((int) ($detail['approver_id'] ?? 0) === $approverId) {
-                    $myDecision = $detail['status'] ?? null;
-                    break;
+                    $myDecision = $decision;
                 }
             }
-            $request['is_approved'] = $alreadyFinalized || ($myDecision !== null && $myDecision !== '');
+            $iActed = $myDecision !== null && $myDecision !== '';
+
+            $request['is_approved'] = $alreadyFinalized || $iActed;
+            $request['is_finalized'] = $alreadyFinalized;
+            $request['my_decision'] = $iActed ? (int) $myDecision : null;
+            $request['can_change'] = !$alreadyFinalized;
+            $request['is_on_behalf'] = ($request['submitted_by'] ?? null) !== null;
+            $request['is_follow_up'] = ($request['origin_request_id'] ?? null) !== null;
+
+            [$statusCode, $statusLabel] = $this->deriveRequestStatus($request, $anyoneActed);
+            $request['status_code'] = $statusCode;
+            $request['status_label'] = $statusLabel;
+
+            [$actionCode, $actionLabel] = $this->deriveApproverAction($request);
+            $request['action_code'] = $actionCode;
+            $request['action_label'] = $actionLabel;
         }
         unset($request);
 
@@ -49,6 +68,60 @@ class OvertimeApprovalService
         });
 
         return ["success" => true, "data" => $overtimeToApprove];
+    }
+
+    /**
+     * Where the request itself stands, independent of the current approver.
+     *
+     * @param array<string, mixed> $request
+     * @return array{0: string, 1: string}
+     */
+    private function deriveRequestStatus(array $request, bool $anyoneActed): array
+    {
+        $status = $request['status'];
+
+        if ((string) $status === '2') {
+            return ['cancelled', 'Cancelled'];
+        }
+
+        if (!$request['is_finalized']) {
+            return ['pending', 'Pending'];
+        }
+
+        if ((string) $status === '1') {
+            return $request['is_on_behalf']
+                ? ['auto_approved', 'Auto-approved']
+                : ['approved', 'Approved'];
+        }
+
+        return $anyoneActed
+            ? ['rejected', 'Rejected']
+            : ['auto_rejected', 'Auto-rejected'];
+    }
+
+    /**
+     * What the current approver has done about the request. Shown as its own
+     * badge beside the request status while the request is still open. Once
+     * finalized, only the request status is shown.
+     *
+     * @param array<string, mixed> $request
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function deriveApproverAction(array $request): array
+    {
+        if ($request['is_finalized'] || (string) $request['status'] === '2') {
+            return [null, null];
+        }
+
+        if ($request['my_decision'] === 1) {
+            return ['you_approved', 'You approved'];
+        }
+
+        if ($request['my_decision'] === 0) {
+            return ['you_rejected', 'You rejected'];
+        }
+
+        return ['action_needed', 'Action needed'];
     }
 
     /**
@@ -76,23 +149,23 @@ class OvertimeApprovalService
             return ['success' => false, 'message' => "This request has already been finalized."];
         }
 
+        // Authorization comes from the assignment row, not from the UPDATE's row count,
+        // so an approver may also re-submit or reverse their own decision.
+        $acceptance = $this->overtimeRepo->findAcceptance($overtimeID, $approverID);
+        if ($acceptance === null) {
+            return ['success' => false, 'message' => 'You are not assigned to approve this request.'];
+        }
+
+        $previousDecision = $acceptance['status'];
+        $isChange = $previousDecision !== null && $previousDecision !== (int) $approved;
+
         $pdo = $this->overtimeRepo->getPdo();
         $finalized = false;
-        $level = null;
+        $level = $acceptance['approval_level'];
         try {
             $pdo->beginTransaction();
 
-            $updated = $this->overtimeRepo->approveRequest($overtimeID, $approverID, $remarks, (int) $approved);
-            if (!$updated) {
-                $pdo->rollBack();
-                return ['success' => false, 'message' => 'You are not assigned to approve this request.'];
-            }
-
-            $level = $this->overtimeRepo->findAcceptanceLevel($overtimeID, $approverID);
-            if ($level === null) {
-                $pdo->rollBack();
-                return ['success' => false, 'message' => 'You are not assigned to approve this request.'];
-            }
+            $this->overtimeRepo->approveRequest($overtimeID, $approverID, $remarks, (int) $approved);
 
             if ($level === 4) {
                 $this->approvalFinalizer->finalizeImmediate(
@@ -115,7 +188,11 @@ class OvertimeApprovalService
             return ['success' => false, 'message' => 'Unable to update the overtime request. Please try again.'];
         }
 
-        $action = ((int) $approved === 1) ? 'request.approve' : 'request.reject';
+        if ($isChange) {
+            $action = 'request.decision.change';
+        } else {
+            $action = ((int) $approved === 1) ? 'request.approve' : 'request.reject';
+        }
         $this->logger->log(
             $action,
             (int) $approverID,
@@ -126,6 +203,8 @@ class OvertimeApprovalService
                 'remarks' => $remarks,
                 'finalized' => $finalized,
                 'approval_level' => $level,
+                'decision' => (int) $approved,
+                'previous_decision' => $previousDecision,
             ]
         );
 
@@ -141,7 +220,8 @@ class OvertimeApprovalService
             'success' => true,
             'finalized' => false,
             'message' => sprintf(
-                'Decision recorded. Final status will be set at %s (or sooner if Level 4 acts).',
+                '%s Final status will be set at %s (or sooner if Level 4 acts).',
+                $isChange ? 'Decision changed.' : 'Decision recorded.',
                 $this->approvalFinalizer->getCutoffTime()
             ),
         ];

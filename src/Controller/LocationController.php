@@ -3,17 +3,16 @@ namespace App\Controller;
 
 use App\Repository\LocationRepository;
 use App\Repository\UserRepository;
-use PDO;
 
 class LocationController
 {
     private LocationRepository $locRepo;
     private UserRepository $userRepo;
 
-    public function __construct(PDO $locPdo, PDO $authPdo)
+    public function __construct(LocationRepository $locRepo, UserRepository $userRepo)
     {
-        $this->locRepo = new LocationRepository($locPdo);
-        $this->userRepo = new UserRepository($authPdo);
+        $this->locRepo = $locRepo;
+        $this->userRepo = $userRepo;
     }
 
     public function getLocations(): array

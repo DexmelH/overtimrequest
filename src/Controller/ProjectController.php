@@ -2,11 +2,9 @@
 namespace App\Controller;
 
 use App\Repository\EmployeeRepository;
-use App\Repository\GroupApproverRepository;
 use App\Repository\ProjectRepository;
 use App\Repository\UserRepository;
 use App\Service\ApproverDirectoryService;
-use PDO;
 
 class ProjectController
 {
@@ -15,16 +13,16 @@ class ProjectController
     private EmployeeRepository $employeeRepo;
     private ApproverDirectoryService $approverDirectory;
 
-    public function __construct(PDO $projectPdo, PDO $userPdo, PDO $employeePdo)
-    {
-        $this->projectRepo = new ProjectRepository($projectPdo);
-        $this->userRepo = new UserRepository($userPdo);
-        $this->employeeRepo = new EmployeeRepository($employeePdo);
-        $this->approverDirectory = new ApproverDirectoryService(
-            new GroupApproverRepository($projectPdo),
-            $this->userRepo,
-            $this->employeeRepo
-        );
+    public function __construct(
+        ProjectRepository $projectRepo,
+        UserRepository $userRepo,
+        EmployeeRepository $employeeRepo,
+        ApproverDirectoryService $approverDirectory
+    ) {
+        $this->projectRepo = $projectRepo;
+        $this->userRepo = $userRepo;
+        $this->employeeRepo = $employeeRepo;
+        $this->approverDirectory = $approverDirectory;
     }
 
     public function getProjects(): array
@@ -38,6 +36,7 @@ class ProjectController
         $shareUserId = $actorId;
 
         if ($requestedEmployeeId > 0 && $requestedEmployeeId !== $actorId) {
+            // On-behalf: approver must handle the target employee's main group (employee_list.group_id).
             if (!$this->canLoadProjectsForEmployee($actorId, $requestedEmployeeId)) {
                 http_response_code(403);
                 echo json_encode([

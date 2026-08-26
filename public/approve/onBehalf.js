@@ -19,6 +19,7 @@ const ON_BEHALF_FIELDS = {
   group: "obGroup",
   location: "obLocation",
 };
+// Date rules use relaxed mode (past dates OK); server validateRequestDate(..., true) matches.
 
 const projectAllocations = createProjectAllocations({
   containerId: "obProjectAllocations",

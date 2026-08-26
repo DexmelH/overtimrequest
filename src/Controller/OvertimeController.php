@@ -2,17 +2,12 @@
 namespace App\Controller;
 
 use App\Repository\EmployeeRepository;
-use App\Repository\GroupApproverRepository;
 use App\Repository\HolidayRepository;
 use App\Repository\LeaveRepository;
-use App\Repository\OvertimeRepository;
 use App\Repository\UserRepository;
-use App\Service\ActivityLogger;
-use App\Service\ApprovalFinalizer;
 use App\Service\ApproverDirectoryService;
 use App\Service\OvertimeApprovalService;
 use App\Service\OvertimeSubmissionService;
-use PDO;
 
 class OvertimeController
 {
@@ -25,47 +20,21 @@ class OvertimeController
     private OvertimeApprovalService $approvalService;
 
     public function __construct(
-        PDO $overtimePDO,
-        PDO $userPDO,
-        PDO $formsPDO,
-        PDO $kdtphNewPdo,
-        ActivityLogger $logger,
-        string $approvalCutoffTime = '15:00'
+        UserRepository $userRepo,
+        HolidayRepository $holidayRepo,
+        LeaveRepository $leaveRepo,
+        EmployeeRepository $employeeRepo,
+        ApproverDirectoryService $approverDirectory,
+        OvertimeSubmissionService $submissionService,
+        OvertimeApprovalService $approvalService
     ) {
-        $overtimeRepo = new OvertimeRepository($overtimePDO);
-        $this->userRepo = new UserRepository($userPDO);
-        $groupApproverRepo = new GroupApproverRepository($overtimePDO);
-        $this->holidayRepo = new HolidayRepository($userPDO);
-        $this->leaveRepo = new LeaveRepository($formsPDO);
-        $this->employeeRepo = new EmployeeRepository($kdtphNewPdo);
-
-        $this->approverDirectory = new ApproverDirectoryService(
-            $groupApproverRepo,
-            $this->userRepo,
-            $this->employeeRepo
-        );
-
-        $this->submissionService = new OvertimeSubmissionService(
-            $overtimeRepo,
-            $this->employeeRepo,
-            $this->holidayRepo,
-            $this->leaveRepo,
-            $this->approverDirectory,
-            $logger,
-            $approvalCutoffTime
-        );
-
-        $approvalFinalizer = new ApprovalFinalizer(
-            $overtimeRepo,
-            $logger,
-            $approvalCutoffTime
-        );
-
-        $this->approvalService = new OvertimeApprovalService(
-            $overtimeRepo,
-            $approvalFinalizer,
-            $logger
-        );
+        $this->userRepo = $userRepo;
+        $this->holidayRepo = $holidayRepo;
+        $this->leaveRepo = $leaveRepo;
+        $this->employeeRepo = $employeeRepo;
+        $this->approverDirectory = $approverDirectory;
+        $this->submissionService = $submissionService;
+        $this->approvalService = $approvalService;
     }
 
     public function getHolidays(): array
@@ -156,6 +125,14 @@ class OvertimeController
             'date' => $_POST['date'] ?? date('Y-m-d'),
             'projectsJson' => $_POST['projects'] ?? '',
         ]);
+    }
+
+    public function followUpRequest(): array
+    {
+        $approver = $this->currentUser();
+        $overtimeID = (int) ($_POST['overtimeID'] ?? 0);
+
+        return $this->submissionService->resubmitAsFollowUp($approver, $overtimeID);
     }
 
     public function getUserHistory(): array

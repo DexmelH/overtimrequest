@@ -6,7 +6,11 @@ import {
   toggleSelected,
 } from "../services/state.js";
 import { populateModal } from "./populateModal.js";
-import { statusClass, formatDateShort } from "../../shared/js/status.js";
+import {
+  approverActionClass,
+  requestStatusClass,
+  formatDateShort,
+} from "../../shared/js/status.js";
 import { escapeHtml } from "../../shared/js/escapeHtml.js";
 
 export function syncBulkBar() {
@@ -96,11 +100,25 @@ export function renderTable() {
       $("<td>").html(
         `<span class="approval-badge">${approvedCount} / ${approvers.length}</span>`,
       ),
-      $("<td>").html(
-        `<span class="status-badge ${needsAction ? "status-pending" : statusClass(1)}">${
-          needsAction ? "Needs action" : "Acted"
-        }</span>`,
-      ),
+      $("<td>").html(`
+        <div class="status-badge-stack">
+          <span class="status-badge ${requestStatusClass(req.status_code)}">${escapeHtml(
+            req.status_label || "Pending",
+          )}</span>
+          ${
+            req.action_code
+              ? `<span class="status-badge ${approverActionClass(
+                  req.action_code,
+                )}">${escapeHtml(req.action_label || "")}</span>`
+              : ""
+          }
+          ${
+            req.is_follow_up
+              ? '<span class="status-badge status-followup">Follow-up</span>'
+              : ""
+          }
+        </div>
+      `),
     );
 
     $tr.on("click keypress", function (e) {

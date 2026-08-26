@@ -117,6 +117,7 @@ export function createProjectAllocations({
       if (employeeIdSelector) {
         const employeeId = String($(employeeIdSelector).val() || "").trim();
         if (employeeId) {
+          // On-behalf: load shared projects for selected employee; server checks main-group auth.
           url += "&employee_id=" + encodeURIComponent(employeeId);
         }
       }

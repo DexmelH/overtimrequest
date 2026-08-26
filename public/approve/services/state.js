@@ -26,7 +26,7 @@ export function getFilteredOvertime() {
     if (filter === "all") return true;
     if (filter === "action") return !req.is_approved;
     if (filter === "done") return !!req.is_approved;
-    return true;
+    return req.status_code === filter;
   });
 }
 

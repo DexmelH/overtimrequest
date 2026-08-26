@@ -4,12 +4,14 @@ import { fetchRequest } from "./api/fetchRequest.js";
 import {
   approveOvertimeRequest,
   approveOvertimeRequestsBulk,
+  followUpRequest,
 } from "./api/approveRequest.js";
 import { renderTable, syncBulkBar } from "./ui/renderOvertime.js";
 import {
   clearSelection,
   getSelectedCount,
   getSelectedIds,
+  overtime,
   selectPendingInFilter,
   setFilter,
 } from "./services/state.js";
@@ -48,12 +50,25 @@ async function handleApproval(status) {
     return;
   }
 
+  const current = overtime.find((r) => String(r.id) === String(requestId));
+  const isChange = current?.my_decision === 0 || current?.my_decision === 1;
+
   const confirmed = await confirmAction({
-    title: isApprove ? "Approve this request?" : "Reject this request?",
-    message: isApprove
-      ? "Your decision will be recorded. Final status is set at cutoff (or immediately if you are Level 4)."
-      : "Your rejection will be recorded. Final status is set at cutoff (or immediately if you are Level 4).",
-    confirmText: isApprove ? "Approve" : "Reject",
+    title: isChange
+      ? `Change your decision to ${isApprove ? "approve" : "reject"}?`
+      : isApprove
+        ? "Approve this request?"
+        : "Reject this request?",
+    message: isChange
+      ? "This replaces your previous decision. Final status is set at cutoff (or immediately if you are Level 4)."
+      : isApprove
+        ? "Your decision will be recorded. Final status is set at cutoff (or immediately if you are Level 4)."
+        : "Your rejection will be recorded. Final status is set at cutoff (or immediately if you are Level 4).",
+    confirmText: isChange
+      ? `Change to ${isApprove ? "Approve" : "Reject"}`
+      : isApprove
+        ? "Approve"
+        : "Reject",
     cancelText: "Go back",
     variant: isApprove ? "success" : "danger",
     icon: isApprove ? "bi-check-circle-fill" : "bi-x-circle-fill",
@@ -187,8 +202,43 @@ async function confirmBulkReject() {
   await runBulkAction(0, remarks);
 }
 
+async function handleFollowUp() {
+  if (actionInProgress) return;
+
+  const requestId = $("#rd-requestID").val();
+  if (!requestId) return;
+
+  const confirmed = await confirmAction({
+    title: "Re-submit this request as approved?",
+    message:
+      "A new approved request will be created with the same employee, date, group and projects. The auto-rejected request stays as it is.",
+    confirmText: "Re-submit",
+    cancelText: "Go back",
+    variant: "primary",
+    icon: "bi-arrow-repeat",
+  });
+  if (!confirmed) return;
+
+  actionInProgress = true;
+  const $followUp = $("#btnFollowUpRequest");
+  $followUp.prop("disabled", true);
+
+  try {
+    const payload = await followUpRequest(requestId);
+    if (payload?.success) {
+      bootstrap.Modal.getInstance(
+        document.getElementById("detailsModal"),
+      )?.hide();
+    }
+  } finally {
+    actionInProgress = false;
+    $followUp.prop("disabled", false);
+  }
+}
+
 $("#btnApproveRequest").on("click", () => handleApproval(1));
 $("#btnRejectRequest").on("click", () => handleApproval(0));
+$("#btnFollowUpRequest").on("click", () => handleFollowUp());
 
 $("#btnBulkApprove").on("click", () => handleBulkApprove());
 $("#btnBulkReject").on("click", () => openBulkRejectModal());

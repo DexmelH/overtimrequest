@@ -6,12 +6,24 @@ class MailService
     private $mailer;
     private EmailTemplate $templates;
     private array $mailConfig;
+    private string $appUrl;
 
-    public function __construct($mailer, ?EmailTemplate $templates = null, ?array $mailConfig = null)
-    {
+    public function __construct(
+        $mailer,
+        ?EmailTemplate $templates = null,
+        ?array $mailConfig = null,
+        string $appUrl = ''
+    ) {
         $this->mailer = $mailer;
         $this->templates = $templates ?? new EmailTemplate();
         $this->mailConfig = $mailConfig ?? [];
+        $this->appUrl = rtrim($appUrl, '/');
+    }
+
+    /** Absolute link to an application page, safe for use in an href. */
+    private function actionUrl(string $path): string
+    {
+        return EmailTemplate::escape($this->appUrl . $path);
     }
 
     /**
@@ -119,6 +131,8 @@ class MailService
             '{{date}}' => EmailTemplate::normalizeDate($data['request_date'] ?? null),
             '{{hours}}' => EmailTemplate::escape((string) ($data['duration'] ?? '-')),
             '{{request_id}}' => EmailTemplate::escape((string) ($queueRow['overtime_id'] ?? $data['id'] ?? '-')),
+            '{{action_url}}' => $this->actionUrl('/approve/'),
+            '{{action_label}}' => 'Open Approval Page',
         ];
     }
 
@@ -139,6 +153,8 @@ class MailService
             '{{hours}}' => EmailTemplate::escape((string) ($data['duration'] ?? '-')),
             '{{remarks}}' => $remarks !== '' ? $remarks : '-',
             '{{request_id}}' => EmailTemplate::escape((string) ($queueRow['overtime_id'] ?? $data['id'] ?? '-')),
+            '{{action_url}}' => $this->actionUrl('/approve/'),
+            '{{action_label}}' => 'Review and Approve',
         ];
     }
 
@@ -179,6 +195,9 @@ class MailService
             '{{header_bg}}' => $isApproved
                 ? 'linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%)'
                 : 'linear-gradient(135deg,#dc2626 0%,#b91c1c 100%)',
+            // Solid fallback for clients that drop gradients, keeping the
+            // white header text readable.
+            '{{header_bg_solid}}' => $isApproved ? '#1d4ed8' : '#b91c1c',
             '{{actor_name}}' => $actor,
             '{{approver_remarks}}' => $approverRemarks,
             '{{rejection_remarks_block}}' => $rejectionRemarksBlock,
@@ -190,6 +209,8 @@ class MailService
             '{{remarks}}' => EmailTemplate::escape($data['remarks'] ?? '-'),
             '{{request_id}}' => EmailTemplate::escape((string) ($queueRow['overtime_id'] ?? $data['id'] ?? '-')),
             '{{submitted_at}}' => EmailTemplate::normalizeDate($data['date_created'] ?? null),
+            '{{action_url}}' => $this->actionUrl('/request/'),
+            '{{action_label}}' => 'View My Requests',
         ];
     }
 

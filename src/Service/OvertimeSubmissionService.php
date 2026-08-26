@@ -59,6 +59,14 @@ class OvertimeSubmissionService
             return ['success' => false, 'message' => 'Please complete all required fields.'];
         }
 
+        // Approvers come from the requestor's main group; the selected OT group is
+        // only stored on the request record and used for project allocation.
+        $mainGroupId = (int) ($user['group_id'] ?? 0);
+        $mainGroupAbbrev = trim((string) ($user['abbreviation'] ?? ''));
+        if ($mainGroupId <= 0) {
+            return ['success' => false, 'message' => 'Your employee record has no main group assigned.'];
+        }
+
         $group = $this->employeeRepo->findGroupById($groupID);
         $groupAbbrev = (string) ($group['abbreviation'] ?? '');
         [$projects, $projectError] = $this->parseProjectAllocations(
@@ -88,8 +96,8 @@ class OvertimeSubmissionService
             $id = $this->overtimeRepo->addOvertime($payload);
             $this->overtimeRepo->addProjectAllocations((int) $id, $projects);
             $approver = $this->approverDirectory->resolveApprovers(
-                (int) $groupID,
-                $groupAbbrev,
+                $mainGroupId,
+                $mainGroupAbbrev,
                 (int) $userID
             );
             foreach ($approver as $app) {
@@ -103,7 +111,7 @@ class OvertimeSubmissionService
                 $this->overtimeRepo->addAcceptance(
                     $id,
                     (int) $app['id'],
-                    isset($app['role']) ? (int) $app['role'] : 1
+                    $this->resolveApprovalLevel($app)
                 );
             }
 
@@ -163,20 +171,27 @@ class OvertimeSubmissionService
             return ['success' => false, 'message' => 'Employee not found.'];
         }
 
-        // Handled-group check is against the employee's main group only.
+        $dateError = $this->validateRequestDate($requestDate, $employeeId, true);
+        if ($dateError !== null) {
+            return ['success' => false, 'message' => $dateError];
+        }
+        // relaxed=true: format-only check; past dates and holiday/weekend rules are allowed on-behalf.
+
+        // Approver-group check is against the employee's main group only.
         $mainGroupId = (int) ($employee['group_id'] ?? 0);
         $mainGroupAbbrev = trim((string) ($employee['group_abbr'] ?? ''));
         if ($mainGroupId <= 0) {
             return ['success' => false, 'message' => 'The selected employee has no main group assigned.'];
         }
         if (!in_array($mainGroupId, $approverGroupIds, true)) {
-            return ['success' => false, 'message' => 'You can only submit for employees whose main group you handle.'];
+            return ['success' => false, 'message' => 'You can only submit for employees whose main group you approve for.'];
         }
 
         if ($groupID <= 0) {
             return ['success' => false, 'message' => 'Please select a group.'];
         }
 
+        // Selected OT group must exist in employee_group for this employee (may differ from main group).
         if (!$this->employeeRepo->isEmployeeInEmployeeGroup($employeeId, $groupID)) {
             return ['success' => false, 'message' => 'The selected group is not assigned to this employee.'];
         }
@@ -197,8 +212,12 @@ class OvertimeSubmissionService
         }
         $duration = array_sum(array_column($projects, 'hours'));
 
+        $originRequestId = (int) ($input['origin_request_id'] ?? 0);
+
         $payload = [
             'user_id' => $employeeId,
+            'submitted_by' => $approverId,
+            'origin_request_id' => $originRequestId > 0 ? $originRequestId : null,
             'group_id' => $groupID,
             'location_id' => $locationID,
             'remarks' => $remarks,
@@ -213,26 +232,29 @@ class OvertimeSubmissionService
 
             $id = (int) $this->overtimeRepo->addOvertime($payload);
             $this->overtimeRepo->addProjectAllocations($id, $projects);
-            // OGA / Form PIC chain follows the employee's main group, not the selected OT group.
+
+            // Only the filing approver is recorded. The rest of the main group's
+            // chain is resolved purely to snapshot this approver's own level.
             $approvers = $this->approverDirectory->resolveApprovers(
                 $mainGroupId,
                 $mainGroupAbbrev,
                 $employeeId
             );
-
+            $approverLevel = 1;
             foreach ($approvers as $app) {
-                $this->overtimeRepo->addAcceptance(
-                    $id,
-                    (int) $app['id'],
-                    isset($app['approval_level']) ? (int) $app['approval_level'] : 1
-                );
-                $this->overtimeRepo->approveRequest(
-                    $id,
-                    (int) $app['id'],
-                    'Automatically approved upon submission',
-                    1
-                );
+                if ((int) $app['id'] === $approverId) {
+                    $approverLevel = $this->resolveApprovalLevel($app);
+                    break;
+                }
             }
+
+            $this->overtimeRepo->addAcceptance($id, $approverId, $approverLevel);
+            $this->overtimeRepo->approveRequest(
+                $id,
+                $approverId,
+                'Automatically approved upon submission',
+                1
+            );
 
             $this->overtimeRepo->updateOvertimeStatus($id, 1);
             $this->overtimeRepo->addAcceptedRequestToDailyReport($id);
@@ -257,6 +279,8 @@ class OvertimeSubmissionService
                     'projects' => $projects,
                     'request_date' => $requestDate,
                     'auto_approved' => true,
+                    'approval_level' => $approverLevel,
+                    'origin_request_id' => $originRequestId > 0 ? $originRequestId : null,
                 ]
             );
 
@@ -272,6 +296,61 @@ class OvertimeSubmissionService
             error_log('Add overtime on behalf failed: ' . $e->getMessage());
             return ['success' => false, 'message' => 'Unable to submit the overtime request. Please try again.'];
         }
+    }
+
+    /**
+     * Re-file an auto-rejected request as a fresh on-behalf submission.
+     *
+     * The original request is never modified; the copy goes through the normal
+     * on-behalf path so all authorization and validation rules still apply.
+     */
+    public function resubmitAsFollowUp(array $approver, int $overtimeId): array
+    {
+        if ($overtimeId <= 0) {
+            return ['success' => false, 'message' => 'Invalid request ID.'];
+        }
+
+        $original = $this->overtimeRepo->findRequestWithDecisionCount($overtimeId);
+        if ($original === null) {
+            return ['success' => false, 'message' => 'Overtime request not found.'];
+        }
+
+        if ((string) ($original['status'] ?? '') !== '0') {
+            return ['success' => false, 'message' => 'Only auto-rejected requests can be re-submitted.'];
+        }
+
+        if ((int) ($original['acted_count'] ?? 0) > 0) {
+            return [
+                'success' => false,
+                'message' => 'This request was rejected by an approver, so it cannot be re-submitted this way.',
+            ];
+        }
+
+        if ($this->overtimeRepo->hasFollowUp($overtimeId)) {
+            return ['success' => false, 'message' => 'This request has already been re-submitted.'];
+        }
+
+        $projects = $this->overtimeRepo->findProjectsByRequestIds([$overtimeId])[$overtimeId] ?? [];
+        if (!$projects) {
+            return ['success' => false, 'message' => 'The original request has no projects to copy.'];
+        }
+
+        $projectsJson = json_encode(array_map(static function (array $project): array {
+            return [
+                'project_id' => (int) $project['project_id'],
+                'hours' => (int) $project['hours'],
+            ];
+        }, $projects));
+
+        return $this->addOvertimeOnBehalf($approver, [
+            'employee_id' => (int) $original['user_id'],
+            'group' => (int) $original['group_id'],
+            'location' => (int) $original['location_id'],
+            'remarks' => (string) ($original['remarks'] ?? ''),
+            'date' => (string) $original['request_date'],
+            'projectsJson' => (string) $projectsJson,
+            'origin_request_id' => $overtimeId,
+        ]);
     }
 
     public function cancelOvertime(array $user, int $overtimeID): array
@@ -342,6 +421,22 @@ class OvertimeSubmissionService
     }
 
     /**
+     * OGA rows expose `approval_level`; the legacy Form PIC fallback exposes `role`.
+     *
+     * @param array<string, mixed> $approver
+     */
+    private function resolveApprovalLevel(array $approver): int
+    {
+        foreach (['approval_level', 'role'] as $key) {
+            if (isset($approver[$key]) && (int) $approver[$key] > 0) {
+                return (int) $approver[$key];
+            }
+        }
+
+        return 1;
+    }
+
+    /**
      * @return array{0: array<int, array{project_id: int, hours: int}>, 1: ?string}
      */
     private function parseProjectAllocations(string $json, string $groupAbbreviation, int $actorUserId = 0): array
@@ -389,13 +484,13 @@ class OvertimeSubmissionService
             return 'Invalid request date.';
         }
 
+        if ($relaxed) {
+            return null;
+        }
+
         $today = new \DateTime('today');
         if ($dt < $today) {
             return 'Past dates are not allowed.';
-        }
-
-        if ($relaxed) {
-            return null;
         }
 
         $dayOfWeek = (int) $dt->format('N');

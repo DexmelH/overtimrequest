@@ -1,19 +1,16 @@
 <?php
 
-use App\Service\Mailer;
+use App\Repository\OvertimeRepository;
 use App\Service\MailService;
-use App\Service\EmailTemplate;
 
-require __DIR__ . '/../../../vendor/autoload.php';
+/** @var \App\Container $container */
+$container = require __DIR__ . '/../../bootstrap.php';
 
-$config = require __DIR__ . '/../../config.php';
-
-$dbManager = new \App\Database($config['connections'] ?? $config);
-$mailRepo = $dbManager->getConnection("webjmr");
-
-$mailer = new Mailer($config["mail"]);
-$mailService = new MailService($mailer, new EmailTemplate(), $config['mail'] ?? []);
-$overtimeRepo = new \App\Repository\OvertimeRepository($mailRepo);
+$config = $container->get('config');
+$cutoffTime = $container->get('config.approval_cutoff_time');
+$mailRepo = $container->get('db.webjmr');
+$mailService = $container->get(MailService::class);
+$overtimeRepo = $container->get(OvertimeRepository::class);
 
 error_log(sprintf(
     'Email worker started [env=%s, mail=%s, db=%s]',
@@ -47,8 +44,13 @@ while (true) {
         $payload = $overtimeRepo->findRequestEmailDetails((int) $requestId);
 
         if (($row['email_type'] ?? 'new_request') === 'status_update') {
+            $decision = (int) ($row['decision'] ?? 0);
             $payload['decision'] = $row['decision'] ?? null;
-            $payload['approver_remarks'] = $overtimeRepo->findLatestDecisionRemarks((int) $requestId);
+            $payload['approver_remarks'] = $overtimeRepo->findStatusNotificationRemarks(
+                (int) $requestId,
+                $decision,
+                $cutoffTime
+            );
         }
 
         $ok = $mailService->sendQueuedEmail($row, $payload);

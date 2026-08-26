@@ -78,27 +78,6 @@ class GroupApproverRepository
         return (int) $stmt->fetchColumn() > 0;
     }
 
-    /**
-     * @param int[] $groupIds
-     * @return int[]
-     */
-    public function findGroupsWithConfiguredApprovers(array $groupIds): array
-    {
-        $groupIds = array_values(array_unique(array_filter(array_map('intval', $groupIds))));
-        if (!$groupIds) {
-            return [];
-        }
-
-        $placeholders = implode(',', array_fill(0, count($groupIds), '?'));
-        $sql = "SELECT DISTINCT `group_id`
-                FROM `overtime_group_approvers`
-                WHERE `group_id` IN ({$placeholders})";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($groupIds);
-
-        return array_map('intval', array_column($stmt->fetchAll() ?: [], 'group_id'));
-    }
-
     public function saveForGroup(int $groupId, array $levels, int $updatedBy): void
     {
         $delete = $this->pdo->prepare(
