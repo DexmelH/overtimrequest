@@ -44,6 +44,7 @@ class OvertimeSubmissionService
         }
 
         $userID = $user['id'];
+        
         $groupID = (int) ($input['group'] ?? 0);
         $locationID = (int) ($input['location'] ?? 0);
         $remarks = trim((string) ($input['remarks'] ?? ''));
@@ -102,7 +103,7 @@ class OvertimeSubmissionService
                 $this->overtimeRepo->addAcceptance(
                     $id,
                     (int) $app['id'],
-                    isset($app['approval_level']) ? (int) $app['approval_level'] : 1
+                    isset($app['role']) ? (int) $app['role'] : 1
                 );
             }
 
