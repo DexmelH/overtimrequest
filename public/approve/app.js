@@ -18,6 +18,7 @@ import {
 import { showToast } from "../shared/js/toast.js";
 import { confirmAction } from "../shared/js/confirm.js";
 import { initShell } from "../shared/js/shell.js";
+import { createLivePoll } from "../shared/js/livePoll.js";
 import { initOnBehalf } from "./onBehalf.js";
 
 let actionInProgress = false;
@@ -263,23 +264,34 @@ $("#selectAllPending").on("change", function () {
   renderTable();
 });
 
-let lastListRefreshAt = 0;
-const LIST_REFRESH_MIN_MS = 5000;
-
-function refreshListOnRevisit() {
-  if (actionInProgress) return;
-  const now = Date.now();
-  if (now - lastListRefreshAt < LIST_REFRESH_MIN_MS) {
-    return;
-  }
-  lastListRefreshAt = now;
-  fetchRequest().catch(() => {});
+function markListUpdated() {
+  const stamp = new Date().toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  $("#listUpdated").text(`Updated ${stamp}`);
 }
 
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
-    refreshListOnRevisit();
-  }
+/**
+ * Brings in newly submitted requests and decisions from other approvers on its
+ * own. Paused while any modal is open: the details and bulk-reject modals hold
+ * remarks the user is typing, which a re-render would discard.
+ */
+const listPoll = createLivePoll({
+  interval: 15000,
+  idleInterval: 60000,
+  isPaused: () => actionInProgress || !!document.querySelector(".modal.show"),
+  fetcher: async () => {
+    const changed = await fetchRequest({ silent: true });
+    markListUpdated();
+    return changed;
+  },
+});
+
+// Closing a modal lifts the pause above, so catch up right away instead of
+// waiting out the rest of the interval.
+$(document).on("hidden.bs.modal", function () {
+  listPoll.refreshNow();
 });
 
 $(".ot-filter-btn").on("click", function () {
@@ -303,8 +315,11 @@ async function bootstrapApprovePage() {
 
   initShell();
   initOnBehalf();
-  lastListRefreshAt = Date.now();
-  fetchRequest().catch(() => {});
+
+  await fetchRequest()
+    .then(markListUpdated)
+    .catch(() => {});
+  listPoll.start();
 }
 
 bootstrapApprovePage();

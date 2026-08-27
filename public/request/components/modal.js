@@ -62,6 +62,20 @@ export function closeModal() {
   getModal()?.hide();
 }
 
+export function isModalOpen() {
+  return !!modalEl && modalEl.classList.contains("show");
+}
+
+/**
+ * Re-read the open request from state so a background refresh is reflected in
+ * the modal too. Safe to call at any time: this modal is read-only apart from
+ * the cancel button, so there is no user input to overwrite.
+ */
+export function refreshOpenModal() {
+  if (currentRequestId === null || !isModalOpen()) return;
+  openModal(currentRequestId);
+}
+
 export function getCurrentRequestId() {
   return currentRequestId;
 }

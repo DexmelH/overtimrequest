@@ -7,11 +7,12 @@ import { setFilter, setSearchQuery } from "./services/state.js";
 import { createProjectAllocations } from "../shared/js/projectAllocations.js";
 import { showToast } from "../shared/js/toast.js";
 import { cancelOvertimeRequest } from "./api/cancelOvertime.js";
-import { getCurrentRequestId } from "./components/modal.js";
+import { getCurrentRequestId, refreshOpenModal } from "./components/modal.js";
 import { confirmAction } from "../shared/js/confirm.js";
 import { initShell } from "../shared/js/shell.js";
 import { apiUrl } from "../shared/js/api.js";
 import { apiGet } from "../shared/js/http.js";
+import { createLivePoll } from "../shared/js/livePoll.js";
 import {
   applyDateConstraints,
   isAllowedRequestDate,
@@ -28,6 +29,8 @@ const projectAllocations = createProjectAllocations({
 });
 
 let requestLocked = false;
+let lockApplied = false;
+let actionInProgress = false;
 let requestLockMessage =
   "Overtime requests are locked from 3:00 PM onwards. Please ask your approver to submit on your behalf if you still need to request overtime.";
 
@@ -53,10 +56,23 @@ function setSubmitLoading(loading) {
 }
 
 function applyRequestCutoffLock(locked, message) {
-  requestLocked = !!locked;
-  if (message) {
-    requestLockMessage = message;
+  const nextLocked = !!locked;
+  const nextMessage = message || requestLockMessage;
+
+  // The lock is re-checked on every background refresh, so only touch the form
+  // when the state actually flips. Re-applying it would fight the user for
+  // control of the fields and the submit button.
+  if (
+    lockApplied &&
+    nextLocked === requestLocked &&
+    nextMessage === requestLockMessage
+  ) {
+    return;
   }
+
+  lockApplied = true;
+  requestLocked = nextLocked;
+  requestLockMessage = nextMessage;
 
   const $banner = $("#requestCutoffLock");
   const $form = $("#overtimeForm");
@@ -108,23 +124,47 @@ $("#historySearch").on("input", function () {
   renderHistory();
 });
 
-let lastHistoryRefreshAt = 0;
-const HISTORY_REFRESH_MIN_MS = 5000;
+const LOCK_RECHECK_MS = 120000;
+let lastLockCheckAt = 0;
 
-function refreshHistoryOnRevisit() {
+/**
+ * The cutoff lock flips at most once a day, so it does not need to ride along
+ * with every history poll. Never rejects.
+ */
+async function maybeRefreshCutoffLock() {
   const now = Date.now();
-  if (now - lastHistoryRefreshAt < HISTORY_REFRESH_MIN_MS) {
-    return;
-  }
-  lastHistoryRefreshAt = now;
-  fetchHistory().catch(() => {});
-  loadRequestCutoffLock().catch(() => {});
+  if (now - lastLockCheckAt < LOCK_RECHECK_MS) return;
+  lastLockCheckAt = now;
+  await loadRequestCutoffLock();
 }
 
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
-    refreshHistoryOnRevisit();
-  }
+function markHistoryUpdated() {
+  const stamp = new Date().toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  $("#historyUpdated").text(`Updated ${stamp}`);
+}
+
+/**
+ * Keeps the history list and the cutoff lock current without a manual refresh,
+ * so an approver's decision (or the 3 PM lock) shows up on its own.
+ */
+const historyPoll = createLivePoll({
+  interval: 20000,
+  idleInterval: 90000,
+  isPaused: () => actionInProgress,
+  fetcher: async () => {
+    const [changed] = await Promise.all([
+      fetchHistory(),
+      maybeRefreshCutoffLock(),
+    ]);
+    markHistoryUpdated();
+    if (changed) {
+      refreshOpenModal();
+    }
+    return changed;
+  },
 });
 
 // Form submit
@@ -162,12 +202,14 @@ $("#overtimeForm").on("submit", async function (e) {
   }
 
   setSubmitLoading(true);
+  actionInProgress = true;
   try {
     await addOvertimeRequest(payload);
     this.reset();
     setDefaultDate();
     projectAllocations.reset();
   } finally {
+    actionInProgress = false;
     setSubmitLoading(false);
   }
 });
@@ -187,9 +229,11 @@ $("#btnCancelRequest").on("click", async function () {
   if (!confirmed) return;
   const $btn = $(this);
   $btn.prop("disabled", true);
+  actionInProgress = true;
   try {
     await cancelOvertimeRequest(requestId);
   } finally {
+    actionInProgress = false;
     $btn.prop("disabled", false);
   }
 });
@@ -211,7 +255,9 @@ initShell();
 applyDateConstraints();
 setDefaultDate();
 loadBlockedHolidays().catch(() => {});
-loadRequestCutoffLock().catch(() => {});
-fetchHistory().catch(() => {});
 fetchLocations().catch(() => {});
 fetchGroups().catch(() => {});
+
+// Loads the history and cutoff lock, then keeps both fresh.
+historyPoll.start();
+historyPoll.refreshNow({ force: true });

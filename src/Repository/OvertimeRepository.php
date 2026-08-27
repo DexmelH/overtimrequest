@@ -168,6 +168,7 @@ class OvertimeRepository
                   AND pt.`fldDelete` = 0
                   AND (
                       pt.`fldGroup` = ?
+                      OR pt.`fldGroup` IS NULL
                       OR ps.`fldEmployeeNum` IS NOT NULL
                   )";
         $stmt = $this->pdo->prepare($sql);
