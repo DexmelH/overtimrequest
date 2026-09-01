@@ -32,6 +32,11 @@ import {
   focusFirstInvalid,
   requireFilled,
 } from "../shared/js/formValidation.js";
+import {
+  getHistoryViewMode,
+  initHistoryCalendar,
+  refreshCalendarMonth,
+} from "./ui/calendar.js";
 
 const projectAllocations = createProjectAllocations({
   containerId: "projectAllocations",
@@ -133,8 +138,8 @@ function reloadHistory() {
   });
 }
 
-$(".ot-filter-btn").on("click", function () {
-  $(".ot-filter-btn").removeClass("active");
+$("#historyStatusFilters .ot-filter-btn").on("click", function () {
+  $("#historyStatusFilters .ot-filter-btn").removeClass("active");
   $(this).addClass("active");
   setFilter($(this).data("filter"));
   reloadHistory().catch(() => {});
@@ -205,6 +210,9 @@ const historyPoll = createLivePoll({
     markHistoryUpdated();
     if (changed) {
       refreshOpenModal();
+    }
+    if (getHistoryViewMode() === "calendar") {
+      refreshCalendarMonth().catch(() => {});
     }
     return changed;
   },
@@ -303,6 +311,7 @@ initShell();
 applyDateConstraints();
 setDefaultDate();
 bindClearInvalidOnEdit("#overtimeForm");
+initHistoryCalendar();
 $("#historyFrom").val(listQuery.from);
 $("#historyTo").val(listQuery.to);
 loadBlockedHolidays().catch(() => {});

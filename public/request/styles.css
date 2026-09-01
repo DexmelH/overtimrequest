@@ -1,6 +1,87 @@
+/* —— History card: view toggle + list controls —— */
+
+.history-card-header {
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.history-card-heading {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ot-view-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 0.2rem;
+  border-radius: 999px;
+  border: 1px solid var(--ot-border);
+  background: var(--ot-surface-muted);
+  box-shadow: inset 0 1px 2px rgba(30, 41, 59, 0.04);
+}
+
+.ot-view-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.42rem 0.85rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ot-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ot-view-toggle-btn i {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.ot-view-toggle-btn:hover {
+  color: var(--ot-accent);
+}
+
+.ot-view-toggle-btn.active {
+  background: var(--ot-surface);
+  color: var(--ot-accent);
+  box-shadow: var(--ot-shadow-sm);
+}
+
+.ot-view-toggle-btn:focus-visible {
+  outline: 2px solid var(--ot-accent);
+  outline-offset: 2px;
+}
+
+.history-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--ot-surface);
+}
+
+.history-controls.d-none {
+  display: none !important;
+}
+
+.history-status-filters {
+  width: 100%;
+}
+
+.history-list-tools {
+  width: 100%;
+}
+
 .history-list {
-  height: 520px;
-  max-height: 520px;
+  height: 480px;
+  max-height: 480px;
   overflow-y: auto;
   padding: 0.65rem 0.85rem 0.85rem;
   background: var(--ot-surface-muted);
@@ -13,62 +94,6 @@
   align-items: center;
   justify-content: center;
   margin: 0;
-}
-
-.request-cutoff-lock {
-  display: flex;
-  gap: 0.85rem;
-  align-items: flex-start;
-  margin-bottom: 1rem;
-  padding: 0.9rem 1rem;
-  border-radius: var(--ot-radius-sm);
-  border: 1px solid #fdba74;
-  background: #fff7ed;
-  color: #9a3412;
-}
-
-.request-cutoff-lock-icon {
-  flex: 0 0 auto;
-  width: 2rem;
-  height: 2rem;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: #fed7aa;
-  color: #c2410c;
-}
-
-.request-cutoff-lock strong {
-  display: block;
-  margin-bottom: 0.2rem;
-  color: #9a3412;
-}
-
-.request-cutoff-lock p {
-  font-size: 0.92rem;
-  line-height: 1.45;
-  color: #9a3412;
-}
-
-#overtimeForm.is-cutoff-locked {
-  opacity: 0.62;
-  pointer-events: none;
-}
-
-[data-theme="dark"] .request-cutoff-lock {
-  border-color: rgba(251, 146, 60, 0.45);
-  background: rgba(154, 52, 18, 0.22);
-  color: #fdba74;
-}
-
-[data-theme="dark"] .request-cutoff-lock-icon {
-  background: rgba(251, 146, 60, 0.25);
-  color: #fdba74;
-}
-
-[data-theme="dark"] .request-cutoff-lock strong,
-[data-theme="dark"] .request-cutoff-lock p {
-  color: #fed7aa;
 }
 
 .history-item {
@@ -162,10 +187,515 @@
   border-color: var(--ot-border) !important;
 }
 
+/* —— Cutoff lock —— */
+
+.request-cutoff-lock {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--ot-radius-sm);
+  border: 1px solid #fdba74;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.request-cutoff-lock-icon {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #fed7aa;
+  color: #c2410c;
+}
+
+.request-cutoff-lock strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: #9a3412;
+}
+
+.request-cutoff-lock p {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #9a3412;
+}
+
+#overtimeForm.is-cutoff-locked {
+  opacity: 0.62;
+  pointer-events: none;
+}
+
+[data-theme="dark"] .request-cutoff-lock {
+  border-color: rgba(251, 146, 60, 0.45);
+  background: rgba(154, 52, 18, 0.22);
+  color: #fdba74;
+}
+
+[data-theme="dark"] .request-cutoff-lock-icon {
+  background: rgba(251, 146, 60, 0.25);
+  color: #fdba74;
+}
+
+[data-theme="dark"] .request-cutoff-lock strong,
+[data-theme="dark"] .request-cutoff-lock p {
+  color: #fed7aa;
+}
+
+/* —— Calendar —— */
+
+.history-calendar {
+  display: flex;
+  flex-direction: column;
+  height: 560px;
+  max-height: 560px;
+  min-height: 560px;
+  overflow: hidden;
+  background: var(--ot-surface-muted);
+}
+
+.history-calendar.d-none {
+  display: none !important;
+}
+
+.ot-cal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+  padding: 0.5rem 0.75rem;
+  background: var(--ot-surface);
+}
+
+.ot-cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ot-cal-title {
+  min-width: 0;
+  flex: 1 1 auto;
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: -0.02em;
+  color: var(--ot-text);
+}
+
+.ot-cal-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ot-cal-month {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 52%;
+  min-height: 0;
+  background: var(--ot-surface-muted);
+}
+
+.ot-cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.7rem;
+  flex: 0 0 auto;
+  padding: 0.3rem 0.75rem 0.4rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--ot-muted);
+  background: var(--ot-surface);
+  border-bottom: 1px solid var(--ot-border);
+}
+
+.ot-cal-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.ot-cal-swatch {
+  display: inline-block;
+  width: 0.58rem;
+  height: 0.58rem;
+  border-radius: 0.18rem;
+  border: 1px solid var(--ot-border);
+  background: var(--ot-surface);
+}
+
+.ot-cal-swatch.is-holiday {
+  background: rgba(220, 38, 38, 0.2);
+  border-color: rgba(220, 38, 38, 0.4);
+}
+
+.ot-cal-swatch.is-leave {
+  background: rgba(37, 99, 235, 0.18);
+  border-color: rgba(37, 99, 235, 0.4);
+}
+
+.ot-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: auto repeat(6, minmax(0, 1fr));
+  gap: 0.22rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  padding: 0.4rem 0.55rem 0.45rem;
+  overflow: hidden;
+}
+
+.ot-cal-weekday {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0.95rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ot-muted);
+}
+
+.ot-cal-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 0.1rem;
+  min-height: 0;
+  height: 100%;
+  padding: 0.2rem 0.22rem 0.22rem;
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  background: var(--ot-surface);
+  color: var(--ot-text);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.ot-cal-cell.is-outside {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.ot-cal-cell.is-weekend {
+  background: color-mix(in srgb, var(--ot-surface-muted) 70%, var(--ot-surface));
+  color: var(--ot-muted);
+}
+
+.ot-cal-cell.is-holiday {
+  background: rgba(220, 38, 38, 0.09);
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+.ot-cal-cell.is-leave:not(.is-holiday) {
+  background: rgba(37, 99, 235, 0.09);
+  border-color: rgba(37, 99, 235, 0.18);
+}
+
+.ot-cal-cell.has-ot {
+  border-color: color-mix(in srgb, var(--ot-border) 55%, var(--ot-accent));
+}
+
+.ot-cal-cell:hover,
+.ot-cal-cell:focus-visible {
+  border-color: var(--ot-accent);
+  outline: none;
+  z-index: 1;
+}
+
+.ot-cal-cell.is-today .ot-cal-daynum {
+  box-shadow: inset 0 0 0 1.5px var(--ot-accent);
+}
+
+.ot-cal-cell.is-selected {
+  border-color: var(--ot-accent);
+  background: var(--ot-accent-soft);
+  box-shadow:
+    0 0 0 2px var(--ot-accent-glow),
+    var(--ot-shadow-sm);
+  z-index: 2;
+}
+
+.ot-cal-cell.is-selected .ot-cal-daynum {
+  background: var(--ot-accent);
+  color: var(--ot-on-accent);
+  box-shadow: none;
+}
+
+.ot-cal-daynum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1;
+  align-self: flex-start;
+}
+
+.ot-cal-marks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.14rem;
+  min-height: 0.45rem;
+}
+
+.ot-cal-flag {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0.02rem 0.22rem;
+  border-radius: 0.2rem;
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ot-cal-flag.is-holiday {
+  background: rgba(220, 38, 38, 0.14);
+  color: var(--ot-danger);
+}
+
+.ot-cal-flag.is-leave {
+  background: rgba(37, 99, 235, 0.14);
+  color: #2563eb;
+}
+
+.ot-cal-dot {
+  display: inline-block;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--ot-muted);
+  flex: 0 0 auto;
+}
+
+.ot-cal-dot.status-pending {
+  background: var(--ot-warning);
+}
+
+.ot-cal-dot.status-approved {
+  background: var(--ot-success);
+}
+
+.ot-cal-dot.status-denied {
+  background: var(--ot-danger);
+}
+
+.ot-cal-dot.status-cancelled {
+  background: #64748b;
+}
+
+.ot-cal-more {
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: var(--ot-muted);
+  line-height: 1;
+}
+
+.ot-cal-day-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1 1 48%;
+  min-height: 0;
+  max-height: none;
+  padding: 0.55rem 0.75rem 0.6rem;
+  overflow: hidden;
+  background: var(--ot-surface);
+}
+
+.ot-cal-day-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+}
+
+.ot-cal-day-title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ot-text);
+}
+
+.ot-cal-day-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.ot-cal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.12rem 0.42rem;
+  border-radius: 999px;
+  border: 1px solid var(--ot-border);
+  background: var(--ot-surface-muted);
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--ot-muted);
+  line-height: 1.2;
+}
+
+.ot-cal-chip.is-holiday {
+  border-color: rgba(220, 38, 38, 0.28);
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--ot-danger);
+}
+
+.ot-cal-chip.is-leave {
+  border-color: rgba(37, 99, 235, 0.28);
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+
+.ot-cal-chip.is-count {
+  border-color: color-mix(in srgb, var(--ot-accent) 35%, var(--ot-border));
+  background: var(--ot-accent-soft);
+  color: var(--ot-accent);
+}
+
+.ot-cal-day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ot-cal-day-empty {
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--ot-radius-sm);
+  background: var(--ot-surface-muted);
+  color: var(--ot-muted);
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
+.ot-cal-day-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.38rem 0.5rem;
+  border: 1px solid var(--ot-border);
+  border-radius: 0.55rem;
+  background: var(--ot-surface-muted);
+  text-align: left;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.ot-cal-day-item:hover,
+.ot-cal-day-item:focus-visible {
+  border-color: var(--ot-accent);
+  background: var(--ot-surface);
+  box-shadow: var(--ot-shadow-sm);
+  outline: none;
+}
+
+.ot-cal-day-item.is-active {
+  border-color: var(--ot-accent);
+  background: var(--ot-accent-soft);
+  box-shadow: 0 0 0 2px var(--ot-accent-glow);
+}
+
+.ot-cal-day-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ot-cal-day-item-main strong {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--ot-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ot-cal-day-item-main .ot-muted {
+  font-size: 0.68rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ot-cal-day-item .status-badge {
+  flex: 0 0 auto;
+  font-size: 0.62rem;
+  padding: 0.18rem 0.4rem;
+}
+
+.ot-cal-day-item-open {
+  flex: 0 0 auto;
+  color: var(--ot-muted);
+  font-size: 0.78rem;
+}
+
+.ot-cal-day-item:hover .ot-cal-day-item-open,
+.ot-cal-day-item:focus-visible .ot-cal-day-item-open {
+  color: var(--ot-accent);
+}
+
 @media (max-width: 991px) {
+  .history-card-header {
+    flex-wrap: wrap;
+  }
+
+  .ot-view-toggle {
+    width: 100%;
+  }
+
+  .ot-view-toggle-btn {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+
   .history-list {
-    height: 360px;
-    max-height: 360px;
+    height: 340px;
+    max-height: 340px;
+  }
+
+  .history-calendar {
+    height: 520px;
+    max-height: 520px;
+    min-height: 520px;
   }
 }
 
@@ -173,4 +703,23 @@
 [data-theme="dark"] .history-item:focus-visible {
   border-color: rgba(129, 140, 248, 0.35);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .ot-view-toggle {
+  background: var(--ot-bg-accent);
+  border-color: var(--ot-border);
+}
+
+[data-theme="dark"] .ot-view-toggle-btn.active {
+  background: var(--ot-surface-raised);
+}
+
+[data-theme="dark"] .ot-cal-cell.is-leave:not(.is-holiday) {
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.28);
+}
+
+[data-theme="dark"] .ot-cal-flag.is-leave,
+[data-theme="dark"] .ot-cal-chip.is-leave {
+  color: #93c5fd;
 }

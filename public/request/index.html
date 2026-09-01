@@ -202,90 +202,119 @@
             <!-- History -->
             <div class="col-lg-5">
               <div class="ot-card h-100 d-flex flex-column">
-                <div class="ot-card-header flex-wrap">
-                  <div>
+                <div class="ot-card-header history-card-header">
+                  <div class="history-card-heading">
                     <h2>Your History</h2>
-                    <p class="ot-muted mb-0">Click a row to view details</p>
+                    <p class="ot-muted mb-0" id="historyCardHint">Click a row to view details</p>
                     <span class="ot-live" title="This list updates on its own">
                       <span class="ot-live-dot" aria-hidden="true"></span>
                       <span id="historyUpdated" aria-live="polite">Live</span>
                     </span>
                   </div>
                   <div
-                    class="ot-filter-group"
+                    class="ot-view-toggle"
                     role="group"
-                    aria-label="Filter history"
+                    aria-label="History view"
                   >
                     <button
-                      class="ot-filter-btn active"
-                      data-filter="all"
+                      class="ot-view-toggle-btn active"
                       type="button"
+                      data-history-view="list"
+                      id="historyViewList"
+                      aria-pressed="true"
                     >
-                      All
+                      <i class="bi bi-list-ul" aria-hidden="true"></i>
+                      List
                     </button>
                     <button
-                      class="ot-filter-btn"
-                      data-filter="pending"
+                      class="ot-view-toggle-btn"
                       type="button"
+                      data-history-view="calendar"
+                      id="historyViewCalendar"
+                      aria-pressed="false"
                     >
-                      Pending
-                    </button>
-                    <button
-                      class="ot-filter-btn"
-                      data-filter="approved"
-                      type="button"
-                    >
-                      Approved
-                    </button>
-                    <button
-                      class="ot-filter-btn"
-                      data-filter="denied"
-                      type="button"
-                    >
-                      Denied
-                    </button>
-                    <button
-                      class="ot-filter-btn"
-                      data-filter="cancelled"
-                      type="button"
-                    >
-                      Cancelled
+                      <i class="bi bi-calendar3" aria-hidden="true"></i>
+                      Calendar
                     </button>
                   </div>
                 </div>
                 <div class="ot-card-body flex-grow-1 d-flex flex-column p-0">
-                  <div class="ot-list-toolbar px-3 pt-2 pb-2 border-bottom">
-                    <div class="ot-date-range" role="group" aria-label="History date range">
-                      <label class="visually-hidden" for="historyFrom">From</label>
+                  <div class="history-controls border-bottom" id="historyListToolbar">
+                    <div
+                      class="ot-filter-group history-status-filters"
+                      id="historyStatusFilters"
+                      role="group"
+                      aria-label="Filter history"
+                    >
+                      <button
+                        class="ot-filter-btn active"
+                        data-filter="all"
+                        type="button"
+                      >
+                        All
+                      </button>
+                      <button
+                        class="ot-filter-btn"
+                        data-filter="pending"
+                        type="button"
+                      >
+                        Pending
+                      </button>
+                      <button
+                        class="ot-filter-btn"
+                        data-filter="approved"
+                        type="button"
+                      >
+                        Approved
+                      </button>
+                      <button
+                        class="ot-filter-btn"
+                        data-filter="denied"
+                        type="button"
+                      >
+                        Denied
+                      </button>
+                      <button
+                        class="ot-filter-btn"
+                        data-filter="cancelled"
+                        type="button"
+                      >
+                        Cancelled
+                      </button>
+                    </div>
+                    <div class="ot-list-toolbar history-list-tools">
+                      <div class="ot-date-range" role="group" aria-label="History date range">
+                        <label class="visually-hidden" for="historyFrom">From</label>
+                        <input
+                          type="date"
+                          class="form-control form-control-sm"
+                          id="historyFrom"
+                          aria-label="History from date"
+                        />
+                        <span class="ot-muted small">to</span>
+                        <label class="visually-hidden" for="historyTo">To</label>
+                        <input
+                          type="date"
+                          class="form-control form-control-sm"
+                          id="historyTo"
+                          aria-label="History to date"
+                        />
+                      </div>
                       <input
-                        type="date"
+                        type="search"
                         class="form-control form-control-sm"
-                        id="historyFrom"
-                        aria-label="History from date"
-                      />
-                      <span class="ot-muted small">to</span>
-                      <label class="visually-hidden" for="historyTo">To</label>
-                      <input
-                        type="date"
-                        class="form-control form-control-sm"
-                        id="historyTo"
-                        aria-label="History to date"
+                        id="historySearch"
+                        placeholder="Search group, location, remarks..."
+                        aria-label="Search history"
                       />
                     </div>
-                    <input
-                      type="search"
-                      class="form-control form-control-sm"
-                      id="historySearch"
-                      placeholder="Search group, location, remarks..."
-                      aria-label="Search history"
-                    />
                   </div>
                   <div
                     class="history-list flex-grow-1"
                     id="historyList"
                     role="list"
                   ></div>
-                  <div class="ot-list-pager border-top">
+                  <div class="ot-list-pager border-top" id="historyListPager">
                     <small class="ot-muted" id="historyPagerInfo">—</small>
                     <div class="btn-group btn-group-sm">
                       <button
@@ -304,6 +333,56 @@
                       >
                         Next
                       </button>
+                    </div>
+                  </div>
+
+                  <div class="history-calendar d-none" id="historyCalendar">
+                    <div class="ot-cal-toolbar border-bottom">
+                      <div class="ot-cal-nav">
+                        <button
+                          type="button"
+                          class="btn btn-outline-secondary btn-sm"
+                          id="calPrevMonth"
+                          aria-label="Previous month"
+                        >
+                          <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <div class="ot-cal-title" id="calMonthLabel">—</div>
+                        <button
+                          type="button"
+                          class="btn btn-outline-secondary btn-sm"
+                          id="calNextMonth"
+                          aria-label="Next month"
+                        >
+                          <i class="bi bi-chevron-right"></i>
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        class="ot-btn ot-btn-secondary btn-sm"
+                        id="calTodayBtn"
+                      >
+                        Today
+                      </button>
+                    </div>
+                    <div class="ot-cal-main">
+                      <div class="ot-cal-month">
+                        <div class="ot-cal-legend" aria-hidden="true">
+                          <span><i class="ot-cal-swatch is-holiday"></i> Holiday</span>
+                          <span><i class="ot-cal-swatch is-leave"></i> Leave</span>
+                          <span><i class="ot-cal-dot status-pending"></i> Pending</span>
+                          <span><i class="ot-cal-dot status-approved"></i> Approved</span>
+                          <span><i class="ot-cal-dot status-denied"></i> Denied</span>
+                        </div>
+                        <div class="ot-cal-grid" id="calGrid" aria-label="Overtime calendar"></div>
+                      </div>
+                      <div class="ot-cal-day-panel border-top" id="calDayPanel">
+                        <div class="ot-cal-day-header">
+                          <div class="ot-cal-day-title" id="calDayTitle">Select a day</div>
+                          <div class="ot-cal-day-meta" id="calDayMeta"></div>
+                        </div>
+                        <div class="ot-cal-day-list" id="calDayList"></div>
+                      </div>
                     </div>
                   </div>
                 </div>
