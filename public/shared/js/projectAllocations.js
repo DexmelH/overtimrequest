@@ -1,6 +1,7 @@
 import { apiUrl } from "./api.js";
 import { apiGet, normalizePayload } from "./http.js";
 import { escapeHtml } from "./escapeHtml.js";
+import { clearFieldInvalid, markFieldInvalid } from "./formValidation.js";
 
 export function createProjectAllocations({
   containerId,
@@ -151,10 +152,61 @@ export function createProjectAllocations({
     });
   }
 
+  /**
+   * Highlight blank/invalid project and hours controls.
+   * Duplicate projects are also marked so the user can see the conflict.
+   * @returns {boolean} true when every row is valid
+   */
+  function markInvalidFields() {
+    const seen = new Set();
+    let ok = true;
+    const $rows = $(`${containerSelector} .project-allocation-row`);
+
+    if (!$rows.length) {
+      return false;
+    }
+
+    $rows.each(function () {
+      const $project = $(this).find(".project-allocation-project");
+      const $hours = $(this).find(".project-allocation-hours");
+      const projectId = Number($project.val());
+      const hours = Number($hours.val());
+      const hoursRaw = String($hours.val() || "").trim();
+
+      if (!projectId || seen.has(projectId)) {
+        markFieldInvalid($project);
+        ok = false;
+      } else {
+        clearFieldInvalid($project);
+        seen.add(projectId);
+      }
+
+      if (!hoursRaw || !Number.isInteger(hours) || hours <= 0) {
+        markFieldInvalid($hours);
+        ok = false;
+      } else {
+        clearFieldInvalid($hours);
+      }
+    });
+
+    return ok;
+  }
+
   $(addButtonSelector).on("click", () => addRow());
   $(containerSelector)
-    .on("change", ".project-allocation-project", refreshOptions)
-    .on("input", ".project-allocation-hours", updateTotal)
+    .on("change", ".project-allocation-project", function () {
+      if (String($(this).val() || "").trim()) {
+        clearFieldInvalid(this);
+      }
+      refreshOptions();
+    })
+    .on("input", ".project-allocation-hours", function () {
+      const hours = Number($(this).val());
+      if (Number.isInteger(hours) && hours > 0) {
+        clearFieldInvalid(this);
+      }
+      updateTotal();
+    })
     .on("click", ".project-allocation-remove", function () {
       $(this).closest(".project-allocation-row").remove();
       refreshOptions();
@@ -169,6 +221,7 @@ export function createProjectAllocations({
     reset,
     getAllocations,
     isValid,
+    markInvalidFields,
     updateTotal,
   };
 }

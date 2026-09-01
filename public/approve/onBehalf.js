@@ -13,6 +13,14 @@ import {
   validateDateInput,
 } from "../shared/js/requestDate.js";
 import { escapeHtml } from "../shared/js/escapeHtml.js";
+import {
+  bindClearInvalidOnEdit,
+  clearFieldInvalid,
+  clearInvalidIn,
+  focusFirstInvalid,
+  markFieldInvalid,
+  requireFilled,
+} from "../shared/js/formValidation.js";
 import { fetchRequest } from "./api/fetchRequest.js";
 
 const ON_BEHALF_FIELDS = {
@@ -140,6 +148,7 @@ async function selectEmployee(employee) {
   if (!employee) return;
   $("#obEmployeeId").val(employee.id);
   $("#obEmployeeSearch").val(`${employee.surname || ""}, ${employee.firstname || ""}`.trim());
+  clearFieldInvalid("#obEmployeeSearch");
   projectAllocations.reset();
   await loadEmployeeGroups(employee.id);
   reloadDateRules().catch(() => {});
@@ -154,6 +163,8 @@ function resetOnBehalfForm() {
   projectAllocations.reset();
   reloadDateRules().catch(() => {});
   clearEmployeeSuggestions();
+  clearInvalidIn("#onBehalfForm");
+  clearInvalidIn("#onBehalfModal");
 }
 
 function isObDateAllowed(isoDate) {
@@ -238,21 +249,36 @@ export function initOnBehalf() {
       remarks: $("#obRemarks").val().trim(),
     };
 
-    if (
-      !payload.employee_id ||
-      !payload.date ||
-      !isObDateAllowed(payload.date) ||
-      !payload.group ||
-      !payload.location ||
-      !projectAllocations.isValid()
-    ) {
-      if (payload.date && !isObDateAllowed(payload.date)) {
-        validateDateInput(true);
-      } else if (!payload.group) {
-        showToast("Please select an assigned group for this employee.", { type: "warning" });
+    clearInvalidIn("#onBehalfForm");
+    clearInvalidIn("#onBehalfModal");
+
+    let valid = true;
+    if (!payload.employee_id) {
+      markFieldInvalid("#obEmployeeSearch");
+      valid = false;
+    } else {
+      clearFieldInvalid("#obEmployeeSearch");
+    }
+    valid = requireFilled("#obDate") && valid;
+    valid = requireFilled(`#${getFieldId("group")}`) && valid;
+    valid = requireFilled(`#${getFieldId("location")}`) && valid;
+    valid = projectAllocations.markInvalidFields() && valid;
+
+    if (payload.date && !isObDateAllowed(payload.date)) {
+      validateDateInput(true);
+      focusFirstInvalid("#onBehalfModal");
+      return;
+    }
+
+    if (!valid) {
+      if (!payload.group && payload.employee_id) {
+        showToast("Please select an assigned group for this employee.", {
+          type: "warning",
+        });
       } else {
         showToast("Please complete all required fields.", { type: "warning" });
       }
+      focusFirstInvalid("#onBehalfModal");
       return;
     }
 
@@ -280,6 +306,8 @@ export function initOnBehalf() {
       $btn.prop("disabled", false);
     }
   });
+
+  bindClearInvalidOnEdit("#onBehalfModal");
 
   $(document).on("click", function (e) {
     if (!$(e.target).closest("#obEmployeeSearch, #obEmployeeSuggestions").length) {

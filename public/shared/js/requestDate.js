@@ -1,6 +1,7 @@
 import { showToast } from "./toast.js";
 import { apiUrl } from "./api.js";
 import { apiGet } from "./http.js";
+import { clearFieldInvalid, markFieldInvalid } from "./formValidation.js";
 
 /** @type {Map<string, string>} */
 let blockedHolidays = new Map();
@@ -123,11 +124,19 @@ export function setDefaultRequestDate() {
 export function validateDateInput(showMessage = true) {
   const $date = $dateField();
   const value = $date.val();
-  if (!value) return false;
+  if (!value) {
+    markFieldInvalid($date);
+    return false;
+  }
 
   applyDateConstraints();
 
-  if (isAllowedRequestDate(value)) return true;
+  if (isAllowedRequestDate(value)) {
+    clearFieldInvalid($date);
+    return true;
+  }
+
+  markFieldInvalid($date);
 
   if (showMessage) {
     const date = parseLocalDate(value);
@@ -167,6 +176,10 @@ export function validateDateInput(showMessage = true) {
   }
 
   setDefaultRequestDate();
+  // Default may still be invalid briefly; clear once a usable default is set.
+  if (isAllowedRequestDate($date.val())) {
+    clearFieldInvalid($date);
+  }
   return false;
 }
 

@@ -2,6 +2,11 @@ import { apiUrl } from "../shared/js/api.js";
 import { apiGet, apiPost } from "../shared/js/http.js";
 import { showToast } from "../shared/js/toast.js";
 import { escapeHtml } from "../shared/js/escapeHtml.js";
+import {
+  bindClearInvalidOnEdit,
+  clearFieldInvalid,
+  markFieldInvalid,
+} from "../shared/js/formValidation.js";
 
 const LEVELS = ["L1", "L2", "L3", "L4"];
 
@@ -161,9 +166,12 @@ function findEmployeeInSearch(level, id) {
 async function saveApproverLevel(level, employee) {
   const groupId = getCurrentGroupId();
   if (!groupId) {
+    markFieldInvalid("#approverGroupSelect");
     showToast("Select a group first.", { type: "warning" });
+    $("#approverGroupSelect").trigger("focus");
     return false;
   }
+  clearFieldInvalid("#approverGroupSelect");
   if (!employee?.id) return false;
 
   const body = new FormData();
@@ -330,8 +338,12 @@ export function initApprovers() {
   renderSavedPreview("");
   renderOfficialApprovers({});
   loadGroups().catch(() => showToast("Could not load groups.", { type: "error" }));
+  bindClearInvalidOnEdit("#adminContent");
 
   $("#approverGroupSelect").on("change", function () {
+    if (String($(this).val() || "").trim()) {
+      clearFieldInvalid(this);
+    }
     loadGroupApprovers($(this).val()).catch(() => {});
   });
 

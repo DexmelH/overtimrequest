@@ -20,6 +20,12 @@ import {
   setDefaultRequestDate,
   validateDateInput,
 } from "../shared/js/requestDate.js";
+import {
+  bindClearInvalidOnEdit,
+  clearInvalidIn,
+  focusFirstInvalid,
+  requireFilled,
+} from "../shared/js/formValidation.js";
 
 const projectAllocations = createProjectAllocations({
   containerId: "projectAllocations",
@@ -184,20 +190,24 @@ $("#overtimeForm").on("submit", async function (e) {
     remarks: $("#remarks").val().trim(),
   };
 
-  if (
-    !payload.date ||
-    !isAllowedRequestDate(payload.date) ||
-    !payload.group ||
-    !payload.location ||
-    !projectAllocations.isValid()
-  ) {
-    if (payload.date && !isAllowedRequestDate(payload.date)) {
-      validateDateInput(true);
-      return;
-    }
+  clearInvalidIn("#overtimeForm");
+  let valid = true;
+  valid = requireFilled("#date") && valid;
+  valid = requireFilled("#group") && valid;
+  valid = requireFilled("#location") && valid;
+  valid = projectAllocations.markInvalidFields() && valid;
+
+  if (payload.date && !isAllowedRequestDate(payload.date)) {
+    validateDateInput(true);
+    focusFirstInvalid("#overtimeForm");
+    return;
+  }
+
+  if (!valid) {
     showToast("Please fill all required fields with valid values.", {
       type: "warning",
     });
+    focusFirstInvalid("#overtimeForm");
     return;
   }
 
@@ -208,6 +218,7 @@ $("#overtimeForm").on("submit", async function (e) {
     this.reset();
     setDefaultDate();
     projectAllocations.reset();
+    clearInvalidIn("#overtimeForm");
   } finally {
     actionInProgress = false;
     setSubmitLoading(false);
@@ -254,6 +265,7 @@ $("#date").on("change input", function () {
 initShell();
 applyDateConstraints();
 setDefaultDate();
+bindClearInvalidOnEdit("#overtimeForm");
 loadBlockedHolidays().catch(() => {});
 fetchLocations().catch(() => {});
 fetchGroups().catch(() => {});

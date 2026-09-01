@@ -19,6 +19,12 @@ import { showToast } from "../shared/js/toast.js";
 import { confirmAction } from "../shared/js/confirm.js";
 import { initShell } from "../shared/js/shell.js";
 import { createLivePoll } from "../shared/js/livePoll.js";
+import {
+  bindClearInvalidOnEdit,
+  clearFieldInvalid,
+  focusFirstInvalid,
+  requireFilled,
+} from "../shared/js/formValidation.js";
 import { initOnBehalf } from "./onBehalf.js";
 
 let actionInProgress = false;
@@ -44,12 +50,14 @@ async function handleApproval(status) {
   const remarks = $("#approvalRemarks").val().trim();
 
   if (!isApprove && !remarks) {
+    requireFilled("#approvalRemarks");
     showToast("Remarks are required when rejecting a request.", {
       type: "warning",
     });
-    $("#approvalRemarks").trigger("focus");
+    focusFirstInvalid("#detailsModal");
     return;
   }
+  clearFieldInvalid("#approvalRemarks");
 
   const current = overtime.find((r) => String(r.id) === String(requestId));
   const isChange = current?.my_decision === 0 || current?.my_decision === 1;
@@ -171,6 +179,7 @@ function openBulkRejectModal() {
     `Shared remarks will be applied to ${count} selected request(s).`,
   );
   $("#bulkRejectRemarks").val("");
+  clearFieldInvalid("#bulkRejectRemarks");
   getBulkRejectModal()?.show();
   setTimeout(() => $("#bulkRejectRemarks").trigger("focus"), 200);
 }
@@ -180,12 +189,14 @@ async function confirmBulkReject() {
 
   const remarks = $("#bulkRejectRemarks").val().trim();
   if (!remarks) {
+    requireFilled("#bulkRejectRemarks");
     showToast("Remarks are required when rejecting requests.", {
       type: "warning",
     });
-    $("#bulkRejectRemarks").trigger("focus");
+    focusFirstInvalid("#bulkRejectModal");
     return;
   }
+  clearFieldInvalid("#bulkRejectRemarks");
 
   const count = getSelectedCount();
   const confirmed = await confirmAction({
@@ -315,6 +326,8 @@ async function bootstrapApprovePage() {
 
   initShell();
   initOnBehalf();
+  bindClearInvalidOnEdit("#detailsModal");
+  bindClearInvalidOnEdit("#bulkRejectModal");
 
   await fetchRequest()
     .then(markListUpdated)

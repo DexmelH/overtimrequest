@@ -3,6 +3,10 @@ import { apiGet, apiPost } from "../shared/js/http.js";
 import { showToast } from "../shared/js/toast.js";
 import { confirmAction } from "../shared/js/confirm.js";
 import { escapeHtml } from "../shared/js/escapeHtml.js";
+import {
+  clearFieldInvalid,
+  markFieldInvalid,
+} from "../shared/js/formValidation.js";
 
 let searchTimer = null;
 let selectedEmployee = null;
@@ -117,6 +121,7 @@ function clearSelection() {
   $("#adminMemberNotes").val("");
   $("#adminMemberAddBtn").prop("disabled", true);
   $("#adminMemberSearchResults").addClass("d-none").empty();
+  clearFieldInvalid("#adminMemberSearch");
 }
 
 function selectEmployee(employee) {
@@ -127,6 +132,7 @@ function selectEmployee(employee) {
   );
   $("#adminMemberAddBtn").prop("disabled", false);
   $("#adminMemberSearchResults").addClass("d-none").empty();
+  clearFieldInvalid("#adminMemberSearch");
 }
 
 async function searchEmployees(query) {
@@ -171,9 +177,12 @@ async function searchEmployees(query) {
 
 async function addMember() {
   if (!selectedEmployee?.id) {
+    markFieldInvalid("#adminMemberSearch");
     showToast("Select an employee first.", { type: "warning" });
+    $("#adminMemberSearch").trigger("focus");
     return;
   }
+  clearFieldInvalid("#adminMemberSearch");
 
   const body = new FormData();
   body.append("employee_id", String(selectedEmployee.id));
