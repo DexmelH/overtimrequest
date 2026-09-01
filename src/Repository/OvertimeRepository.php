@@ -85,21 +85,84 @@ class OvertimeRepository
         );
     }
 
-    public function findHistoryByUserId(string $userID): array
+    /**
+     * Employee request history, bounded by request_date and paginated.
+     *
+     * @param array{from: string, to: string, page: int, limit: int, offset: int, status?: string, q?: string} $filters
+     * @return array{data: array<int, array<string, mixed>>, pagination: array{page: int, limit: int, total: int, pages: int}}
+     */
+    public function findHistoryByUserId(string $userID, array $filters = []): array
     {
+        $from = (string) ($filters['from'] ?? date('Y-m-d', strtotime('-7 days')));
+        $to = (string) ($filters['to'] ?? date('Y-m-d'));
+        $page = max(1, (int) ($filters['page'] ?? 1));
+        $limit = max(1, (int) ($filters['limit'] ?? 10));
+        $offset = max(0, (int) ($filters['offset'] ?? (($page - 1) * $limit)));
+        $status = strtolower(trim((string) ($filters['status'] ?? '')));
+        $q = trim((string) ($filters['q'] ?? ''));
+
+        $where = [
+            'orq.`user_id` = :userID',
+            'orq.`request_date` >= :fromDate',
+            'orq.`request_date` <= :toDate',
+        ];
+        $params = [
+            ':userID' => $userID,
+            ':fromDate' => $from,
+            ':toDate' => $to,
+        ];
+
+        if ($status === 'pending') {
+            $where[] = '(orq.`status` IS NULL OR orq.`status` = \'\')';
+        } elseif ($status === 'approved') {
+            $where[] = 'orq.`status` = 1';
+        } elseif ($status === 'denied') {
+            $where[] = 'orq.`status` = 0';
+        } elseif ($status === 'cancelled') {
+            $where[] = 'orq.`status` = 2';
+        }
+
+        if ($q !== '') {
+            $where[] = '(gl.`abbreviation` LIKE :q
+                        OR l.`fldLocation` LIKE :q
+                        OR orq.`remarks` LIKE :q
+                        OR orq.`request_date` LIKE :q)';
+            $params[':q'] = '%' . $q . '%';
+        }
+
+        $whereSql = implode(' AND ', $where);
+
+        $countSql = "SELECT COUNT(*)
+                     FROM `overtime_request` orq
+                     LEFT JOIN kdtphdb_new.`group_list` gl ON orq.`group_id` = gl.`id`
+                     LEFT JOIN `dispatch_locations` l ON orq.`location_id` = l.`fldID`
+                     WHERE {$whereSql}";
+        $countStmt = $this->pdo->prepare($countSql);
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
         $sql = "SELECT orq.`id`, orq.`duration`, orq.`remarks`, orq.`request_date`, orq.`status`,
                        gl.`abbreviation` AS `group_name`,
                        l.`fldLocation` AS `location_name`
                 FROM `overtime_request` orq
                 LEFT JOIN kdtphdb_new.`group_list` gl ON orq.`group_id` = gl.`id`
                 LEFT JOIN `dispatch_locations` l ON orq.`location_id` = l.`fldID`
-                WHERE orq.`user_id` = :userID
-                ORDER BY orq.`request_date` DESC, orq.`id` DESC";
+                WHERE {$whereSql}
+                ORDER BY orq.`request_date` DESC, orq.`id` DESC
+                LIMIT {$limit} OFFSET {$offset}";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':userID' => $userID]);
-        $data = $stmt->fetchAll();
+        $stmt->execute($params);
+        $data = $stmt->fetchAll() ?: [];
 
-        return $data ? $this->attachRequestDetails($data) : [];
+        return [
+            'data' => $data ? $this->attachRequestDetails($data) : [],
+            'pagination' => [
+                'page' => $page,
+                'limit' => $limit,
+                'total' => $total,
+                'pages' => $total > 0 ? (int) ceil($total / $limit) : 0,
+            ],
+        ];
     }
 
     public function addOvertime(array $payload): int
@@ -410,32 +473,119 @@ class OvertimeRepository
         }, $rows);
     }
 
-    public function findOvertimeToApprove(int $approverID): array
+    /**
+     * Approver queue: date-bounded on request_date, but open items always included.
+     *
+     * @param array{from: string, to: string, page: int, limit: int, offset: int, view?: string} $filters
+     * @return array{
+     *   data: array<int, array<string, mixed>>,
+     *   pagination: array{page: int, limit: int, total: int, pages: int},
+     *   counts: array{total: int, pending: int, acted: int}
+     * }
+     */
+    public function findOvertimeToApprove(int $approverID, array $filters = []): array
     {
+        $from = (string) ($filters['from'] ?? date('Y-m-d', strtotime('-7 days')));
+        $to = (string) ($filters['to'] ?? date('Y-m-d'));
+        $page = max(1, (int) ($filters['page'] ?? 1));
+        $limit = max(1, (int) ($filters['limit'] ?? 10));
+        $offset = max(0, (int) ($filters['offset'] ?? (($page - 1) * $limit)));
+        $view = strtolower(trim((string) ($filters['view'] ?? 'all')));
+
+        $baseWhere = [
+            'oa.`approver_id` = :approverID',
+            '(orq.`status` != 2 OR orq.`status` IS NULL)',
+            '((orq.`request_date` >= :fromDate AND orq.`request_date` <= :toDate)
+              OR (oa.`status` IS NULL AND (orq.`status` IS NULL OR orq.`status` = \'\')))',
+        ];
+        $params = [
+            ':approverID' => $approverID,
+            ':fromDate' => $from,
+            ':toDate' => $to,
+        ];
+
+        $openSql = '(oa.`status` IS NULL AND (orq.`status` IS NULL OR orq.`status` = \'\'))';
+        $actedSql = '(oa.`status` IS NOT NULL OR (orq.`status` IS NOT NULL AND orq.`status` != \'\'))';
+
+        $viewWhere = [];
+        if ($view === 'action') {
+            $viewWhere[] = $openSql;
+        } elseif ($view === 'done') {
+            $viewWhere[] = $actedSql;
+        } elseif ($view === 'auto_approved') {
+            $viewWhere[] = 'orq.`status` = 1 AND orq.`submitted_by` IS NOT NULL';
+        } elseif ($view === 'auto_rejected') {
+            $viewWhere[] = 'orq.`status` = 0
+                AND NOT EXISTS (
+                    SELECT 1 FROM `overtime_accept` oax
+                    WHERE oax.`overtime_id` = orq.`id`
+                      AND oax.`status` IS NOT NULL
+                )';
+        }
+
+        $whereAll = array_merge($baseWhere, $viewWhere);
+        $whereSql = implode(' AND ', $whereAll);
+        $baseWhereSql = implode(' AND ', $baseWhere);
+
+        $fromSql = "FROM `overtime_accept` oa
+                INNER JOIN `overtime_request` orq ON oa.`overtime_id` = orq.`id`
+                LEFT JOIN kdtphdb_new.`group_list` gl ON orq.`group_id` = gl.`id`
+                LEFT JOIN `dispatch_locations` l ON orq.`location_id` = l.`fldID`
+                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = orq.`user_id`";
+
+        $countStmt = $this->pdo->prepare("SELECT COUNT(*) {$fromSql} WHERE {$whereSql}");
+        $countStmt->execute($params);
+        $total = (int) $countStmt->fetchColumn();
+
+        // Stats ignore the status chip so the three counters stay meaningful.
+        $statsSql = "SELECT
+                        COUNT(*) AS total,
+                        SUM(CASE WHEN {$openSql} THEN 1 ELSE 0 END) AS pending
+                     {$fromSql}
+                     WHERE {$baseWhereSql}";
+        $statsStmt = $this->pdo->prepare($statsSql);
+        $statsStmt->execute([
+            ':approverID' => $approverID,
+            ':fromDate' => $from,
+            ':toDate' => $to,
+        ]);
+        $stats = $statsStmt->fetch() ?: ['total' => 0, 'pending' => 0];
+        $statsTotal = (int) ($stats['total'] ?? 0);
+        $statsPending = (int) ($stats['pending'] ?? 0);
+
         $sql = "SELECT orq.`id`, orq.`duration`, orq.`remarks`, orq.`request_date`, orq.`status`,
                        orq.`date_created`, orq.`submitted_by`, orq.`origin_request_id`,
                        el.`id` AS `employee_id`,
                        el.`surname` AS `employee_name`,
                        gl.`abbreviation` AS `group_name`,
                        l.`fldLocation` AS `location_name`
-                FROM `overtime_accept` oa
-                INNER JOIN `overtime_request` orq ON oa.`overtime_id` = orq.`id`
-                LEFT JOIN kdtphdb_new.`group_list` gl ON orq.`group_id` = gl.`id`
-                LEFT JOIN `dispatch_locations` l ON orq.`location_id` = l.`fldID`
-                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = orq.`user_id`
-                WHERE oa.`approver_id` = :approverID
-                  AND (orq.`status` != 2 OR orq.`status` IS NULL)
+                {$fromSql}
+                WHERE {$whereSql}
                 ORDER BY
                     CASE
                         WHEN orq.`status` IS NOT NULL OR oa.`status` IS NOT NULL THEN 1
                         ELSE 0
                     END ASC,
-                    orq.`date_created` DESC";
+                    orq.`date_created` DESC
+                LIMIT {$limit} OFFSET {$offset}";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':approverID' => $approverID]);
-        $data = $stmt->fetchAll();
+        $stmt->execute($params);
+        $data = $stmt->fetchAll() ?: [];
 
-        return $data ? $this->attachRequestDetails($data) : [];
+        return [
+            'data' => $data ? $this->attachRequestDetails($data) : [],
+            'pagination' => [
+                'page' => $page,
+                'limit' => $limit,
+                'total' => $total,
+                'pages' => $total > 0 ? (int) ceil($total / $limit) : 0,
+            ],
+            'counts' => [
+                'total' => $statsTotal,
+                'pending' => $statsPending,
+                'acted' => max(0, $statsTotal - $statsPending),
+            ],
+        ];
     }
 
     public function findApproverDetails(int $overtimeID): array

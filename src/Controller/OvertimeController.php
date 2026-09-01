@@ -138,7 +138,14 @@ class OvertimeController
     public function getUserHistory(): array
     {
         $user = $this->currentUser();
-        return $this->submissionService->getUserHistory($user['id']);
+        return $this->submissionService->getUserHistory($user['id'], [
+            'from' => $_GET['from'] ?? null,
+            'to' => $_GET['to'] ?? null,
+            'page' => $_GET['page'] ?? 1,
+            'limit' => $_GET['limit'] ?? 25,
+            'status' => $_GET['status'] ?? '',
+            'q' => $_GET['q'] ?? '',
+        ]);
     }
 
     public function addOvertime(): array
@@ -165,7 +172,13 @@ class OvertimeController
     public function getOvertimeToApprove(): array
     {
         $user = $this->currentUser();
-        return $this->approvalService->getOvertimeToApprove((int) $user['id']);
+        return $this->approvalService->getOvertimeToApprove((int) $user['id'], [
+            'from' => $_GET['from'] ?? null,
+            'to' => $_GET['to'] ?? null,
+            'page' => $_GET['page'] ?? 1,
+            'limit' => $_GET['limit'] ?? 25,
+            'view' => $_GET['view'] ?? 'all',
+        ]);
     }
 
     public function approveOvertime(): array

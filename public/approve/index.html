@@ -163,6 +163,28 @@
               </div>
             </div>
             <div class="ot-card-body p-0">
+              <div class="ot-list-toolbar px-3 pt-2 pb-2 border-bottom">
+                <div class="ot-date-range" role="group" aria-label="Request date range">
+                  <label class="visually-hidden" for="listFrom">From</label>
+                  <input
+                    type="date"
+                    class="form-control form-control-sm"
+                    id="listFrom"
+                    aria-label="List from date"
+                  />
+                  <span class="ot-muted small">to</span>
+                  <label class="visually-hidden" for="listTo">To</label>
+                  <input
+                    type="date"
+                    class="form-control form-control-sm"
+                    id="listTo"
+                    aria-label="List to date"
+                  />
+                </div>
+                <p class="ot-muted small mb-0 ot-date-hint">
+                  Open requests always stay visible, even outside this range.
+                </p>
+              </div>
               <div
                 id="bulkActionBar"
                 class="ot-bulk-bar d-none"
@@ -208,43 +230,66 @@
                   </button>
                 </div>
               </div>
-              <div class="table-responsive">
-                <table
-                  id="requestsTable"
-                  class="table table-hover align-middle mb-0"
-                >
-                  <thead class="table-light">
-                    <tr>
-                      <th class="bulk-check-col" scope="col">
-                        <input
-                          type="checkbox"
-                          class="form-check-input"
-                          id="selectAllPending"
-                          aria-label="Select all pending requests in this list"
-                        />
-                      </th>
-                      <th>Group</th>
-                      <th>Employee</th>
-                      <th>Date</th>
-                      <th>Hours</th>
-                      <th>Location</th>
-                      <th>Approvals</th>
-                      <th>Your Status</th>
-                    </tr>
-                  </thead>
-                  <tbody></tbody>
-                </table>
+              <div class="ot-data-scroll" id="approveDataScroll">
+                <div class="table-responsive">
+                  <table
+                    id="requestsTable"
+                    class="table table-hover align-middle mb-0"
+                  >
+                    <thead class="table-light">
+                      <tr>
+                        <th class="bulk-check-col" scope="col">
+                          <input
+                            type="checkbox"
+                            class="form-check-input"
+                            id="selectAllPending"
+                            aria-label="Select all pending requests in this list"
+                          />
+                        </th>
+                        <th>Group</th>
+                        <th>Employee</th>
+                        <th>Date</th>
+                        <th>Hours</th>
+                        <th>Location</th>
+                        <th>Approvals</th>
+                        <th>Your Status</th>
+                      </tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+                <div id="tableEmpty" class="ot-empty d-none">
+                  <i class="bi bi-inbox"></i>
+                  <p class="mb-0">No overtime requests to display</p>
+                </div>
+                <div id="tableLoading" class="ot-empty">
+                  <div
+                    class="spinner-border spinner-border-sm text-primary"
+                    role="status"
+                  ></div>
+                  <p class="mb-0 mt-2">Loading requests...</p>
+                </div>
               </div>
-              <div id="tableEmpty" class="ot-empty d-none">
-                <i class="bi bi-inbox"></i>
-                <p class="mb-0">No overtime requests to display</p>
-              </div>
-              <div id="tableLoading" class="ot-empty">
-                <div
-                  class="spinner-border spinner-border-sm text-primary"
-                  role="status"
-                ></div>
-                <p class="mb-0 mt-2">Loading requests...</p>
+              <div class="ot-list-pager border-top">
+                <small class="ot-muted" id="listPagerInfo">—</small>
+                <div class="btn-group btn-group-sm">
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    id="listPrevPage"
+                    disabled
+                  >
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    id="listNextPage"
+                    disabled
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           </div>

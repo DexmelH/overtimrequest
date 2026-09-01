@@ -1,9 +1,15 @@
-import { fetchHistory } from "./api/fetchHistory.js";
+import { fetchHistory, resetHistorySignature } from "./api/fetchHistory.js";
 import { fetchLocations } from "./api/fetchLocations.js";
 import { fetchGroups } from "./api/fetchGroups.js";
 import { addOvertimeRequest } from "./api/addOvertime.js";
-import { renderHistory } from "./ui/renderHistory.js";
-import { setFilter, setSearchQuery } from "./services/state.js";
+import {
+  listQuery,
+  pagination,
+  setFilter,
+  setListDates,
+  setListPage,
+  setSearchQuery,
+} from "./services/state.js";
 import { createProjectAllocations } from "../shared/js/projectAllocations.js";
 import { showToast } from "../shared/js/toast.js";
 import { cancelOvertimeRequest } from "./api/cancelOvertime.js";
@@ -117,17 +123,48 @@ $("#group").on("change", function () {
   projectAllocations.loadProjects().catch(() => {});
 });
 
-// History filters & search
+// History filters, search, date range, pager
+function reloadHistory() {
+  resetHistorySignature();
+  return fetchHistory().then((changed) => {
+    markHistoryUpdated();
+    if (changed) refreshOpenModal();
+    return changed;
+  });
+}
+
 $(".ot-filter-btn").on("click", function () {
   $(".ot-filter-btn").removeClass("active");
   $(this).addClass("active");
   setFilter($(this).data("filter"));
-  renderHistory();
+  reloadHistory().catch(() => {});
 });
 
+let historySearchTimer = null;
 $("#historySearch").on("input", function () {
-  setSearchQuery($(this).val());
-  renderHistory();
+  clearTimeout(historySearchTimer);
+  const value = $(this).val();
+  historySearchTimer = setTimeout(() => {
+    setSearchQuery(value);
+    reloadHistory().catch(() => {});
+  }, 280);
+});
+
+$("#historyFrom, #historyTo").on("change", function () {
+  setListDates($("#historyFrom").val(), $("#historyTo").val());
+  reloadHistory().catch(() => {});
+});
+
+$("#historyPrevPage").on("click", function () {
+  if (listQuery.page <= 1) return;
+  setListPage(listQuery.page - 1);
+  reloadHistory().catch(() => {});
+});
+
+$("#historyNextPage").on("click", function () {
+  if (pagination.pages > 0 && listQuery.page >= pagination.pages) return;
+  setListPage(listQuery.page + 1);
+  reloadHistory().catch(() => {});
 });
 
 const LOCK_RECHECK_MS = 120000;
@@ -266,6 +303,8 @@ initShell();
 applyDateConstraints();
 setDefaultDate();
 bindClearInvalidOnEdit("#overtimeForm");
+$("#historyFrom").val(listQuery.from);
+$("#historyTo").val(listQuery.to);
 loadBlockedHolidays().catch(() => {});
 fetchLocations().catch(() => {});
 fetchGroups().catch(() => {});

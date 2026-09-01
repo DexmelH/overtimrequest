@@ -1,10 +1,32 @@
+import { defaultDateRange, DEFAULT_LIST_LIMIT } from "../../shared/js/listQuery.js";
+
+const initialRange = defaultDateRange();
+
 export let overtime = [];
 export let filter = "all";
 export let selectedIds = new Set();
+export let listQuery = {
+  from: initialRange.from,
+  to: initialRange.to,
+  page: 1,
+  limit: DEFAULT_LIST_LIMIT,
+  view: "all",
+};
+export let pagination = {
+  page: 1,
+  limit: DEFAULT_LIST_LIMIT,
+  total: 0,
+  pages: 0,
+};
+export let listCounts = {
+  total: 0,
+  pending: 0,
+  acted: 0,
+};
 
 export function setOvertime(data) {
   const rows = Array.isArray(data) ? data : [];
-  // Needs-action first, then newest within each group
+  // Needs-action first, then newest within each group (page-local safety net)
   overtime = rows.slice().sort((a, b) => {
     const aPending = a.is_approved ? 1 : 0;
     const bPending = b.is_approved ? 1 : 0;
@@ -18,16 +40,43 @@ export function setOvertime(data) {
 }
 
 export function setFilter(f) {
-  filter = f;
+  filter = f || "all";
+  listQuery = { ...listQuery, view: filter, page: 1 };
+}
+
+export function setListDates(from, to) {
+  listQuery = {
+    ...listQuery,
+    from: from || listQuery.from,
+    to: to || listQuery.to,
+    page: 1,
+  };
+}
+
+export function setListPage(page) {
+  listQuery = { ...listQuery, page: Math.max(1, Number(page) || 1) };
+}
+
+export function setPagination(p) {
+  pagination = {
+    page: Number(p?.page || 1),
+    limit: Number(p?.limit || DEFAULT_LIST_LIMIT),
+    total: Number(p?.total || 0),
+    pages: Number(p?.pages || 0),
+  };
+}
+
+export function setListCounts(c) {
+  listCounts = {
+    total: Number(c?.total || 0),
+    pending: Number(c?.pending || 0),
+    acted: Number(c?.acted || 0),
+  };
 }
 
 export function getFilteredOvertime() {
-  return overtime.filter((req) => {
-    if (filter === "all") return true;
-    if (filter === "action") return !req.is_approved;
-    if (filter === "done") return !!req.is_approved;
-    return req.status_code === filter;
-  });
+  // Status chips are applied server-side via listQuery.view.
+  return overtime;
 }
 
 export function getPendingFilteredOvertime() {

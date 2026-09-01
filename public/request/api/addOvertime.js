@@ -1,8 +1,9 @@
 import { apiUrl } from "../../shared/js/api.js";
 import { apiPost } from "../../shared/js/http.js";
 import { showToast } from "../../shared/js/toast.js";
-import { fetchHistory } from "./fetchHistory.js";
+import { fetchHistory, resetHistorySignature } from "./fetchHistory.js";
 import { openModal } from "../components/modal.js";
+import { setListPage } from "../services/state.js";
 
 export async function addOvertimeRequest(formData) {
   const body = new FormData();
@@ -15,6 +16,8 @@ export async function addOvertimeRequest(formData) {
   try {
     const payload = await apiPost(apiUrl("/addovertime"), body);
     if (payload?.success) {
+      setListPage(1);
+      resetHistorySignature();
       await fetchHistory();
       if (payload.id) {
         openModal(payload.id);

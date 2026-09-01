@@ -1,6 +1,4 @@
-import { apiUrl } from "../shared/js/api.js";
-import { apiGet } from "../shared/js/http.js";
-import { fetchRequest } from "./api/fetchRequest.js";
+import { fetchRequest, resetRequestSignature } from "./api/fetchRequest.js";
 import {
   approveOvertimeRequest,
   approveOvertimeRequestsBulk,
@@ -11,9 +9,13 @@ import {
   clearSelection,
   getSelectedCount,
   getSelectedIds,
+  listQuery,
   overtime,
+  pagination,
   selectPendingInFilter,
   setFilter,
+  setListDates,
+  setListPage,
 } from "./services/state.js";
 import { showToast } from "../shared/js/toast.js";
 import { confirmAction } from "../shared/js/confirm.js";
@@ -26,6 +28,8 @@ import {
   requireFilled,
 } from "../shared/js/formValidation.js";
 import { initOnBehalf } from "./onBehalf.js";
+import { apiUrl } from "../shared/js/api.js";
+import { apiGet } from "../shared/js/http.js";
 
 let actionInProgress = false;
 let bulkRejectModal = null;
@@ -299,6 +303,13 @@ const listPoll = createLivePoll({
   },
 });
 
+function reloadList() {
+  resetRequestSignature();
+  return fetchRequest()
+    .then(markListUpdated)
+    .catch(() => {});
+}
+
 // Closing a modal lifts the pause above, so catch up right away instead of
 // waiting out the rest of the interval.
 $(document).on("hidden.bs.modal", function () {
@@ -309,7 +320,24 @@ $(".ot-filter-btn").on("click", function () {
   $(".ot-filter-btn").removeClass("active");
   $(this).addClass("active");
   setFilter($(this).data("filter"));
-  renderTable();
+  reloadList();
+});
+
+$("#listFrom, #listTo").on("change", function () {
+  setListDates($("#listFrom").val(), $("#listTo").val());
+  reloadList();
+});
+
+$("#listPrevPage").on("click", function () {
+  if (listQuery.page <= 1) return;
+  setListPage(listQuery.page - 1);
+  reloadList();
+});
+
+$("#listNextPage").on("click", function () {
+  if (pagination.pages > 0 && listQuery.page >= pagination.pages) return;
+  setListPage(listQuery.page + 1);
+  reloadList();
 });
 
 async function bootstrapApprovePage() {
@@ -328,6 +356,8 @@ async function bootstrapApprovePage() {
   initOnBehalf();
   bindClearInvalidOnEdit("#detailsModal");
   bindClearInvalidOnEdit("#bulkRejectModal");
+  $("#listFrom").val(listQuery.from);
+  $("#listTo").val(listQuery.to);
 
   await fetchRequest()
     .then(markListUpdated)

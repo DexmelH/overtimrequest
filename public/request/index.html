@@ -254,12 +254,29 @@
                   </div>
                 </div>
                 <div class="ot-card-body flex-grow-1 d-flex flex-column p-0">
-                  <div class="px-3 pt-2 pb-2 border-bottom">
+                  <div class="ot-list-toolbar px-3 pt-2 pb-2 border-bottom">
+                    <div class="ot-date-range" role="group" aria-label="History date range">
+                      <label class="visually-hidden" for="historyFrom">From</label>
+                      <input
+                        type="date"
+                        class="form-control form-control-sm"
+                        id="historyFrom"
+                        aria-label="History from date"
+                      />
+                      <span class="ot-muted small">to</span>
+                      <label class="visually-hidden" for="historyTo">To</label>
+                      <input
+                        type="date"
+                        class="form-control form-control-sm"
+                        id="historyTo"
+                        aria-label="History to date"
+                      />
+                    </div>
                     <input
                       type="search"
                       class="form-control form-control-sm"
                       id="historySearch"
-                      placeholder="Search group, project, location..."
+                      placeholder="Search group, location, remarks..."
                       aria-label="Search history"
                     />
                   </div>
@@ -268,6 +285,27 @@
                     id="historyList"
                     role="list"
                   ></div>
+                  <div class="ot-list-pager border-top">
+                    <small class="ot-muted" id="historyPagerInfo">—</small>
+                    <div class="btn-group btn-group-sm">
+                      <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        id="historyPrevPage"
+                        disabled
+                      >
+                        Prev
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        id="historyNextPage"
+                        disabled
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -1,41 +1,13 @@
-import { history, filter, searchQuery } from "../services/state.js";
+import { history, pagination } from "../services/state.js";
 import { statusClass, statusText } from "../../shared/js/status.js";
 import { escapeHtml } from "../../shared/js/escapeHtml.js";
 import { openModal } from "../components/modal.js";
-
-function matchesFilter(item) {
-  if (filter === "all") return true;
-  if (filter === "approved") return item.status == 1;
-  if (filter === "denied") return item.status == 0;
-  if (filter === "pending") return item.status == null || item.status === "";
-  if (filter === "cancelled") return item.status == 2;
-  return true;
-}
-
-function matchesSearch(item) {
-  if (!searchQuery) return true;
-  const projectNames = Array.isArray(item.projects)
-    ? item.projects.map((project) => project.project_name)
-    : [];
-  const hay = [
-    item.group_name,
-    item.project_name,
-    ...projectNames,
-    item.location_name,
-    item.remarks,
-    item.request_date,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  return hay.includes(searchQuery);
-}
+import { renderPager } from "../../shared/js/listQuery.js";
 
 export function renderHistory() {
   const $list = $("#historyList").empty();
-  const filtered = history.filter((item) => matchesFilter(item) && matchesSearch(item));
 
-  filtered.forEach((item) => {
+  history.forEach((item) => {
     const dateBadge = item.request_date ? item.request_date.slice(5) : "—";
     const $row = $(`
       <div class="history-item" data-id="${escapeHtml(item.id)}" role="listitem" tabindex="0">
@@ -63,12 +35,22 @@ export function renderHistory() {
     $list.append($row);
   });
 
-  if (filtered.length === 0) {
+  if (history.length === 0) {
     $list.append(`
       <div class="ot-empty">
         <i class="bi bi-inbox"></i>
-        <p class="mb-0">No requests match this filter.</p>
+        <p class="mb-0">No requests in this date range.</p>
       </div>
     `);
   }
+
+  renderPager(
+    {
+      info: "#historyPagerInfo",
+      prev: "#historyPrevPage",
+      next: "#historyNextPage",
+    },
+    pagination,
+    { emptyLabel: "No requests in this date range" },
+  );
 }

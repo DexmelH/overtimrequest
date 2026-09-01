@@ -415,9 +415,32 @@ class OvertimeSubmissionService
     }
 
     /** @param string|int $userId */
-    public function getUserHistory($userId): array
+    public function getUserHistory($userId, array $filters = []): array
     {
-        return $this->overtimeRepo->findHistoryByUserId($userId);
+        $query = \App\Support\ListQuery::normalize($filters);
+        $status = strtolower(trim((string) ($filters['status'] ?? '')));
+        $allowedStatus = ['pending', 'approved', 'denied', 'cancelled'];
+        if (!in_array($status, $allowedStatus, true)) {
+            $status = '';
+        }
+
+        $result = $this->overtimeRepo->findHistoryByUserId((string) $userId, [
+            'from' => $query['from'],
+            'to' => $query['to'],
+            'page' => $query['page'],
+            'limit' => $query['limit'],
+            'offset' => $query['offset'],
+            'status' => $status,
+            'q' => trim((string) ($filters['q'] ?? '')),
+        ]);
+
+        return [
+            'success' => true,
+            'data' => $result['data'],
+            'from' => $query['from'],
+            'to' => $query['to'],
+            'pagination' => $result['pagination'],
+        ];
     }
 
     /**
