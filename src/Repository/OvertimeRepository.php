@@ -142,11 +142,17 @@ class OvertimeRepository
         $total = (int) $countStmt->fetchColumn();
 
         $sql = "SELECT orq.`id`, orq.`duration`, orq.`remarks`, orq.`request_date`, orq.`status`,
+                       orq.`date_created`, orq.`submitted_by`, orq.`origin_request_id`,
                        gl.`abbreviation` AS `group_name`,
-                       l.`fldLocation` AS `location_name`
+                       l.`fldLocation` AS `location_name`,
+                       TRIM(CONCAT(COALESCE(sub.`surname`, ''), ' ', COALESCE(sub.`firstname`, ''))) AS `submitted_by_name`,
+                       origin.`request_date` AS `origin_request_date`,
+                       origin.`status` AS `origin_request_status`
                 FROM `overtime_request` orq
                 LEFT JOIN kdtphdb_new.`group_list` gl ON orq.`group_id` = gl.`id`
                 LEFT JOIN `dispatch_locations` l ON orq.`location_id` = l.`fldID`
+                LEFT JOIN kdtphdb_new.`employee_list` sub ON sub.`id` = orq.`submitted_by`
+                LEFT JOIN `overtime_request` origin ON origin.`id` = orq.`origin_request_id`
                 WHERE {$whereSql}
                 ORDER BY orq.`request_date` DESC, orq.`id` DESC
                 LIMIT {$limit} OFFSET {$offset}";
@@ -154,8 +160,11 @@ class OvertimeRepository
         $stmt->execute($params);
         $data = $stmt->fetchAll() ?: [];
 
+        $enriched = $data ? $this->attachRequestDetails($data) : [];
+        $enriched = $this->attachHistoryMeta($enriched);
+
         return [
-            'data' => $data ? $this->attachRequestDetails($data) : [],
+            'data' => $enriched,
             'pagination' => [
                 'page' => $page,
                 'limit' => $limit,
@@ -163,6 +172,120 @@ class OvertimeRepository
                 'pages' => $total > 0 ? (int) ceil($total / $limit) : 0,
             ],
         ];
+    }
+
+    /**
+     * Single history row for the owner (ignores date window). Used when opening
+     * an origin/follow-up link that may sit outside the current list page.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function findOwnedHistoryRequest(string $userID, int $requestId): ?array
+    {
+        if ($requestId <= 0) {
+            return null;
+        }
+
+        $sql = "SELECT orq.`id`, orq.`duration`, orq.`remarks`, orq.`request_date`, orq.`status`,
+                       orq.`date_created`, orq.`submitted_by`, orq.`origin_request_id`,
+                       gl.`abbreviation` AS `group_name`,
+                       l.`fldLocation` AS `location_name`,
+                       TRIM(CONCAT(COALESCE(sub.`surname`, ''), ' ', COALESCE(sub.`firstname`, ''))) AS `submitted_by_name`,
+                       origin.`request_date` AS `origin_request_date`,
+                       origin.`status` AS `origin_request_status`
+                FROM `overtime_request` orq
+                LEFT JOIN kdtphdb_new.`group_list` gl ON orq.`group_id` = gl.`id`
+                LEFT JOIN `dispatch_locations` l ON orq.`location_id` = l.`fldID`
+                LEFT JOIN kdtphdb_new.`employee_list` sub ON sub.`id` = orq.`submitted_by`
+                LEFT JOIN `overtime_request` origin ON origin.`id` = orq.`origin_request_id`
+                WHERE orq.`user_id` = :userID
+                  AND orq.`id` = :requestId
+                LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':userID' => $userID,
+            ':requestId' => $requestId,
+        ]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            return null;
+        }
+
+        $enriched = $this->attachRequestDetails([$row]);
+        $enriched = $this->attachHistoryMeta($enriched);
+
+        return $enriched[0] ?? null;
+    }
+
+    /**
+     * Flags + follow-up child link for employee-facing history rows.
+     *
+     * @param array<int, array<string, mixed>> $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function attachHistoryMeta(array $rows): array
+    {
+        if (!$rows) {
+            return [];
+        }
+
+        $ids = [];
+        foreach ($rows as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+        $ids = array_values(array_unique($ids));
+
+        $followUps = [];
+        if ($ids) {
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $sql = "SELECT `id`, `origin_request_id`, `request_date`, `status`
+                    FROM `overtime_request`
+                    WHERE `origin_request_id` IN ({$placeholders})";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($ids);
+            foreach ($stmt->fetchAll() ?: [] as $child) {
+                $originId = (int) ($child['origin_request_id'] ?? 0);
+                if ($originId > 0 && !isset($followUps[$originId])) {
+                    $followUps[$originId] = $child;
+                }
+            }
+        }
+
+        foreach ($rows as &$row) {
+            $requestId = (int) ($row['id'] ?? 0);
+            $submittedBy = $row['submitted_by'] ?? null;
+            $originId = $row['origin_request_id'] ?? null;
+            $submitterName = trim((string) ($row['submitted_by_name'] ?? ''));
+
+            $row['submitted_by'] = $submittedBy !== null && $submittedBy !== ''
+                ? (int) $submittedBy
+                : null;
+            $row['origin_request_id'] = $originId !== null && $originId !== ''
+                ? (int) $originId
+                : null;
+            $row['submitted_by_name'] = $submitterName !== '' ? $submitterName : null;
+            $row['is_on_behalf'] = $row['submitted_by'] !== null;
+            $row['is_follow_up'] = $row['origin_request_id'] !== null;
+
+            $child = $followUps[$requestId] ?? null;
+            if ($child) {
+                $row['follow_up_id'] = (int) $child['id'];
+                $row['follow_up_request_date'] = $child['request_date'] ?? null;
+                $row['follow_up_status'] = $child['status'] ?? null;
+                $row['has_follow_up'] = true;
+            } else {
+                $row['follow_up_id'] = null;
+                $row['follow_up_request_date'] = null;
+                $row['follow_up_status'] = null;
+                $row['has_follow_up'] = false;
+            }
+        }
+        unset($row);
+
+        return $rows;
     }
 
     public function addOvertime(array $payload): int

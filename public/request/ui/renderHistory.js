@@ -9,6 +9,31 @@ export function renderHistory() {
 
   history.forEach((item) => {
     const dateBadge = item.request_date ? item.request_date.slice(5) : "—";
+    let statusLabel = statusText(item.status);
+    let statusCls = statusClass(item.status);
+    if ((item.status == 1 || item.status === "1") && item.is_on_behalf) {
+      statusLabel = "Auto-approved";
+      statusCls = "status-auto-approved";
+    } else if (
+      (item.status == 0 || item.status === "0") &&
+      !(item.approver_details || []).some(
+        (m) => m.status !== null && m.status !== undefined && m.status !== "",
+      )
+    ) {
+      statusLabel = "Auto-rejected";
+      statusCls = "status-auto-rejected";
+    }
+
+    const badges = [
+      `<span class="status-badge ${statusCls}">${escapeHtml(statusLabel)}</span>`,
+    ];
+    if (item.is_on_behalf) {
+      badges.push('<span class="status-badge status-onbehalf">On behalf</span>');
+    }
+    if (item.is_follow_up) {
+      badges.push('<span class="status-badge status-followup">Follow-up</span>');
+    }
+
     const $row = $(`
       <div class="history-item" data-id="${escapeHtml(item.id)}" role="listitem" tabindex="0">
         <div class="history-left">
@@ -18,7 +43,7 @@ export function renderHistory() {
             <div class="history-sub">${escapeHtml(item.request_date || "")} · ${escapeHtml(item.duration ?? 0)} hrs · ${escapeHtml(item.location_name || "")}</div>
           </div>
         </div>
-        <span class="status-badge ${statusClass(item.status)}">${escapeHtml(statusText(item.status))}</span>
+        <div class="history-badges">${badges.join("")}</div>
       </div>
     `);
 

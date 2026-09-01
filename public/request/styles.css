@@ -132,6 +132,15 @@
   min-width: 0;
 }
 
+.history-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  max-width: 11rem;
+  flex-shrink: 0;
+}
+
 .history-left > div:last-child {
   min-width: 0;
 }

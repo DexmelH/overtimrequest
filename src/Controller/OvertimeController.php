@@ -139,6 +139,7 @@ class OvertimeController
     {
         $user = $this->currentUser();
         return $this->submissionService->getUserHistory($user['id'], [
+            'id' => $_GET['id'] ?? 0,
             'from' => $_GET['from'] ?? null,
             'to' => $_GET['to'] ?? null,
             'page' => $_GET['page'] ?? 1,

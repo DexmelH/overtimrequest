@@ -334,9 +334,7 @@
             ></button>
           </div>
           <div class="modal-body pt-2">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <span id="m_statusBadge"></span>
-            </div>
+            <div class="d-flex flex-wrap gap-2 align-items-center mb-3" id="m_statusBadge"></div>
             <div class="row g-3">
               <div class="col-lg-7">
                 <div class="detail-grid">
@@ -371,15 +369,15 @@
               <div class="col-lg-5">
                 <div class="ot-card border h-100">
                   <div class="ot-card-header py-2">
-                    <h3 class="h6 mb-0">Approval Chain</h3>
+                    <h3 class="h6 mb-0">Request timeline</h3>
                     <span class="ot-muted small" id="approvalCount"
                       >0 / 0 approved</span
                     >
                   </div>
                   <div class="ot-card-body pt-2">
                     <div
-                      id="managersList"
-                      class="approvals-list"
+                      id="requestTimeline"
+                      class="ot-timeline"
                       aria-live="polite"
                     ></div>
                   </div>

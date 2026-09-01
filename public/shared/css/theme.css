@@ -673,6 +673,13 @@ body.ot-sidebar-open {
   font-weight: 600;
 }
 
+.status-onbehalf {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--ot-accent);
+  text-transform: none;
+  font-weight: 600;
+}
+
 /* Toasts */
 .ot-toast-container {
   position: fixed;
@@ -982,18 +989,20 @@ body.ot-sidebar-open {
 }
 
 /* Approval chain */
-.approvals-list {
+.approvals-list,
+.ot-timeline {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
-  /* Fit 4 approver rows (with remarks) without scrolling */
+  /* Fit several timeline rows without growing the modal endlessly */
   min-height: 23.5rem;
   max-height: 23.5rem;
   overflow-y: auto;
 }
 
 @media (max-width: 991.98px) {
-  .approvals-list {
+  .approvals-list,
+  .ot-timeline {
     min-height: 0;
     max-height: min(23.5rem, 50vh);
   }
@@ -1001,6 +1010,117 @@ body.ot-sidebar-open {
   .ot-modal .modal-body {
     min-height: 0;
   }
+}
+
+.ot-timeline-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 0.85rem minmax(0, 1fr);
+  gap: 0.7rem;
+  padding-left: 0.15rem;
+}
+
+.ot-timeline-item:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 0.42rem;
+  top: 1rem;
+  bottom: -0.55rem;
+  width: 2px;
+  background: var(--ot-border);
+}
+
+.ot-timeline-dot {
+  width: 0.85rem;
+  height: 0.85rem;
+  margin-top: 0.35rem;
+  border-radius: 50%;
+  border: 2px solid var(--ot-border-strong, var(--ot-border));
+  background: var(--ot-surface);
+  z-index: 1;
+}
+
+.ot-timeline-item.is-submitted .ot-timeline-dot {
+  border-color: var(--ot-accent);
+  background: var(--ot-accent-soft);
+}
+
+.ot-timeline-item.is-approved .ot-timeline-dot {
+  border-color: var(--ot-success);
+  background: rgba(5, 150, 105, 0.2);
+}
+
+.ot-timeline-item.is-rejected .ot-timeline-dot,
+.ot-timeline-item.is-cancelled .ot-timeline-dot {
+  border-color: var(--ot-danger);
+  background: rgba(220, 38, 38, 0.15);
+}
+
+.ot-timeline-item.is-pending .ot-timeline-dot {
+  border-color: var(--ot-warning);
+  background: rgba(217, 119, 6, 0.18);
+}
+
+.ot-timeline-item.is-followup .ot-timeline-dot {
+  border-color: var(--ot-muted);
+  background: var(--ot-surface-muted);
+}
+
+.ot-timeline-body {
+  min-width: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--ot-radius-sm);
+  border: 1px solid var(--ot-border);
+  background: var(--ot-surface-muted);
+}
+
+.ot-timeline-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.ot-timeline-title {
+  font-weight: 700;
+  font-size: 0.86rem;
+  line-height: 1.3;
+}
+
+.ot-timeline-meta {
+  margin-top: 0.2rem;
+  font-size: 0.76rem;
+  color: var(--ot-muted);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.ot-timeline-time {
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--ot-muted);
+  font-weight: 500;
+}
+
+.ot-timeline-link {
+  display: inline-block;
+  margin-top: 0.4rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ot-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.ot-timeline-link:hover,
+.ot-timeline-link:focus-visible {
+  color: var(--ot-accent);
+  outline: none;
 }
 
 .ot-modal .modal-dialog.modal-xl {
