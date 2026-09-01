@@ -3,6 +3,7 @@ import { apiGet } from "../shared/js/http.js";
 import { showToast } from "../shared/js/toast.js";
 import { initApprovers } from "./approvers.js";
 import { initAdminMembers } from "./members.js";
+import { initOtReports } from "./reports.js";
 import { initShell } from "../shared/js/shell.js";
 import { escapeHtml } from "../shared/js/escapeHtml.js";
 
@@ -479,5 +480,6 @@ checkAccess().then((ok) => {
   if (ok) {
     initApprovers();
     initAdminMembers();
+    initOtReports();
   }
 });

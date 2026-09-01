@@ -23,6 +23,7 @@ return function (RouteCollector $r): void {
     $r->addRoute('POST', '/api/cancelovertime', ['App\Controller\OvertimeController', 'cancelOvertime']);
     $r->addRoute('GET', '/api/admin/session', ['App\Controller\AdminController', 'getSession']);
     $r->addRoute('GET', '/api/admin/logs', ['App\Controller\AdminController', 'getActivityLogs']);
+    $r->addRoute('GET', '/api/admin/reports/ot', ['App\Controller\AdminController', 'getOtReport']);
     $r->addRoute('GET', '/api/admin/groups', ['App\Controller\AdminController', 'getAdminGroups']);
     $r->addRoute('GET', '/api/admin/employees', ['App\Controller\AdminController', 'searchEmployees']);
     $r->addRoute('GET', '/api/admin/members', ['App\Controller\AdminController', 'getAdminMembers']);

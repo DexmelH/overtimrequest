@@ -19,6 +19,7 @@ use App\Repository\HolidayRepository;
 use App\Repository\LeaveRepository;
 use App\Repository\LocationRepository;
 use App\Repository\OvertimeRepository;
+use App\Repository\OtReportRepository;
 use App\Repository\ProjectRepository;
 use App\Repository\UserRepository;
 use App\Service\ActivityLogger;
@@ -55,6 +56,7 @@ return function (Container $c, array $config): void {
     $c->set(LeaveRepository::class, static fn (Container $c) => new LeaveRepository($c->get('db.forms')));
     $c->set(LocationRepository::class, static fn (Container $c) => new LocationRepository($c->get('db.webjmr')));
     $c->set(OvertimeRepository::class, static fn (Container $c) => new OvertimeRepository($c->get('db.webjmr')));
+    $c->set(OtReportRepository::class, static fn (Container $c) => new OtReportRepository($c->get('db.webjmr')));
     $c->set(ProjectRepository::class, static fn (Container $c) => new ProjectRepository($c->get('db.webjmr')));
     $c->set(UserRepository::class, static fn (Container $c) => new UserRepository($c->get('db.kdtph')));
 
@@ -120,6 +122,7 @@ return function (Container $c, array $config): void {
         $c->get(EmployeeRepository::class),
         $c->get(GroupApproverRepository::class),
         $c->get(AdminMemberRepository::class),
+        $c->get(OtReportRepository::class),
         $c->get(AdminAccessService::class),
         $c->get(ActivityLogger::class)
     ));

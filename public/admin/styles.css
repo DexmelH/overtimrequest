@@ -636,3 +636,64 @@ body[data-page="admin"] .ot-main {
   gap: 0.35rem;
   flex-shrink: 0;
 }
+
+/* OT Reports */
+#reportSummaryCards .stat-card {
+  border-left: 4px solid var(--ot-accent);
+}
+
+#reportSummaryCards .stat-label {
+  font-size: 0.72rem;
+  color: var(--ot-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+#reportSummaryCards .stat-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-top: 0.25rem;
+  letter-spacing: -0.03em;
+  color: var(--ot-accent);
+}
+
+#reportSummaryCards .stat-pending {
+  border-left-color: var(--ot-warning);
+}
+
+#reportSummaryCards .stat-pending .stat-value {
+  color: var(--ot-warning);
+}
+
+#reportSummaryCards .stat-done {
+  border-left-color: var(--ot-success);
+}
+
+#reportSummaryCards .stat-done .stat-value {
+  color: var(--ot-success);
+}
+
+.report-table-scroll {
+  height: 480px;
+  max-height: 480px;
+}
+
+#reportTable .report-hours {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 991.98px) {
+  .admin-tabs {
+    width: 100%;
+    border-radius: var(--ot-radius-sm);
+    flex-wrap: wrap;
+  }
+
+  .report-table-scroll {
+    height: 360px;
+    max-height: 360px;
+  }
+}

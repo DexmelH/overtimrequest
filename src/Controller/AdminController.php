@@ -5,9 +5,12 @@ use App\Repository\ActivityLogRepository;
 use App\Repository\AdminMemberRepository;
 use App\Repository\EmployeeRepository;
 use App\Repository\GroupApproverRepository;
+use App\Repository\OtReportRepository;
 use App\Repository\UserRepository;
 use App\Service\ActivityLogger;
 use App\Service\AdminAccessService;
+use App\Support\ListQuery;
+use App\Http\CsvResponse;
 
 class AdminController
 {
@@ -16,6 +19,7 @@ class AdminController
     private EmployeeRepository $employeeRepo;
     private GroupApproverRepository $approverRepo;
     private AdminMemberRepository $adminMemberRepo;
+    private OtReportRepository $otReportRepo;
     private AdminAccessService $adminAccess;
     private ActivityLogger $logger;
 
@@ -25,6 +29,7 @@ class AdminController
         EmployeeRepository $employeeRepo,
         GroupApproverRepository $approverRepo,
         AdminMemberRepository $adminMemberRepo,
+        OtReportRepository $otReportRepo,
         AdminAccessService $adminAccess,
         ActivityLogger $logger
     ) {
@@ -33,6 +38,7 @@ class AdminController
         $this->employeeRepo = $employeeRepo;
         $this->approverRepo = $approverRepo;
         $this->adminMemberRepo = $adminMemberRepo;
+        $this->otReportRepo = $otReportRepo;
         $this->adminAccess = $adminAccess;
         $this->logger = $logger;
     }
@@ -232,6 +238,117 @@ class AdminController
             ],
             $result
         );
+    }
+
+    /**
+     * Monthly / range OT hours report for payroll and Daily Report.
+     * JSON by default; pass format=csv for download.
+     *
+     * @return array<string, mixed>|CsvResponse
+     */
+    public function getOtReport()
+    {
+        $user = $this->currentUser();
+        $this->requireAdmin((int) $user['id']);
+
+        $query = ListQuery::normalize($_GET, 31, 25);
+        // Reports usually want the current calendar month when dates omitted.
+        if (!isset($_GET['from']) && !isset($_GET['to'])) {
+            $query['from'] = date('Y-m-01');
+            $query['to'] = date('Y-m-t');
+        }
+
+        $status = strtolower(trim((string) ($_GET['status'] ?? 'approved')));
+        $allowedStatus = ['approved', 'denied', 'cancelled', 'pending', 'all'];
+        if (!in_array($status, $allowedStatus, true)) {
+            $status = 'approved';
+        }
+
+        $groupBy = strtolower(trim((string) ($_GET['group_by'] ?? 'project')));
+        $allowedGroupBy = ['project', 'employee', 'group'];
+        if (!in_array($groupBy, $allowedGroupBy, true)) {
+            $groupBy = 'project';
+        }
+
+        $groupId = (int) ($_GET['group'] ?? $_GET['group_id'] ?? 0);
+
+        $result = $this->otReportRepo->findOtHours([
+            'from' => $query['from'],
+            'to' => $query['to'],
+            'group_id' => $groupId,
+            'status' => $status,
+            'group_by' => $groupBy,
+        ]);
+
+        $format = strtolower(trim((string) ($_GET['format'] ?? 'json')));
+        if ($format === 'csv') {
+            return $this->otReportToCsv(
+                $result['rows'],
+                $groupBy,
+                $query['from'],
+                $query['to'],
+                $status
+            );
+        }
+
+        return [
+            'success' => true,
+            'from' => $query['from'],
+            'to' => $query['to'],
+            'status' => $status,
+            'group_by' => $groupBy,
+            'group_id' => $groupId > 0 ? $groupId : null,
+            'data' => $result['rows'],
+            'summary' => $result['summary'],
+        ];
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     */
+    private function otReportToCsv(array $rows, string $groupBy, string $from, string $to, string $status): CsvResponse
+    {
+        if ($groupBy === 'group') {
+            $headers = ['Group', 'Employees', 'Projects', 'Requests', 'Hours'];
+            $csvRows = array_map(static function (array $row): array {
+                return [
+                    $row['group_name'] ?? '',
+                    $row['employee_count'] ?? '',
+                    $row['project_count'] ?? '',
+                    $row['request_count'] ?? 0,
+                    $row['hours'] ?? 0,
+                ];
+            }, $rows);
+        } elseif ($groupBy === 'employee') {
+            $headers = ['Employee ID', 'Employee', 'Group', 'Projects', 'Requests', 'Hours'];
+            $csvRows = array_map(static function (array $row): array {
+                return [
+                    $row['employee_id'] ?? '',
+                    $row['employee_name'] ?? '',
+                    $row['group_name'] ?? '',
+                    $row['project_count'] ?? '',
+                    $row['request_count'] ?? 0,
+                    $row['hours'] ?? 0,
+                ];
+            }, $rows);
+        } else {
+            $headers = ['Employee ID', 'Employee', 'Group', 'Project ID', 'Project', 'Requests', 'Hours'];
+            $csvRows = array_map(static function (array $row): array {
+                return [
+                    $row['employee_id'] ?? '',
+                    $row['employee_name'] ?? '',
+                    $row['group_name'] ?? '',
+                    $row['project_id'] ?? '',
+                    $row['project_name'] ?? '',
+                    $row['request_count'] ?? 0,
+                    $row['hours'] ?? 0,
+                ];
+            }, $rows);
+        }
+
+        $filename = sprintf('ot-report_%s_%s_%s_%s.csv', $status, $groupBy, $from, $to);
+
+        return new CsvResponse($filename, $headers, $csvRows);
     }
 
     /** @param array<int, array<string, mixed>> $rows */

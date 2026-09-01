@@ -65,7 +65,7 @@
           </button>
           <div class="ot-topbar-title">
             <h1>Overtime Admin</h1>
-            <p>Manage approvers, admins, and activity logs</p>
+            <p>Manage approvers, admins, reports, and activity logs</p>
           </div>
           <div class="ot-header-end">
             <div class="ot-header-tools" id="otHeaderTools"></div>
@@ -93,6 +93,12 @@
             <button class="nav-link" id="tab-members" data-bs-toggle="pill"
               data-bs-target="#panel-members" type="button" role="tab">
               <i class="bi bi-shield-check me-1"></i> Admins
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-reports" data-bs-toggle="pill"
+              data-bs-target="#panel-reports" type="button" role="tab">
+              <i class="bi bi-bar-chart-line me-1"></i> OT Reports
             </button>
           </li>
           <li class="nav-item" role="presentation">
@@ -224,6 +230,106 @@
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- OT Reports -->
+          <div class="tab-pane fade" id="panel-reports" role="tabpanel">
+            <div class="row g-3 mb-3" id="reportSummaryCards"></div>
+
+            <div class="ot-card">
+              <div class="ot-card-header flex-wrap">
+                <div>
+                  <h2>Overtime Hours Report</h2>
+                  <p class="ot-muted mb-0">
+                    Approved hours by employee, group, and project for payroll /
+                    Daily Report
+                  </p>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                  <button type="button" class="ot-btn ot-btn-secondary btn-sm" id="reportRefreshBtn">
+                    <i class="bi bi-arrow-repeat"></i> Refresh
+                  </button>
+                  <button type="button" class="ot-btn ot-btn-primary btn-sm" id="reportCsvBtn">
+                    <i class="bi bi-download"></i> Download CSV
+                  </button>
+                </div>
+              </div>
+              <div class="ot-card-body border-bottom">
+                <form id="reportFilterForm" class="row g-2 align-items-end">
+                  <div class="col-lg-2 col-md-3 col-6">
+                    <label class="form-label" for="reportMonth">Month</label>
+                    <input type="month" class="form-control form-control-sm" id="reportMonth" />
+                  </div>
+                  <div class="col-lg-2 col-md-3 col-6">
+                    <label class="form-label" for="reportFrom">From</label>
+                    <input type="date" class="form-control form-control-sm" id="reportFrom" />
+                  </div>
+                  <div class="col-lg-2 col-md-3 col-6">
+                    <label class="form-label" for="reportTo">To</label>
+                    <input type="date" class="form-control form-control-sm" id="reportTo" />
+                  </div>
+                  <div class="col-lg-2 col-md-3 col-6">
+                    <label class="form-label" for="reportGroup">Group</label>
+                    <select class="form-select form-select-sm" id="reportGroup">
+                      <option value="">All groups</option>
+                    </select>
+                  </div>
+                  <div class="col-lg-2 col-md-3 col-6">
+                    <label class="form-label" for="reportStatus">Status</label>
+                    <select class="form-select form-select-sm" id="reportStatus">
+                      <option value="approved" selected>Approved</option>
+                      <option value="pending">Pending</option>
+                      <option value="denied">Denied</option>
+                      <option value="cancelled">Cancelled</option>
+                      <option value="all">All statuses</option>
+                    </select>
+                  </div>
+                  <div class="col-lg-2 col-md-3 col-6">
+                    <label class="form-label" for="reportGroupBy">View</label>
+                    <select class="form-select form-select-sm" id="reportGroupBy">
+                      <option value="project" selected>By project</option>
+                      <option value="employee">By employee</option>
+                      <option value="group">By group</option>
+                    </select>
+                  </div>
+                  <div class="col-lg-3 col-md-4 col-12">
+                    <label class="form-label" for="reportSearch">Search</label>
+                    <input
+                      type="search"
+                      class="form-control form-control-sm"
+                      id="reportSearch"
+                      placeholder="Employee, group, project..."
+                    />
+                  </div>
+                  <div class="col-lg-2 col-md-3 col-6">
+                    <button type="submit" class="ot-btn ot-btn-primary btn-sm w-100">
+                      Run report
+                    </button>
+                  </div>
+                </form>
+              </div>
+              <div class="ot-data-scroll report-table-scroll" id="reportDataScroll">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0" id="reportTable">
+                    <thead class="table-light">
+                      <tr id="reportTableHead"></tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+                <div id="reportEmpty" class="ot-empty d-none">
+                  <i class="bi bi-inbox"></i>
+                  <p class="mb-0">No overtime hours match these filters.</p>
+                </div>
+                <div id="reportLoading" class="ot-empty">
+                  <div class="spinner-border spinner-border-sm text-primary"></div>
+                  <p class="mb-0 mt-2">Loading report...</p>
+                </div>
+              </div>
+              <div class="ot-list-pager border-top">
+                <small class="ot-muted" id="reportPagerInfo">—</small>
               </div>
             </div>
           </div>

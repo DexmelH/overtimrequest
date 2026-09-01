@@ -59,6 +59,10 @@ class Application
                     }
 
                     $result = call_user_func_array([$controller, $method], $vars);
+                    if ($result instanceof \App\Http\CsvResponse) {
+                        $result->send();
+                        exit;
+                    }
                     $this->jsonResponse(200, $result);
                 } catch (Throwable $e) {
                     error_log($e->getMessage() . "\n" . $e->getTraceAsString());
