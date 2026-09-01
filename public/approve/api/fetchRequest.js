@@ -10,6 +10,7 @@ import {
 } from "../services/state.js";
 import { renderTable } from "../ui/renderOvertime.js";
 import { updateStats } from "../ui/stats.js";
+import { fetchApproverDashboard } from "../ui/dashboard.js";
 
 let lastSignature = null;
 
@@ -66,6 +67,10 @@ export async function fetchRequest({ silent = false } = {}) {
     setListCounts(counts);
     updateStats(counts);
     renderTable();
+    // Keep the dashboard strip in sync after list mutations / refreshes.
+    if (!silent) {
+      fetchApproverDashboard({ silent: true }).catch(() => {});
+    }
     return true;
   } catch (error) {
     console.error("Failed to fetch overtime requests:", error);

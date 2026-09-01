@@ -8,15 +8,58 @@ class OvertimeApprovalService
     private OvertimeRepository $overtimeRepo;
     private ApprovalFinalizer $approvalFinalizer;
     private ActivityLogger $logger;
+    private ApprovalCutoff $cutoff;
 
     public function __construct(
         OvertimeRepository $overtimeRepo,
         ApprovalFinalizer $approvalFinalizer,
-        ActivityLogger $logger
+        ActivityLogger $logger,
+        ApprovalCutoff $cutoff
     ) {
         $this->overtimeRepo = $overtimeRepo;
         $this->approvalFinalizer = $approvalFinalizer;
         $this->logger = $logger;
+        $this->cutoff = $cutoff;
+    }
+
+    /**
+     * Approver-facing dashboard: today's pending hours / cutoff risk, and
+     * rolling auto-reject rate (independent of the list date filters).
+     */
+    public function getApproverDashboard(int $approverId): array
+    {
+        $today = date('Y-m-d');
+        $from30 = date('Y-m-d', strtotime($today . ' -29 days'));
+
+        $risk = $this->overtimeRepo->findApproverCutoffRisk($approverId, $today);
+        $autoReject = $this->overtimeRepo->findApproverAutoRejectStats($approverId, $from30, $today);
+        $secondsUntil = $this->cutoff->secondsUntilCutoff();
+        $isPast = $this->cutoff->isPastCutoff();
+
+        return [
+            'success' => true,
+            'date' => $today,
+            'cutoff' => [
+                'time' => $this->cutoff->getCutoffTime(),
+                'label' => $this->cutoff->getCutoffLabel(),
+                'is_past' => $isPast,
+                'seconds_until' => $secondsUntil,
+            ],
+            'pending_hours_today' => $risk['hours'],
+            'pending_count_today' => $risk['count'],
+            'cutoff_risk' => [
+                'count' => $risk['count'],
+                'hours' => $risk['hours'],
+                'items' => $risk['items'],
+            ],
+            'auto_reject_rate_30d' => [
+                'rate' => $autoReject['rate'],
+                'auto_rejected' => $autoReject['auto_rejected'],
+                'finalized' => $autoReject['finalized'],
+                'from' => $from30,
+                'to' => $today,
+            ],
+        ];
     }
 
     public function getOvertimeToApprove(int $approverId, array $filters = []): array

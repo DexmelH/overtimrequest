@@ -70,6 +70,18 @@
             <div class="ot-header-extra">
               <button
                 type="button"
+                class="ot-btn ot-btn-secondary btn-sm"
+                id="dashboardOpenBtn"
+                data-bs-toggle="modal"
+                data-bs-target="#dashboardModal"
+                title="Approver dashboard"
+              >
+                <i class="bi bi-speedometer2"></i>
+                <span class="d-none d-sm-inline">Dashboard</span>
+                <span class="dash-btn-badge d-none" id="dashBtnBadge" aria-hidden="true"></span>
+              </button>
+              <button
+                type="button"
                 class="ot-btn ot-btn-primary btn-sm d-none"
                 id="onBehalfOpenBtn"
                 data-bs-toggle="modal"
@@ -476,6 +488,95 @@
               id="btnBulkRejectConfirm"
             >
               <i class="bi bi-x-circle"></i> Reject all
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Approver dashboard modal -->
+    <div
+      class="modal fade ot-modal"
+      id="dashboardModal"
+      tabindex="-1"
+      aria-labelledby="dashboardModalTitle"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <div>
+              <h5 class="modal-title fw-bold" id="dashboardModalTitle">
+                Approver dashboard
+              </h5>
+              <p class="ot-muted mb-0 small" id="dashboardModalSub">
+                Today’s pending hours, cutoff risk, and recent auto-reject rate
+              </p>
+            </div>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3" id="approverDashboard">
+              <div class="col-md-4">
+                <div class="ot-card dash-card dash-pending-hours h-100">
+                  <div class="ot-card-body py-3">
+                    <div class="stat-label">Pending hours today</div>
+                    <div class="stat-value" id="dashPendingHours">0</div>
+                    <div class="dash-sub ot-muted" id="dashPendingHoursSub">
+                      0 open requests for today
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="ot-card dash-card dash-cutoff-risk h-100">
+                  <div class="ot-card-body py-3">
+                    <div class="stat-label">Cutoff risk</div>
+                    <div class="stat-value" id="dashCutoffRisk">0</div>
+                    <div class="dash-sub ot-muted" id="dashCutoffSub">
+                      Cutoff —
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="ot-card dash-card dash-auto-reject h-100">
+                  <div class="ot-card-body py-3">
+                    <div class="stat-label">Auto-reject rate (30d)</div>
+                    <div class="stat-value" id="dashAutoRejectRate">—</div>
+                    <div class="dash-sub ot-muted" id="dashAutoRejectSub">
+                      No finalized requests yet
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="ot-card border mt-3">
+              <div class="ot-card-header py-2">
+                <h3 class="h6 mb-0">At risk before cutoff</h3>
+                <span class="ot-muted small" id="dashRiskCountLabel">0 requests</span>
+              </div>
+              <div class="ot-card-body pt-2">
+                <ul class="dash-risk-list mb-0" id="dashRiskList"></ul>
+                <p class="ot-muted small mb-0 d-none" id="dashRiskEmpty">
+                  Nothing at risk for today’s cutoff.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer border-0">
+            <button
+              type="button"
+              class="ot-btn ot-btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
             </button>
           </div>
         </div>

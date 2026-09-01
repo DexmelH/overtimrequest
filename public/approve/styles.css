@@ -51,6 +51,107 @@
   color: var(--ot-success);
 }
 
+/* Approver dashboard (modal + compact header button) */
+#dashboardOpenBtn {
+  position: relative;
+}
+
+#dashboardOpenBtn .dash-btn-badge {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.35rem;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--ot-warning);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1.15rem;
+  text-align: center;
+}
+
+#dashboardOpenBtn.has-urgent .dash-btn-badge {
+  background: var(--ot-danger);
+}
+
+.dash-card .stat-value {
+  font-size: 1.85rem;
+}
+
+.dash-sub {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.dash-pending-hours {
+  border-left: 4px solid var(--ot-warning);
+}
+
+.dash-pending-hours .stat-value {
+  color: var(--ot-warning);
+}
+
+.dash-cutoff-risk {
+  border-left: 4px solid var(--ot-accent);
+}
+
+.dash-cutoff-risk.is-warn {
+  border-left-color: var(--ot-warning);
+}
+
+.dash-cutoff-risk.is-warn .stat-value {
+  color: var(--ot-warning);
+}
+
+.dash-cutoff-risk.is-danger {
+  border-left-color: var(--ot-danger);
+}
+
+.dash-cutoff-risk.is-danger .stat-value {
+  color: var(--ot-danger);
+}
+
+.dash-cutoff-risk.is-clear .stat-value {
+  color: var(--ot-success);
+}
+
+.dash-auto-reject {
+  border-left: 4px solid var(--ot-muted);
+}
+
+.dash-auto-reject.is-high {
+  border-left-color: var(--ot-danger);
+}
+
+.dash-auto-reject.is-high .stat-value {
+  color: var(--ot-danger);
+}
+
+.dash-risk-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.dash-risk-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.55rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--ot-radius-sm);
+  border: 1px solid var(--ot-border);
+  background: var(--ot-surface-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
 .employee-cell {
   display: flex;
   align-items: center;

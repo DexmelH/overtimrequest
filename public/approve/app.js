@@ -6,6 +6,11 @@ import {
 } from "./api/approveRequest.js";
 import { renderTable, syncBulkBar } from "./ui/renderOvertime.js";
 import {
+  fetchApproverDashboard,
+  initApproverDashboardUi,
+  startDashboardCountdown,
+} from "./ui/dashboard.js";
+import {
   clearSelection,
   getSelectedCount,
   getSelectedIds,
@@ -295,11 +300,16 @@ function markListUpdated() {
 const listPoll = createLivePoll({
   interval: 15000,
   idleInterval: 60000,
-  isPaused: () => actionInProgress || !!document.querySelector(".modal.show"),
+  isPaused: () =>
+    actionInProgress ||
+    !!document.querySelector(".modal.show:not(#dashboardModal)"),
   fetcher: async () => {
-    const changed = await fetchRequest({ silent: true });
+    const [listChanged, dashChanged] = await Promise.all([
+      fetchRequest({ silent: true }),
+      fetchApproverDashboard({ silent: true }).catch(() => false),
+    ]);
     markListUpdated();
-    return changed;
+    return listChanged || dashChanged;
   },
 });
 
@@ -358,6 +368,8 @@ async function bootstrapApprovePage() {
   bindClearInvalidOnEdit("#bulkRejectModal");
   $("#listFrom").val(listQuery.from);
   $("#listTo").val(listQuery.to);
+  startDashboardCountdown();
+  initApproverDashboardUi();
 
   await fetchRequest()
     .then(markListUpdated)

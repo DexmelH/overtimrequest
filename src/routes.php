@@ -18,6 +18,7 @@ return function (RouteCollector $r): void {
     $r->addRoute('GET', '/api/overtimehistory', ['App\Controller\OvertimeController', 'getUserHistory']);
     $r->addRoute('POST', '/api/addovertime', ['App\Controller\OvertimeController', 'addOvertime']);
     $r->addRoute('GET', '/api/overtimetoapprove', ['App\Controller\OvertimeController', 'getOvertimeToApprove']);
+    $r->addRoute('GET', '/api/approve/dashboard', ['App\Controller\OvertimeController', 'getApproverDashboard']);
     $r->addRoute('POST', '/api/approveovertime', ['App\Controller\OvertimeController', 'approveOvertime']);
     $r->addRoute('POST', '/api/approve/bulk', ['App\Controller\OvertimeController', 'approveOvertimeBulk']);
     $r->addRoute('POST', '/api/cancelovertime', ['App\Controller\OvertimeController', 'cancelOvertime']);

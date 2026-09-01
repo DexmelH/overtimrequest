@@ -28,15 +28,24 @@ class ApprovalCutoff
     public function isPastCutoff(?\DateTimeInterface $now = null): bool
     {
         $now = $now ?? new \DateTimeImmutable('now');
-        $cutoff = \DateTimeImmutable::createFromFormat(
-            'Y-m-d H:i',
-            $now->format('Y-m-d') . ' ' . $this->cutoffTime
-        );
+        $cutoff = $this->cutoffDateTime($now);
         if (!$cutoff) {
             return false;
         }
 
         return $now >= $cutoff;
+    }
+
+    /** Seconds until today's cutoff; negative when already past. */
+    public function secondsUntilCutoff(?\DateTimeInterface $now = null): int
+    {
+        $now = $now ?? new \DateTimeImmutable('now');
+        $cutoff = $this->cutoffDateTime($now);
+        if (!$cutoff) {
+            return 0;
+        }
+
+        return $cutoff->getTimestamp() - $now->getTimestamp();
     }
 
     public function employeeLockMessage(): string
@@ -45,6 +54,16 @@ class ApprovalCutoff
             'Overtime requests are locked from %s onwards. Please ask your approver to submit on your behalf if you still need to request overtime.',
             $this->getCutoffLabel()
         );
+    }
+
+    private function cutoffDateTime(\DateTimeInterface $now): ?\DateTimeImmutable
+    {
+        $cutoff = \DateTimeImmutable::createFromFormat(
+            'Y-m-d H:i',
+            $now->format('Y-m-d') . ' ' . $this->cutoffTime
+        );
+
+        return $cutoff ?: null;
     }
 
     private function normalizeCutoffTime(string $cutoffTime): string

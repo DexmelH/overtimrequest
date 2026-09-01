@@ -182,6 +182,18 @@ class OvertimeController
         ]);
     }
 
+    public function getApproverDashboard(): array
+    {
+        $user = $this->currentUser();
+        $approverId = (int) $user['id'];
+
+        if (!$this->approverDirectory->isApprover($approverId)) {
+            return ['success' => false, 'message' => 'You are not authorized to view the approver dashboard.'];
+        }
+
+        return $this->approvalService->getApproverDashboard($approverId);
+    }
+
     public function approveOvertime(): array
     {
         $user = $this->currentUser();

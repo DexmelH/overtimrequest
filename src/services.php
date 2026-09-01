@@ -24,6 +24,7 @@ use App\Repository\ProjectRepository;
 use App\Repository\UserRepository;
 use App\Service\ActivityLogger;
 use App\Service\AdminAccessService;
+use App\Service\ApprovalCutoff;
 use App\Service\ApprovalFinalizer;
 use App\Service\ApproverDirectoryService;
 use App\Service\EmailTemplate;
@@ -92,10 +93,15 @@ return function (Container $c, array $config): void {
         $c->get('config.approval_cutoff_time')
     ));
 
+    $c->set(ApprovalCutoff::class, static fn (Container $c) => new ApprovalCutoff(
+        (string) $c->get('config.approval_cutoff_time')
+    ));
+
     $c->set(OvertimeApprovalService::class, static fn (Container $c) => new OvertimeApprovalService(
         $c->get(OvertimeRepository::class),
         $c->get(ApprovalFinalizer::class),
-        $c->get(ActivityLogger::class)
+        $c->get(ActivityLogger::class),
+        $c->get(ApprovalCutoff::class)
     ));
 
     $c->set(Mailer::class, static fn (): Mailer => new Mailer($config['mail'] ?? []));

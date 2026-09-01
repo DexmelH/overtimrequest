@@ -930,4 +930,107 @@ class OvertimeRepository
 
         return $data ? $data : [];
     }
+
+    /**
+     * Open requests for today that this approver still needs to act on
+     * (same set that today's cutoff finalizer will process for them).
+     *
+     * @return array{hours: float, count: int, items: array<int, array<string, mixed>>}
+     */
+    public function findApproverCutoffRisk(int $approverId, string $requestDate, int $limit = 8): array
+    {
+        $params = [
+            ':approverID' => $approverId,
+            ':requestDate' => $requestDate,
+        ];
+
+        $countSql = "SELECT COALESCE(SUM(orq.`duration`), 0) AS `hours`,
+                            COUNT(*) AS `count`
+                     FROM `overtime_accept` oa
+                     INNER JOIN `overtime_request` orq ON orq.`id` = oa.`overtime_id`
+                     WHERE oa.`approver_id` = :approverID
+                       AND oa.`status` IS NULL
+                       AND (orq.`status` IS NULL OR orq.`status` = '')
+                       AND orq.`request_date` = :requestDate";
+        $countStmt = $this->pdo->prepare($countSql);
+        $countStmt->execute($params);
+        $totals = $countStmt->fetch() ?: ['hours' => 0, 'count' => 0];
+
+        $limit = max(1, min(20, $limit));
+        $listSql = "SELECT orq.`id`, orq.`duration`, orq.`request_date`, orq.`date_created`,
+                           el.`id` AS `employee_id`,
+                           el.`surname` AS `employee_name`,
+                           gl.`abbreviation` AS `group_name`
+                    FROM `overtime_accept` oa
+                    INNER JOIN `overtime_request` orq ON orq.`id` = oa.`overtime_id`
+                    LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = orq.`user_id`
+                    LEFT JOIN kdtphdb_new.`group_list` gl ON gl.`id` = orq.`group_id`
+                    WHERE oa.`approver_id` = :approverID
+                      AND oa.`status` IS NULL
+                      AND (orq.`status` IS NULL OR orq.`status` = '')
+                      AND orq.`request_date` = :requestDate
+                    ORDER BY orq.`date_created` ASC
+                    LIMIT {$limit}";
+        $listStmt = $this->pdo->prepare($listSql);
+        $listStmt->execute($params);
+        $items = [];
+        foreach ($listStmt->fetchAll() ?: [] as $row) {
+            $items[] = [
+                'id' => (int) $row['id'],
+                'duration' => (float) ($row['duration'] ?? 0),
+                'request_date' => $row['request_date'] ?? null,
+                'date_created' => $row['date_created'] ?? null,
+                'employee_id' => isset($row['employee_id']) ? (int) $row['employee_id'] : null,
+                'employee_name' => trim((string) ($row['employee_name'] ?? '')) ?: null,
+                'group_name' => trim((string) ($row['group_name'] ?? '')) ?: null,
+            ];
+        }
+
+        return [
+            'hours' => round((float) ($totals['hours'] ?? 0), 2),
+            'count' => (int) ($totals['count'] ?? 0),
+            'items' => $items,
+        ];
+    }
+
+    /**
+     * Auto-reject rate for requests this approver was assigned to in a date window.
+     *
+     * @return array{auto_rejected: int, finalized: int, rate: float|null}
+     */
+    public function findApproverAutoRejectStats(int $approverId, string $from, string $to): array
+    {
+        $sql = "SELECT
+                    COUNT(DISTINCT orq.`id`) AS `finalized`,
+                    COUNT(DISTINCT CASE
+                        WHEN orq.`status` = 0
+                         AND NOT EXISTS (
+                            SELECT 1 FROM `overtime_accept` oax
+                            WHERE oax.`overtime_id` = orq.`id`
+                              AND oax.`status` IS NOT NULL
+                         )
+                        THEN orq.`id`
+                    END) AS `auto_rejected`
+                FROM `overtime_accept` oa
+                INNER JOIN `overtime_request` orq ON orq.`id` = oa.`overtime_id`
+                WHERE oa.`approver_id` = :approverID
+                  AND orq.`request_date` >= :fromDate
+                  AND orq.`request_date` <= :toDate
+                  AND orq.`status` IN (0, 1)";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':approverID' => $approverId,
+            ':fromDate' => $from,
+            ':toDate' => $to,
+        ]);
+        $row = $stmt->fetch() ?: ['finalized' => 0, 'auto_rejected' => 0];
+        $finalized = (int) ($row['finalized'] ?? 0);
+        $autoRejected = (int) ($row['auto_rejected'] ?? 0);
+
+        return [
+            'auto_rejected' => $autoRejected,
+            'finalized' => $finalized,
+            'rate' => $finalized > 0 ? round($autoRejected / $finalized, 4) : null,
+        ];
+    }
 }
