@@ -104,7 +104,8 @@ return function (Container $c, array $config): void {
         $c->get(Mailer::class),
         $c->get(EmailTemplate::class),
         $config['mail'] ?? [],
-        (string) ($config['app']['url'] ?? '')
+        (string) ($config['app']['url'] ?? ''),
+        $c->get(EmployeeRepository::class)
     ));
 
     $c->set(UserController::class, static fn (Container $c) => new UserController(

@@ -1,23 +1,28 @@
 <?php
 namespace App\Service;
 
+use App\Repository\EmployeeRepository;
+
 class MailService
 {
     private $mailer;
     private EmailTemplate $templates;
     private array $mailConfig;
     private string $appUrl;
+    private ?EmployeeRepository $employeeRepo;
 
     public function __construct(
         $mailer,
         ?EmailTemplate $templates = null,
         ?array $mailConfig = null,
-        string $appUrl = ''
+        string $appUrl = '',
+        ?EmployeeRepository $employeeRepo = null
     ) {
         $this->mailer = $mailer;
         $this->templates = $templates ?? new EmailTemplate();
         $this->mailConfig = $mailConfig ?? [];
         $this->appUrl = rtrim($appUrl, '/');
+        $this->employeeRepo = $employeeRepo;
     }
 
     /** Absolute link to an application page, safe for use in an href. */
@@ -50,7 +55,7 @@ class MailService
     public function sendNewRequestEmail(array $queueRow, array $requestData): bool
     {
         $recipientEmail = trim((string) ($queueRow['email_to'] ?? ''));
-        $recipientName = trim((string) ($queueRow['approver_name'] ?? 'Approver'));
+        $recipientName = $this->plainName($queueRow['approver_name'] ?? 'Approver');
 
         if ($recipientEmail === '') {
             error_log('MailService: missing approver email for overtime ' . ($queueRow['overtime_id'] ?? ''));
@@ -58,7 +63,7 @@ class MailService
         }
 
         $html = $this->templates->load('request_email.html');
-        $map = $this->buildNewRequestVars($queueRow, $requestData);
+        $map = $this->buildNewRequestVars($queueRow, $requestData, $recipientEmail);
         $body = $this->templates->render($html, $map);
         $subject = sprintf(
             'New overtime request from %s',
@@ -74,7 +79,7 @@ class MailService
     public function sendStatusUpdateEmail(array $queueRow, array $requestData): bool
     {
         $recipientEmail = trim((string) ($queueRow['email_to'] ?? ''));
-        $recipientName = trim((string) ($queueRow['approver_name'] ?? 'Employee'));
+        $recipientName = $this->plainName($queueRow['approver_name'] ?? 'Employee');
 
         if ($recipientEmail === '') {
             error_log('MailService: missing requestor email for overtime ' . ($queueRow['overtime_id'] ?? ''));
@@ -85,7 +90,7 @@ class MailService
         $isApproved = $decision === 1;
 
         $html = $this->templates->load('status_email.html');
-        $map = $this->buildStatusVars($queueRow, $requestData, $isApproved);
+        $map = $this->buildStatusVars($queueRow, $requestData, $isApproved, $recipientEmail);
         $body = $this->templates->render($html, $map);
         $subject = $isApproved
             ? 'Your overtime request was approved'
@@ -100,7 +105,7 @@ class MailService
     public function sendCancelNotificationEmail(array $queueRow, array $requestData): bool
     {
         $recipientEmail = trim((string) ($queueRow['email_to'] ?? ''));
-        $recipientName = trim((string) ($queueRow['approver_name'] ?? 'PIC'));
+        $recipientName = $this->plainName($queueRow['approver_name'] ?? 'PIC');
 
         if ($recipientEmail === '') {
             error_log('MailService: missing PIC email for cancel on overtime ' . ($queueRow['overtime_id'] ?? ''));
@@ -108,7 +113,7 @@ class MailService
         }
 
         $html = $this->templates->load('cancel_email.html');
-        $map = $this->buildCancelVars($queueRow, $requestData);
+        $map = $this->buildCancelVars($queueRow, $requestData, $recipientEmail);
         $body = $this->templates->render($html, $map);
         $subject = sprintf(
             'Overtime request #%s cancelled by %s',
@@ -119,12 +124,16 @@ class MailService
         return $this->deliver($recipientEmail, $recipientName, $subject, $body);
     }
 
-    private function buildCancelVars(array $queueRow, array $data): array
+    private function buildCancelVars(array $queueRow, array $data, string $recipientEmail): array
     {
+        $plainRecipient = $this->plainName($queueRow['approver_name'] ?? 'PIC');
+
         return [
-            '{{recipient_name}}' => EmailTemplate::escape($queueRow['approver_name'] ?? 'PIC'),
-            '{{requestor_name}}' => EmailTemplate::escape($data['surname'] ?? $data['requestor_name'] ?? '-'),
-            '{{actor_name}}' => EmailTemplate::escape($queueRow['actor_name'] ?? '-'),
+            '{{recipient_name}}' => EmailTemplate::escape(
+                $this->salutationName($recipientEmail, $plainRecipient)
+            ),
+            '{{requestor_name}}' => EmailTemplate::escape($this->requestorPlainName($data)),
+            '{{actor_name}}' => EmailTemplate::escape($this->plainName($queueRow['actor_name'] ?? '-')),
             '{{group_name}}' => EmailTemplate::escape($data['abbreviation'] ?? $data['group_name'] ?? '-'),
             '{{project_list}}' => $this->buildProjectListHtml($data),
             '{{location_name}}' => EmailTemplate::escape($data['location_name'] ?? '-'),
@@ -136,14 +145,17 @@ class MailService
         ];
     }
 
-    private function buildNewRequestVars(array $queueRow, array $data): array
+    private function buildNewRequestVars(array $queueRow, array $data, string $recipientEmail): array
     {
-        $requestor = EmailTemplate::escape($data['surname'] ?? $data['requestor_name'] ?? '-');
+        $plainRecipient = $this->plainName($queueRow['approver_name'] ?? 'Approver');
+        $requestor = EmailTemplate::escape($this->requestorPlainName($data));
         $remarks = EmailTemplate::escape($data['remarks'] ?? '-');
 
         return [
-            '{{recipient_name}}' => EmailTemplate::escape($queueRow['approver_name'] ?? 'Approver'),
-            '{{approver_name}}' => EmailTemplate::escape($queueRow['approver_name'] ?? 'Approver'),
+            '{{recipient_name}}' => EmailTemplate::escape(
+                $this->salutationName($recipientEmail, $plainRecipient)
+            ),
+            '{{approver_name}}' => EmailTemplate::escape($plainRecipient),
             '{{requestor_name}}' => $requestor,
             '{{submitted_at}}' => EmailTemplate::normalizeDate($data['date_created'] ?? null),
             '{{group_name}}' => EmailTemplate::escape($data['abbreviation'] ?? $data['group_name'] ?? '-'),
@@ -158,10 +170,15 @@ class MailService
         ];
     }
 
-    private function buildStatusVars(array $queueRow, array $data, bool $isApproved): array
-    {
+    private function buildStatusVars(
+        array $queueRow,
+        array $data,
+        bool $isApproved,
+        string $recipientEmail
+    ): array {
         $statusLabel = $isApproved ? 'Approved' : 'Rejected';
-        $actor = EmailTemplate::escape($queueRow['actor_name'] ?? '-');
+        $plainRecipient = $this->plainName($queueRow['approver_name'] ?? 'Employee');
+        $actor = EmailTemplate::escape($this->plainName($queueRow['actor_name'] ?? '-'));
         $rawApproverRemarks = trim((string) ($data['approver_remarks'] ?? ''));
         $approverRemarks = EmailTemplate::escape($rawApproverRemarks !== '' ? $rawApproverRemarks : '-');
         $rejectionRemarksBlock = '';
@@ -184,8 +201,10 @@ class MailService
         }
 
         return [
-            '{{recipient_name}}' => EmailTemplate::escape($queueRow['approver_name'] ?? 'Employee'),
-            '{{requestor_name}}' => EmailTemplate::escape($queueRow['approver_name'] ?? 'Employee'),
+            '{{recipient_name}}' => EmailTemplate::escape(
+                $this->salutationName($recipientEmail, $plainRecipient)
+            ),
+            '{{requestor_name}}' => EmailTemplate::escape($plainRecipient),
             '{{status_label}}' => $statusLabel,
             '{{status_label_lower}}' => strtolower($statusLabel),
             '{{status_bg}}' => $isApproved ? '#16a34a' : '#dc2626',
@@ -229,6 +248,41 @@ class MailService
         }, $projects);
 
         return implode('', $items);
+    }
+
+    /** Plain surname for body copy / subjects (no Mr./Mrs./Ms.). */
+    private function requestorPlainName(array $data): string
+    {
+        $surname = trim((string) ($data['surname'] ?? $data['requestor_name'] ?? ''));
+        if ($surname !== '') {
+            return $surname;
+        }
+        $firstname = trim((string) ($data['firstname'] ?? ''));
+        return $firstname !== '' ? $firstname : '-';
+    }
+
+    private function plainName($value): string
+    {
+        $name = trim((string) $value);
+        // Strip a leading courtesy title if an older queued row already stored one.
+        $name = preg_replace('/^(Mr|Mrs|Ms|Miss)\.?\s+/i', '', $name) ?? $name;
+        return trim($name);
+    }
+
+    /** Courtesy title only for the greeting line. */
+    private function salutationName(string $email, string $fallback): string
+    {
+        $fallback = $this->plainName($fallback);
+        if ($this->employeeRepo === null || $email === '') {
+            return $fallback;
+        }
+
+        $person = $this->employeeRepo->findByEmail($email);
+        if (!$person) {
+            return $fallback;
+        }
+
+        return EmailTemplate::formalSurname($person, $fallback);
     }
 
     private function deliver(string $toEmail, string $toName, string $subject, string $html): bool

@@ -86,12 +86,37 @@ class EmployeeRepository
     public function findById(int $id): array
     {
         $sql = "SELECT el.`id`, el.`surname`, el.`firstname`, el.`email`, el.`group_id`,
+                       el.`gender`, el.`marital_status`,
                        gl.`abbreviation` AS `group_abbr`
                 FROM `employee_list` el
                 LEFT JOIN `group_list` gl ON gl.`id` = el.`group_id`
                 WHERE el.`id` = :id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':id' => $id]);
+        $row = $stmt->fetch();
+
+        return $row ?: [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function findByEmail(string $email): array
+    {
+        $email = trim($email);
+        if ($email === '') {
+            return [];
+        }
+
+        $sql = "SELECT el.`id`, el.`surname`, el.`firstname`, el.`email`, el.`group_id`,
+                       el.`gender`, el.`marital_status`,
+                       gl.`abbreviation` AS `group_abbr`
+                FROM `employee_list` el
+                LEFT JOIN `group_list` gl ON gl.`id` = el.`group_id`
+                WHERE el.`email` = :email
+                LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':email' => $email]);
         $row = $stmt->fetch();
 
         return $row ?: [];

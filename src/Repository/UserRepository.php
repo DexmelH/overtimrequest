@@ -14,7 +14,8 @@ class UserRepository
 
     public function findIdByHash(string $userHash): array
     {
-        $sql = "SELECT el.`id`, el.`surname`, el.`firstname`, gl.`id` AS `group_id`, gl.`abbreviation` 
+        $sql = "SELECT el.`id`, el.`surname`, el.`firstname`, el.`gender`, el.`marital_status`,
+                       gl.`id` AS `group_id`, gl.`abbreviation` 
                 FROM `kdtlogin` kl 
                 LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = kl.`fldEmployeeNum` 
                 LEFT JOIN kdtphdb_new.`group_list` gl ON gl.`id` = el.`group_id` 
@@ -56,7 +57,8 @@ class UserRepository
         }
 
         $sql = "SELECT fp.`fldEmployeeNum` AS id, fp.`fldRole` AS role,
-                       el.`surname`, el.`firstname`, el.`email`, fp.`fldGroups` AS groups_raw
+                       el.`surname`, el.`firstname`, el.`email`,
+                       el.`gender`, el.`marital_status`, fp.`fldGroups` AS groups_raw
                 FROM `formspic` fp
                 INNER JOIN kdtphdb_new.`employee_list` el ON el.`id` = fp.`fldEmployeeNum`
                 WHERE el.`emp_status` = 1
@@ -78,6 +80,8 @@ class UserRepository
                 'surname' => (string) ($row['surname'] ?? ''),
                 'firstname' => (string) ($row['firstname'] ?? ''),
                 'email' => (string) ($row['email'] ?? ''),
+                'gender' => $row['gender'] ?? null,
+                'marital_status' => $row['marital_status'] ?? null,
             ];
         }
 

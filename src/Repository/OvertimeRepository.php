@@ -20,7 +20,8 @@ class OvertimeRepository
     public function findRequestEmailDetails(int $requestID): array
     {
         $sql = "SELECT orq.`id`, orq.`remarks`, orq.`duration`, orq.`request_date`, orq.`date_created`, orq.`status`,
-                    el.`surname`, el.`surname` AS requestor_name, el.`email` AS requestor_email,
+                    el.`surname`, el.`firstname`, el.`gender`, el.`marital_status`,
+                    el.`surname` AS requestor_name, el.`email` AS requestor_email,
                     gl.`abbreviation`, gl.`abbreviation` AS group_name,
                     l.`fldLocation` AS location_name
                 FROM `overtime_request` orq
@@ -44,7 +45,8 @@ class OvertimeRepository
 
     public function findRequestorByOvertimeId(int $overtimeID): array
     {
-        $sql = "SELECT el.`id`, el.`surname`, el.`email`
+        $sql = "SELECT el.`id`, el.`surname`, el.`firstname`, el.`email`,
+                       el.`gender`, el.`marital_status`
                 FROM `overtime_request` orq
                 LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = orq.`user_id`
                 WHERE orq.`id` = :overtimeID";
@@ -388,7 +390,8 @@ class OvertimeRepository
      */
     public function findDecisionsWithLevels(int $overtimeID): array
     {
-        $sql = "SELECT oa.`approver_id`, el.`surname`, oa.`status`, oa.`remarks`,
+        $sql = "SELECT oa.`approver_id`, el.`surname`, el.`firstname`, el.`gender`, el.`marital_status`,
+                       oa.`status`, oa.`remarks`,
                        oa.`approval_level`, oa.`date_accepted`
                 FROM `overtime_accept` oa
                 LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = oa.`approver_id`
@@ -402,6 +405,9 @@ class OvertimeRepository
             return [
                 'approver_id' => (int) $row['approver_id'],
                 'surname' => (string) ($row['surname'] ?? 'Approver'),
+                'firstname' => (string) ($row['firstname'] ?? ''),
+                'gender' => $row['gender'] ?? null,
+                'marital_status' => $row['marital_status'] ?? null,
                 'status' => (int) $row['status'],
                 'remarks' => (string) ($row['remarks'] ?? ''),
                 'approval_level' => (int) ($row['approval_level'] ?? 1),
@@ -647,7 +653,8 @@ class OvertimeRepository
 
     public function findPicsForOvertime(int $overtimeID): array
     {
-        $sql = "SELECT el.`id`, el.`surname`, el.`email`
+        $sql = "SELECT el.`id`, el.`surname`, el.`firstname`, el.`email`,
+                       el.`gender`, el.`marital_status`
                 FROM `overtime_accept` oa
                 LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = oa.`approver_id`
                 WHERE oa.`overtime_id` = :overtimeID";

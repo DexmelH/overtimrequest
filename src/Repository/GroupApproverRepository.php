@@ -33,7 +33,8 @@ class GroupApproverRepository
 
     public function findApproversByGroupId(int $groupId, int $excludeUserId): array
     {
-        $sql = "SELECT el.`id`, el.`surname`, el.`email`, oga.`approval_level`
+        $sql = "SELECT el.`id`, el.`surname`, el.`firstname`, el.`email`,
+                       el.`gender`, el.`marital_status`, oga.`approval_level`
                 FROM `overtime_group_approvers` oga
                 INNER JOIN kdtphdb_new.`employee_list` el ON el.`id` = oga.`approver_id`
                 WHERE oga.`group_id` = :groupId AND el.`id` != :userId

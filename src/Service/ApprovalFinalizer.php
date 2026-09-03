@@ -90,7 +90,7 @@ class ApprovalFinalizer
                 $overtimeId,
                 (int) $winner['status'],
                 (string) $winner['remarks'],
-                (string) $winner['surname'],
+                (string) ($winner['surname'] ?? 'Approver'),
                 (int) $winner['approver_id'],
                 false,
                 (int) $winner['approval_level']

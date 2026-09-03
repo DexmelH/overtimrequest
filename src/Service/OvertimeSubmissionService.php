@@ -103,7 +103,7 @@ class OvertimeSubmissionService
             foreach ($approver as $app) {
                 $emailPayload = [
                     'email_to' => $app['email'],
-                    'approver_name' => $app['surname'],
+                    'approver_name' => $app['surname'] ?? 'Approver',
                     'overtime_id' => $id,
                     'email_type' => 'new_request',
                 ];
@@ -258,7 +258,11 @@ class OvertimeSubmissionService
 
             $this->overtimeRepo->updateOvertimeStatus($id, 1);
             $this->overtimeRepo->addAcceptedRequestToDailyReport($id);
-            $this->overtimeRepo->queueRequestorStatusEmail($id, 1, (string) ($approver['surname'] ?? 'Approver'));
+            $this->overtimeRepo->queueRequestorStatusEmail(
+                $id,
+                1,
+                (string) ($approver['surname'] ?? 'Approver')
+            );
 
             $pdo->commit();
 
