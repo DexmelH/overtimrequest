@@ -51,33 +51,26 @@ function syncThemeToggle() {
     : '<i class="bi bi-moon-stars-fill" aria-hidden="true"></i><span class="d-none d-sm-inline">Dark</span>';
 }
 
-function renderNav(currentPage) {
+function renderNav(currentPage, { isApprover = false, isAdmin = false } = {}) {
   const nav = document.getElementById("otNav");
   if (!nav) return;
 
-  nav.innerHTML = NAV_PAGES.map((page) => {
-    const active = page.id === currentPage ? " active" : "";
-    const attrs = [];
-    if (page.adminOnly) attrs.push('data-admin-only="true"');
-    if (page.approverOnly) attrs.push('data-approver-only="true"');
-    const attrStr = attrs.length ? ` ${attrs.join(" ")}` : "";
-    return `<a class="ot-sidebar-link${active}" href="${page.href}"${attrStr}>
+  // Omit role-gated links until session confirms access (no CSS-only hide).
+  const pages = NAV_PAGES.filter((page) => {
+    if (page.approverOnly && !isApprover) return false;
+    if (page.adminOnly && !isAdmin) return false;
+    return true;
+  });
+
+  nav.innerHTML = pages
+    .map((page) => {
+      const active = page.id === currentPage ? " active" : "";
+      return `<a class="ot-sidebar-link${active}" href="${page.href}">
       <i class="bi ${page.icon}" aria-hidden="true"></i>
       <span>${page.label}</span>
     </a>`;
-  }).join("");
-
-  if (currentPage === "admin") {
-    nav.querySelectorAll('[data-admin-only="true"]').forEach((el) => {
-      el.classList.add("is-visible");
-    });
-  }
-
-  if (currentPage === "approve") {
-    nav.querySelectorAll('[data-approver-only="true"]').forEach((el) => {
-      el.classList.add("is-visible");
-    });
-  }
+    })
+    .join("");
 }
 
 function renderThemeToggle() {
@@ -169,7 +162,7 @@ function initSidebarDrawer() {
   });
 }
 
-async function loadSession() {
+async function loadSession(currentPage) {
   try {
     const json = await apiGet(apiUrl("/session"));
     const name = String(json?.user?.name || "").trim();
@@ -180,24 +173,13 @@ async function loadSession() {
       greeting.classList.remove("d-none");
     }
 
-    if (json?.is_approver) {
-      document.querySelectorAll('[data-approver-only="true"]').forEach((el) => {
-        el.classList.add("is-visible");
-      });
-    }
-
-    if (json?.is_admin) {
-      document.querySelectorAll('[data-admin-only="true"]').forEach((el) => {
-        el.classList.add("is-visible");
-      });
-    }
+    renderNav(currentPage, {
+      isApprover: Boolean(json?.is_approver),
+      isAdmin: Boolean(json?.is_admin),
+    });
   } catch {
-    /* session unavailable */
+    /* session unavailable — keep role-gated links hidden */
   }
-}
-
-async function revealAdminNav() {
-  await loadSession();
 }
 
 function staggerCards() {
@@ -211,11 +193,16 @@ function staggerCards() {
 export function initShell() {
   const currentPage = document.body.dataset.page || "";
   updateThemeMeta(getTheme() === "dark");
-  renderNav(currentPage);
+  // Hide gated links by default. On approve/admin pages the page gate already
+  // ran, so show that section link immediately to avoid a nav flash.
+  renderNav(currentPage, {
+    isApprover: currentPage === "approve",
+    isAdmin: currentPage === "admin",
+  });
   renderThemeToggle();
   ensureUserGreeting();
   initSidebarDrawer();
-  revealAdminNav();
+  loadSession(currentPage);
   staggerCards();
 
   requestAnimationFrame(() => {
