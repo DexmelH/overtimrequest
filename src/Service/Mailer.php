@@ -2,7 +2,6 @@
 namespace App\Service;
 
 use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 
 class Mailer
 {
@@ -34,7 +33,11 @@ class Mailer
             $mail->SMTPSecure = false;
             // $mail->Username   = $this->config['username'];
             // $mail->Password   = $this->config['password'];
-            $mail->Port       = $this->config['port'];
+            $mail->Port       = (int) ($this->config['port'] ?? 25);
+            // Without these, an unreachable SMTP host hangs forever and the
+            // queue row stays stuck on status=sending with no last_error.
+            $mail->Timeout    = (int) ($this->config['timeout'] ?? 20);
+            $mail->SMTPKeepAlive = false;
 
             // From
             $mail->setFrom($this->config['from_email'], $this->config['from_name']);
@@ -57,9 +60,10 @@ class Mailer
 
             $mail->send();
             return true;
-        } catch (Exception $e) {
-            error_log('Mailer error: ' . $e->getMessage());
-            return false;
+        } catch (\Throwable $e) {
+            $detail = trim($mail->ErrorInfo !== '' ? $mail->ErrorInfo : $e->getMessage());
+            error_log('Mailer error: ' . $detail);
+            throw new \RuntimeException('SMTP send failed: ' . $detail, 0, $e);
         }
     }
 }

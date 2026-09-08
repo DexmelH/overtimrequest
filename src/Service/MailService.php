@@ -314,7 +314,8 @@ class MailService
             return false;
         } catch (\Throwable $e) {
             error_log('MailService send error: ' . $e->getMessage());
-            return false;
+            // Re-throw so the worker can persist last_error on the queue row.
+            throw $e;
         }
     }
 }

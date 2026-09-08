@@ -21,9 +21,54 @@ error_log(sprintf(
 
 $maxAttempts = 5;
 $baseSleep = 2;
+/** Seconds after which a row stuck in "sending" is treated as abandoned. */
+$staleSendingSeconds = 120;
+
+/**
+ * Mark a claimed job as retryable or permanently failed, and always store last_error.
+ */
+function finalizeFailedJob(
+    PDO $mailRepo,
+    array $row,
+    string $error,
+    int $maxAttempts,
+    int $baseSleep
+): void {
+    $attempts = ((int) ($row['attempts'] ?? 0)) + 1;
+    $error = mb_substr($error, 0, 500);
+
+    if ($attempts >= $maxAttempts) {
+        $mailRepo->prepare(
+            "UPDATE email_queue SET status='failed', attempts = ?, last_error = ? WHERE id = ?"
+        )->execute([$attempts, $error, $row['id']]);
+        error_log("Email job {$row['id']} failed permanently after {$attempts} attempts: {$error}");
+        return;
+    }
+
+    $mailRepo->prepare(
+        "UPDATE email_queue SET status='pending', attempts = ?, last_error = ? WHERE id = ?"
+    )->execute([$attempts, $error, $row['id']]);
+    $sleep = $baseSleep * $attempts;
+    error_log("Email job {$row['id']} failed, will retry after {$sleep}s (attempt {$attempts}): {$error}");
+    sleep($sleep);
+}
 
 while (true) {
+    $claimed = null;
+
     try {
+        // Reclaim abandoned "sending" rows from a crashed / hung previous attempt.
+        $mailRepo->prepare(
+            "UPDATE email_queue
+             SET status = 'pending',
+                 last_error = COALESCE(NULLIF(last_error, ''), 'reclaimed stale sending job')
+             WHERE status = 'sending'
+               AND (
+                    last_attempt_at IS NULL
+                    OR last_attempt_at < (NOW() - INTERVAL {$staleSendingSeconds} SECOND)
+               )"
+        )->execute();
+
         $mailRepo->beginTransaction();
         $stmt = $mailRepo->query(
             "SELECT * FROM email_queue WHERE status='pending' ORDER BY created_at LIMIT 1 FOR UPDATE"
@@ -39,15 +84,16 @@ while (true) {
             "UPDATE email_queue SET status='sending', last_attempt_at = NOW() WHERE id = ?"
         )->execute([$row['id']]);
         $mailRepo->commit();
+        $claimed = $row;
 
-        $requestId = $row['overtime_id'] ?? null;
-        $payload = $overtimeRepo->findRequestEmailDetails((int) $requestId);
+        $requestId = (int) ($row['overtime_id'] ?? 0);
+        $payload = $overtimeRepo->findRequestEmailDetails($requestId);
 
         if (($row['email_type'] ?? 'new_request') === 'status_update') {
             $decision = (int) ($row['decision'] ?? 0);
             $payload['decision'] = $row['decision'] ?? null;
             $payload['approver_remarks'] = $overtimeRepo->findStatusNotificationRemarks(
-                (int) $requestId,
+                $requestId,
                 $decision,
                 $cutoffTime
             );
@@ -57,31 +103,36 @@ while (true) {
 
         if ($ok) {
             $mailRepo->prepare(
-                "UPDATE email_queue SET status='sent', attempts = attempts + 1 WHERE id = ?"
+                "UPDATE email_queue SET status='sent', attempts = attempts + 1, last_error = NULL WHERE id = ?"
             )->execute([$row['id']]);
             error_log("Email job {$row['id']} sent successfully");
+            $claimed = null;
         } else {
-            $attempts = ($row['attempts'] ?? 0) + 1;
-            $error = 'send failed at ' . date('c');
-            if ($attempts >= $maxAttempts) {
-                $mailRepo->prepare(
-                    "UPDATE email_queue SET status='failed', attempts = ?, last_error = ? WHERE id = ?"
-                )->execute([$attempts, $error, $row['id']]);
-                error_log("Email job {$row['id']} failed permanently after {$attempts} attempts");
-            } else {
-                $mailRepo->prepare(
-                    "UPDATE email_queue SET status='pending', attempts = ?, last_error = ? WHERE id = ?"
-                )->execute([$attempts, $error, $row['id']]);
-                $sleep = $baseSleep * $attempts;
-                error_log("Email job {$row['id']} failed, will retry after {$sleep}s (attempt {$attempts})");
-                sleep($sleep);
-            }
+            finalizeFailedJob($mailRepo, $row, 'send returned false', $maxAttempts, $baseSleep);
+            $claimed = null;
         }
     } catch (\Throwable $e) {
         error_log('Worker exception: ' . $e->getMessage());
         if ($mailRepo->inTransaction()) {
             $mailRepo->rollBack();
         }
-        sleep(5);
+        // Status was already committed as "sending" — recover so the job is not stuck forever.
+        if ($claimed !== null) {
+            try {
+                finalizeFailedJob(
+                    $mailRepo,
+                    $claimed,
+                    'worker exception: ' . $e->getMessage(),
+                    $maxAttempts,
+                    $baseSleep
+                );
+            } catch (\Throwable $inner) {
+                error_log('Failed to finalize email job after exception: ' . $inner->getMessage());
+                sleep(5);
+            }
+            $claimed = null;
+        } else {
+            sleep(5);
+        }
     }
 }
