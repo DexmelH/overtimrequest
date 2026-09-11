@@ -1,5 +1,15 @@
 <?php
 
+/**
+ * Long-running email queue worker.
+ *
+ * IMPORTANT (production):
+ * - Run exactly ONE instance (Task Scheduler: "Do not start a new instance").
+ * - This process holds MySQL GET_LOCK('overtime_email_worker') so duplicates exit.
+ * - Stuck status=sending usually means SMTP hung after the row was claimed;
+ *   that is a mail/network problem, but a thrashing worker can also keep mysqld busy.
+ */
+
 use App\Repository\OvertimeRepository;
 use App\Service\MailService;
 
@@ -12,17 +22,40 @@ $mailRepo = $container->get('db.webjmr');
 $mailService = $container->get(MailService::class);
 $overtimeRepo = $container->get(OvertimeRepository::class);
 
-error_log(sprintf(
-    'Email worker started [env=%s, mail=%s, db=%s]',
-    $config['app']['env'] ?? 'unknown',
-    ($config['mail']['enabled'] ?? true) ? 'enabled' : 'disabled',
-    $config['connections']['webjmr']['dsn'] ?? 'n/a'
-));
-
 $maxAttempts = 5;
 $baseSleep = 2;
+/** Idle poll interval when the queue is empty. */
+$idleSleep = 5;
+/** Pause after each processed job so mysqld is not hammered in a tight loop. */
+$jobPause = 1;
+/** How often to reclaim abandoned "sending" rows (not every loop). */
+$reclaimEverySeconds = 60;
 /** Seconds after which a row stuck in "sending" is treated as abandoned. */
 $staleSendingSeconds = 120;
+
+error_log(sprintf(
+    'Email worker started [env=%s, mail=%s, db=%s, pid=%d]',
+    $config['app']['env'] ?? 'unknown',
+    ($config['mail']['enabled'] ?? true) ? 'enabled' : 'disabled',
+    $config['connections']['webjmr']['dsn'] ?? 'n/a',
+    getmypid() ?: 0
+));
+
+// Prevent multiple workers from polling the same queue (common Task Scheduler mistake).
+$lockStmt = $mailRepo->query("SELECT GET_LOCK('overtime_email_worker', 0)");
+$gotLock = $lockStmt && (int) $lockStmt->fetchColumn() === 1;
+if (!$gotLock) {
+    error_log('Email worker exiting: another instance already holds overtime_email_worker lock');
+    exit(0);
+}
+
+register_shutdown_function(static function () use ($mailRepo): void {
+    try {
+        $mailRepo->query("SELECT RELEASE_LOCK('overtime_email_worker')");
+    } catch (\Throwable $e) {
+        // ignore
+    }
+});
 
 /**
  * Mark a claimed job as retryable or permanently failed, and always store last_error.
@@ -53,30 +86,51 @@ function finalizeFailedJob(
     sleep($sleep);
 }
 
+function reclaimStaleSending(PDO $mailRepo, int $staleSendingSeconds): int
+{
+    $stmt = $mailRepo->prepare(
+        "UPDATE email_queue
+         SET status = 'pending',
+             last_error = COALESCE(NULLIF(last_error, ''), 'reclaimed stale sending job')
+         WHERE status = 'sending'
+           AND (
+                last_attempt_at IS NULL
+                OR last_attempt_at < (NOW() - INTERVAL :stale SECOND)
+           )"
+    );
+    $stmt->bindValue(':stale', $staleSendingSeconds, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->rowCount();
+}
+
+$lastReclaimAt = 0;
+
 while (true) {
     $claimed = null;
 
     try {
-        // Reclaim abandoned "sending" rows from a crashed / hung previous attempt.
-        $mailRepo->prepare(
-            "UPDATE email_queue
-             SET status = 'pending',
-                 last_error = COALESCE(NULLIF(last_error, ''), 'reclaimed stale sending job')
-             WHERE status = 'sending'
-               AND (
-                    last_attempt_at IS NULL
-                    OR last_attempt_at < (NOW() - INTERVAL {$staleSendingSeconds} SECOND)
-               )"
-        )->execute();
+        $now = time();
+        if ($now - $lastReclaimAt >= $reclaimEverySeconds) {
+            $reclaimed = reclaimStaleSending($mailRepo, $staleSendingSeconds);
+            $lastReclaimAt = $now;
+            if ($reclaimed > 0) {
+                error_log("Reclaimed {$reclaimed} stale sending email job(s)");
+            }
+        }
 
         $mailRepo->beginTransaction();
+        // SKIP LOCKED avoids pile-ups if a second worker somehow starts.
         $stmt = $mailRepo->query(
-            "SELECT * FROM email_queue WHERE status='pending' ORDER BY created_at LIMIT 1 FOR UPDATE"
+            "SELECT * FROM email_queue
+             WHERE status = 'pending'
+             ORDER BY created_at
+             LIMIT 1
+             FOR UPDATE SKIP LOCKED"
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) {
             $mailRepo->commit();
-            sleep(3);
+            sleep($idleSleep);
             continue;
         }
 
@@ -107,6 +161,7 @@ while (true) {
             )->execute([$row['id']]);
             error_log("Email job {$row['id']} sent successfully");
             $claimed = null;
+            sleep($jobPause);
         } else {
             finalizeFailedJob($mailRepo, $row, 'send returned false', $maxAttempts, $baseSleep);
             $claimed = null;
