@@ -31,6 +31,10 @@ UPDATE email_queue SET status = 'pending' WHERE status = 'sending';
 
 5. Verify within 1–2 minutes: pending rows get `last_attempt_at` set; then `sent` or `failed` with `last_error`.
 
+## Compatibility
+
+Claim SQL uses `SELECT … FOR UPDATE` (no `SKIP LOCKED`). That works on MariaDB 10.4 / typical XAMPP. Overlap is prevented by `storage/email_worker.lock` plus Task Scheduler “Do not start a new instance”.
+
 ## Manual run
 
 ```bash

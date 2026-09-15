@@ -8,7 +8,6 @@ $pdo = $db->getConnection('webjmr');
 echo 'version=' . $pdo->query('SELECT VERSION()')->fetchColumn() . PHP_EOL;
 
 foreach ([
-    "SELECT id FROM email_queue WHERE status='pending' ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED",
     "SELECT id FROM email_queue WHERE status='pending' ORDER BY created_at LIMIT 1 FOR UPDATE",
 ] as $sql) {
     try {

@@ -75,27 +75,6 @@ error_log(sprintf(
     $limit
 ));
 
-/**
- * Detect FOR UPDATE SKIP LOCKED (MySQL 8+ / MariaDB 10.6+).
- */
-function supportsSkipLocked(PDO $pdo): bool
-{
-    try {
-        $pdo->beginTransaction();
-        $pdo->query(
-            "SELECT id FROM email_queue WHERE status = 'pending' ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED"
-        );
-        $pdo->commit();
-        return true;
-    } catch (\Throwable $e) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
-        error_log('FOR UPDATE SKIP LOCKED not available, falling back: ' . $e->getMessage());
-        return false;
-    }
-}
-
 function finalizeFailedJob(PDO $mailRepo, array $row, string $error, int $maxAttempts): string
 {
     $attempts = ((int) ($row['attempts'] ?? 0)) + 1;
@@ -134,13 +113,19 @@ function reclaimStaleSending(PDO $mailRepo, int $staleSendingSeconds): int
 }
 
 /**
+ * Claim one pending row. Uses FOR UPDATE only (no SKIP LOCKED) for MariaDB < 10.6.
+ * Concurrent workers are already prevented by the file lock above.
+ *
  * @return array{id: mixed}|null
  */
-function claimNextPending(PDO $mailRepo, string $claimSql): ?array
+function claimNextPending(PDO $mailRepo): ?array
 {
     $mailRepo->beginTransaction();
     try {
-        $stmt = $mailRepo->query($claimSql);
+        // Compatible with MariaDB 10.4+/MySQL 5.7+ (XAMPP). SKIP LOCKED needs MariaDB 10.6+/MySQL 8+.
+        $stmt = $mailRepo->query(
+            "SELECT * FROM email_queue WHERE status = 'pending' ORDER BY created_at LIMIT 1 FOR UPDATE"
+        );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) {
             $mailRepo->commit();
@@ -160,13 +145,6 @@ function claimNextPending(PDO $mailRepo, string $claimSql): ?array
     }
 }
 
-$useSkipLocked = supportsSkipLocked($mailRepo);
-$claimSql = $useSkipLocked
-    ? "SELECT * FROM email_queue WHERE status = 'pending' ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED"
-    : "SELECT * FROM email_queue WHERE status = 'pending' ORDER BY created_at LIMIT 1 FOR UPDATE";
-
-error_log('Email batch claim mode: ' . ($useSkipLocked ? 'SKIP LOCKED' : 'FOR UPDATE'));
-
 $stats = [
     'processed' => 0,
     'sent' => 0,
@@ -184,7 +162,7 @@ try {
     for ($i = 0; $i < $limit; $i++) {
         $claimed = null;
         try {
-            $row = claimNextPending($mailRepo, $claimSql);
+            $row = claimNextPending($mailRepo);
             if ($row === null) {
                 break;
             }
