@@ -1,13 +1,21 @@
 <?php
 
 /**
- * Long-running email queue worker.
+ * Email queue batch drain (not a daemon).
  *
- * IMPORTANT (production):
- * - Run exactly ONE instance (Task Scheduler: "Do not start a new instance").
- * - This process holds MySQL GET_LOCK('overtime_email_worker') so duplicates exit.
- * - Stuck status=sending usually means SMTP hung after the row was claimed;
- *   that is a mail/network problem, but a thrashing worker can also keep mysqld busy.
+ * Default: reclaim stale "sending" once, process up to 10 pending jobs, exit.
+ *
+ * Usage:
+ *   php src/usr/bin/email_worker.php
+ *   php src/usr/bin/email_worker.php --limit=20
+ *
+ * Production (Windows Task Scheduler):
+ *   - Trigger: every 1 minute
+ *   - Action: scripts\start_email_worker.bat
+ *   - Settings: "Do not start a new instance if the previous is still running"
+ *   - Stop any old long-running email_worker php.exe processes before switching
+ *
+ * Server DB (once): apply databases/migrations/013_email_queue_worker_indexes.sql
  */
 
 use App\Repository\OvertimeRepository;
@@ -23,50 +31,73 @@ $mailService = $container->get(MailService::class);
 $overtimeRepo = $container->get(OvertimeRepository::class);
 
 $maxAttempts = 5;
-$baseSleep = 2;
-/** Idle poll interval when the queue is empty. */
-$idleSleep = 5;
-/** Pause after each processed job so mysqld is not hammered in a tight loop. */
-$jobPause = 1;
-/** How often to reclaim abandoned "sending" rows (not every loop). */
-$reclaimEverySeconds = 60;
-/** Seconds after which a row stuck in "sending" is treated as abandoned. */
 $staleSendingSeconds = 120;
+$defaultLimit = 10;
 
-error_log(sprintf(
-    'Email worker started [env=%s, mail=%s, db=%s, pid=%d]',
-    $config['app']['env'] ?? 'unknown',
-    ($config['mail']['enabled'] ?? true) ? 'enabled' : 'disabled',
-    $config['connections']['webjmr']['dsn'] ?? 'n/a',
-    getmypid() ?: 0
-));
+$limit = $defaultLimit;
+foreach ($argv ?? [] as $arg) {
+    if (preg_match('/^--limit=(\d+)$/', (string) $arg, $m)) {
+        $limit = max(1, min(100, (int) $m[1]));
+    }
+}
 
-// Prevent multiple workers from polling the same queue (common Task Scheduler mistake).
-$lockStmt = $mailRepo->query("SELECT GET_LOCK('overtime_email_worker', 0)");
-$gotLock = $lockStmt && (int) $lockStmt->fetchColumn() === 1;
-if (!$gotLock) {
-    error_log('Email worker exiting: another instance already holds overtime_email_worker lock');
+$projectRoot = dirname(__DIR__, 2);
+$lockDir = $projectRoot . DIRECTORY_SEPARATOR . 'storage';
+if (!is_dir($lockDir) && !mkdir($lockDir, 0775, true) && !is_dir($lockDir)) {
+    fwrite(STDERR, "Cannot create storage directory for email worker lock.\n");
+    exit(1);
+}
+
+$lockPath = $lockDir . DIRECTORY_SEPARATOR . 'email_worker.lock';
+$lockFh = fopen($lockPath, 'c+');
+if ($lockFh === false) {
+    fwrite(STDERR, "Cannot open email worker lock file.\n");
+    exit(1);
+}
+
+if (!flock($lockFh, LOCK_EX | LOCK_NB)) {
+    $msg = 'Email worker exiting: another batch is already running (file lock).';
+    error_log($msg);
+    fwrite(STDOUT, $msg . "\n");
+    fclose($lockFh);
     exit(0);
 }
 
-register_shutdown_function(static function () use ($mailRepo): void {
-    try {
-        $mailRepo->query("SELECT RELEASE_LOCK('overtime_email_worker')");
-    } catch (\Throwable $e) {
-        // ignore
-    }
-});
+fwrite($lockFh, (string) (getmypid() ?: 0) . ' ' . date('c') . "\n");
+fflush($lockFh);
+
+error_log(sprintf(
+    'Email batch started [env=%s, mail=%s, db=%s, pid=%d, limit=%d]',
+    $config['app']['env'] ?? 'unknown',
+    ($config['mail']['enabled'] ?? true) ? 'enabled' : 'disabled',
+    $config['connections']['webjmr']['dsn'] ?? 'n/a',
+    getmypid() ?: 0,
+    $limit
+));
 
 /**
- * Mark a claimed job as retryable or permanently failed, and always store last_error.
+ * Detect FOR UPDATE SKIP LOCKED (MySQL 8+ / MariaDB 10.6+).
  */
-function finalizeFailedJob(
-    PDO $mailRepo,
-    array $row,
-    string $error,
-    int $maxAttempts,
-    int $baseSleep
-): void {
+function supportsSkipLocked(PDO $pdo): bool
+{
+    try {
+        $pdo->beginTransaction();
+        $pdo->query(
+            "SELECT id FROM email_queue WHERE status = 'pending' ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED"
+        );
+        $pdo->commit();
+        return true;
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        error_log('FOR UPDATE SKIP LOCKED not available, falling back: ' . $e->getMessage());
+        return false;
+    }
+}
+
+function finalizeFailedJob(PDO $mailRepo, array $row, string $error, int $maxAttempts): string
+{
     $attempts = ((int) ($row['attempts'] ?? 0)) + 1;
     $error = mb_substr($error, 0, 500);
 
@@ -75,19 +106,19 @@ function finalizeFailedJob(
             "UPDATE email_queue SET status='failed', attempts = ?, last_error = ? WHERE id = ?"
         )->execute([$attempts, $error, $row['id']]);
         error_log("Email job {$row['id']} failed permanently after {$attempts} attempts: {$error}");
-        return;
+        return 'failed';
     }
 
     $mailRepo->prepare(
         "UPDATE email_queue SET status='pending', attempts = ?, last_error = ? WHERE id = ?"
     )->execute([$attempts, $error, $row['id']]);
-    $sleep = $baseSleep * $attempts;
-    error_log("Email job {$row['id']} failed, will retry after {$sleep}s (attempt {$attempts}): {$error}");
-    sleep($sleep);
+    error_log("Email job {$row['id']} failed, requeued for next batch (attempt {$attempts}): {$error}");
+    return 'requeued';
 }
 
 function reclaimStaleSending(PDO $mailRepo, int $staleSendingSeconds): int
 {
+    $seconds = max(1, $staleSendingSeconds);
     $stmt = $mailRepo->prepare(
         "UPDATE email_queue
          SET status = 'pending',
@@ -95,99 +126,132 @@ function reclaimStaleSending(PDO $mailRepo, int $staleSendingSeconds): int
          WHERE status = 'sending'
            AND (
                 last_attempt_at IS NULL
-                OR last_attempt_at < (NOW() - INTERVAL :stale SECOND)
+                OR last_attempt_at < (NOW() - INTERVAL {$seconds} SECOND)
            )"
     );
-    $stmt->bindValue(':stale', $staleSendingSeconds, PDO::PARAM_INT);
     $stmt->execute();
     return $stmt->rowCount();
 }
 
-$lastReclaimAt = 0;
-
-while (true) {
-    $claimed = null;
-
+/**
+ * @return array{id: mixed}|null
+ */
+function claimNextPending(PDO $mailRepo, string $claimSql): ?array
+{
+    $mailRepo->beginTransaction();
     try {
-        $now = time();
-        if ($now - $lastReclaimAt >= $reclaimEverySeconds) {
-            $reclaimed = reclaimStaleSending($mailRepo, $staleSendingSeconds);
-            $lastReclaimAt = $now;
-            if ($reclaimed > 0) {
-                error_log("Reclaimed {$reclaimed} stale sending email job(s)");
-            }
-        }
-
-        $mailRepo->beginTransaction();
-        // SKIP LOCKED avoids pile-ups if a second worker somehow starts.
-        $stmt = $mailRepo->query(
-            "SELECT * FROM email_queue
-             WHERE status = 'pending'
-             ORDER BY created_at
-             LIMIT 1
-             FOR UPDATE SKIP LOCKED"
-        );
+        $stmt = $mailRepo->query($claimSql);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$row) {
             $mailRepo->commit();
-            sleep($idleSleep);
-            continue;
+            return null;
         }
 
         $mailRepo->prepare(
             "UPDATE email_queue SET status='sending', last_attempt_at = NOW() WHERE id = ?"
         )->execute([$row['id']]);
         $mailRepo->commit();
-        $claimed = $row;
-
-        $requestId = (int) ($row['overtime_id'] ?? 0);
-        $payload = $overtimeRepo->findRequestEmailDetails($requestId);
-
-        if (($row['email_type'] ?? 'new_request') === 'status_update') {
-            $decision = (int) ($row['decision'] ?? 0);
-            $payload['decision'] = $row['decision'] ?? null;
-            $payload['approver_remarks'] = $overtimeRepo->findStatusNotificationRemarks(
-                $requestId,
-                $decision,
-                $cutoffTime
-            );
-        }
-
-        $ok = $mailService->sendQueuedEmail($row, $payload);
-
-        if ($ok) {
-            $mailRepo->prepare(
-                "UPDATE email_queue SET status='sent', attempts = attempts + 1, last_error = NULL WHERE id = ?"
-            )->execute([$row['id']]);
-            error_log("Email job {$row['id']} sent successfully");
-            $claimed = null;
-            sleep($jobPause);
-        } else {
-            finalizeFailedJob($mailRepo, $row, 'send returned false', $maxAttempts, $baseSleep);
-            $claimed = null;
-        }
+        return $row;
     } catch (\Throwable $e) {
-        error_log('Worker exception: ' . $e->getMessage());
         if ($mailRepo->inTransaction()) {
             $mailRepo->rollBack();
         }
-        // Status was already committed as "sending" — recover so the job is not stuck forever.
-        if ($claimed !== null) {
-            try {
-                finalizeFailedJob(
-                    $mailRepo,
-                    $claimed,
-                    'worker exception: ' . $e->getMessage(),
-                    $maxAttempts,
-                    $baseSleep
-                );
-            } catch (\Throwable $inner) {
-                error_log('Failed to finalize email job after exception: ' . $inner->getMessage());
-                sleep(5);
-            }
-            $claimed = null;
-        } else {
-            sleep(5);
-        }
+        throw $e;
     }
 }
+
+$useSkipLocked = supportsSkipLocked($mailRepo);
+$claimSql = $useSkipLocked
+    ? "SELECT * FROM email_queue WHERE status = 'pending' ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED"
+    : "SELECT * FROM email_queue WHERE status = 'pending' ORDER BY created_at LIMIT 1 FOR UPDATE";
+
+error_log('Email batch claim mode: ' . ($useSkipLocked ? 'SKIP LOCKED' : 'FOR UPDATE'));
+
+$stats = [
+    'processed' => 0,
+    'sent' => 0,
+    'failed' => 0,
+    'requeued' => 0,
+    'reclaimed' => 0,
+];
+
+try {
+    $stats['reclaimed'] = reclaimStaleSending($mailRepo, $staleSendingSeconds);
+    if ($stats['reclaimed'] > 0) {
+        error_log("Reclaimed {$stats['reclaimed']} stale sending email job(s)");
+    }
+
+    for ($i = 0; $i < $limit; $i++) {
+        $claimed = null;
+        try {
+            $row = claimNextPending($mailRepo, $claimSql);
+            if ($row === null) {
+                break;
+            }
+            $claimed = $row;
+            $stats['processed']++;
+
+            $requestId = (int) ($row['overtime_id'] ?? 0);
+            $payload = $overtimeRepo->findRequestEmailDetails($requestId);
+
+            if (($row['email_type'] ?? 'new_request') === 'status_update') {
+                $decision = (int) ($row['decision'] ?? 0);
+                $payload['decision'] = $row['decision'] ?? null;
+                $payload['approver_remarks'] = $overtimeRepo->findStatusNotificationRemarks(
+                    $requestId,
+                    $decision,
+                    $cutoffTime
+                );
+            }
+
+            $ok = $mailService->sendQueuedEmail($row, $payload);
+
+            if ($ok) {
+                $mailRepo->prepare(
+                    "UPDATE email_queue SET status='sent', attempts = attempts + 1, last_error = NULL WHERE id = ?"
+                )->execute([$row['id']]);
+                error_log("Email job {$row['id']} sent successfully");
+                $stats['sent']++;
+                $claimed = null;
+            } else {
+                $outcome = finalizeFailedJob($mailRepo, $row, 'send returned false', $maxAttempts);
+                $stats[$outcome === 'failed' ? 'failed' : 'requeued']++;
+                $claimed = null;
+            }
+        } catch (\Throwable $e) {
+            error_log('Batch worker exception: ' . $e->getMessage());
+            if ($mailRepo->inTransaction()) {
+                $mailRepo->rollBack();
+            }
+            if ($claimed !== null) {
+                try {
+                    $outcome = finalizeFailedJob(
+                        $mailRepo,
+                        $claimed,
+                        'worker exception: ' . $e->getMessage(),
+                        $maxAttempts
+                    );
+                    $stats[$outcome === 'failed' ? 'failed' : 'requeued']++;
+                } catch (\Throwable $inner) {
+                    error_log('Failed to finalize email job after exception: ' . $inner->getMessage());
+                    $stats['failed']++;
+                }
+            }
+        }
+    }
+} finally {
+    flock($lockFh, LOCK_UN);
+    fclose($lockFh);
+}
+
+$summary = sprintf(
+    'Email batch finished processed=%d sent=%d failed=%d requeued=%d reclaimed=%d',
+    $stats['processed'],
+    $stats['sent'],
+    $stats['failed'],
+    $stats['requeued'],
+    $stats['reclaimed']
+);
+error_log($summary);
+fwrite(STDOUT, $summary . "\n");
+exit(0);
