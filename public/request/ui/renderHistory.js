@@ -1,12 +1,17 @@
 import { history, filter, searchQuery } from "../services/state.js";
-import { statusClass, statusText } from "../../shared/js/status.js";
+import { historyStatusClass, historyStatusText } from "../../shared/js/status.js";
 import { escapeHtml } from "../../shared/js/escapeHtml.js";
 import { openModal } from "../components/modal.js";
+
+function hasFollowUp(item) {
+  return item.has_follow_up === true || item.has_follow_up === 1 || item.has_follow_up === "1";
+}
 
 function matchesFilter(item) {
   if (filter === "all") return true;
   if (filter === "approved") return item.status == 1;
-  if (filter === "denied") return item.status == 0;
+  if (filter === "denied") return item.status == 0 && !hasFollowUp(item);
+  if (filter === "resubmitted") return item.status == 0 && hasFollowUp(item);
   if (filter === "pending") return item.status == null || item.status === "";
   if (filter === "cancelled") return item.status == 2;
   return true;
@@ -46,7 +51,7 @@ export function renderHistory() {
             <div class="history-sub">${escapeHtml(item.request_date || "")} · ${escapeHtml(item.duration ?? 0)} hrs · ${escapeHtml(item.location_name || "")}</div>
           </div>
         </div>
-        <span class="status-badge ${statusClass(item.status)}">${escapeHtml(statusText(item.status))}</span>
+        <span class="status-badge ${historyStatusClass(item)}">${escapeHtml(historyStatusText(item))}</span>
       </div>
     `);
 

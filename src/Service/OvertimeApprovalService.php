@@ -44,6 +44,7 @@ class OvertimeApprovalService
             $request['can_change'] = !$alreadyFinalized;
             $request['is_on_behalf'] = ($request['submitted_by'] ?? null) !== null;
             $request['is_follow_up'] = ($request['origin_request_id'] ?? null) !== null;
+            $request['has_follow_up'] = ((int) ($request['has_follow_up'] ?? 0)) === 1;
 
             [$statusCode, $statusLabel] = $this->deriveRequestStatus($request, $anyoneActed);
             $request['status_code'] = $statusCode;
@@ -94,9 +95,17 @@ class OvertimeApprovalService
                 : ['approved', 'Approved'];
         }
 
-        return $anyoneActed
-            ? ['rejected', 'Rejected']
-            : ['auto_rejected', 'Auto-rejected'];
+        if ($anyoneActed) {
+            return ['rejected', 'Rejected'];
+        }
+
+        // Auto-rejected originals keep that outcome; once a follow-up exists
+        // the status becomes Re-submitted so the list shows the later action.
+        if (!empty($request['has_follow_up'])) {
+            return ['resubmitted', 'Re-submitted'];
+        }
+
+        return ['auto_rejected', 'Auto-rejected'];
     }
 
     /**

@@ -595,6 +595,12 @@ body.ot-sidebar-open {
   border: 1px dashed var(--ot-danger);
 }
 
+.status-resubmitted {
+  background: var(--ot-accent-soft);
+  color: var(--ot-accent);
+  border: 1px dashed var(--ot-accent);
+}
+
 .status-followup {
   background: var(--ot-surface-muted);
   color: var(--ot-muted);

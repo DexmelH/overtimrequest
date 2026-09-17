@@ -233,6 +233,14 @@ $finalized = ['status' => '1', 'is_finalized' => true, 'my_decision' => 1, 'is_o
 [$aCode3] = $deriveAction->invoke($approvalSvc, $finalized);
 qa('Status UI', 'Finalized: Approved only (no action badge)', $sCode3 === 'approved' && $aCode3 === null, $sLabel3);
 
+$autoRejected = ['status' => '0', 'is_finalized' => true, 'my_decision' => null, 'is_on_behalf' => false, 'has_follow_up' => false];
+[$sCode4, $sLabel4] = $deriveRequest->invoke($approvalSvc, $autoRejected, false);
+qa('Status UI', 'Auto-rejected (no follow-up)', $sCode4 === 'auto_rejected', $sLabel4);
+
+$resubmitted = ['status' => '0', 'is_finalized' => true, 'my_decision' => null, 'is_on_behalf' => false, 'has_follow_up' => true];
+[$sCode5, $sLabel5] = $deriveRequest->invoke($approvalSvc, $resubmitted, false);
+qa('Status UI', 'Auto-rejected that was re-submitted', $sCode5 === 'resubmitted', $sLabel5);
+
 $list510 = $approvalSvc->getOvertimeToApprove(510)['data'] ?? [];
 $finalRows = array_filter($list510, static fn(array $r): bool => !empty($r['is_finalized']));
 $finalWithAction = array_filter($finalRows, static fn(array $r): bool => ($r['action_code'] ?? null) !== null);

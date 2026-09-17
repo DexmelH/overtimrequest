@@ -1,5 +1,5 @@
 import { history } from "../services/state.js";
-import { statusClass, statusText, isPending } from "../../shared/js/status.js";
+import { historyStatusClass, historyStatusText, isPending } from "../../shared/js/status.js";
 import { renderManagers } from "../../shared/js/approvers.js";
 
 const modalEl = document.getElementById("detailModal");
@@ -44,7 +44,7 @@ export function openModal(id) {
   $("#m_hours").text(`${item.duration ?? "—"} hrs`);
   $("#m_remarks").text(item.remarks || "—");
   $("#m_statusBadge").html(
-    `<span class="status-badge ${statusClass(item.status)}">${statusText(item.status)}</span>`,
+    `<span class="status-badge ${historyStatusClass(item)}">${historyStatusText(item)}</span>`,
   );
   renderManagers(item.approver_details || []);
 

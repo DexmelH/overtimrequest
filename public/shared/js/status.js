@@ -23,12 +23,32 @@ export function isPending(status) {
   return status == null || status === "";
 }
 
+function isTruthyFlag(value) {
+  return value === true || value === 1 || value === "1";
+}
+
+/** Employee-history display: auto-rejected rows that were re-filed. */
+export function historyStatusClass(item) {
+  if (isTruthyFlag(item?.has_follow_up) && (item.status == 0 || item.status === "0")) {
+    return "status-resubmitted";
+  }
+  return statusClass(item?.status);
+}
+
+export function historyStatusText(item) {
+  if (isTruthyFlag(item?.has_follow_up) && (item.status == 0 || item.status === "0")) {
+    return "Re-submitted";
+  }
+  return statusText(item?.status);
+}
+
 const REQUEST_STATUS_CLASSES = {
   pending: "status-pending",
   approved: "status-approved",
   auto_approved: "status-auto-approved",
   rejected: "status-denied",
   auto_rejected: "status-auto-rejected",
+  resubmitted: "status-resubmitted",
   cancelled: "status-cancelled",
 };
 

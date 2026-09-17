@@ -90,6 +90,11 @@ class OvertimeRepository
     public function findHistoryByUserId(string $userID): array
     {
         $sql = "SELECT orq.`id`, orq.`duration`, orq.`remarks`, orq.`request_date`, orq.`status`,
+                       orq.`origin_request_id`,
+                       EXISTS (
+                           SELECT 1 FROM `overtime_request` fu
+                           WHERE fu.`origin_request_id` = orq.`id`
+                       ) AS `has_follow_up`,
                        gl.`abbreviation` AS `group_name`,
                        l.`fldLocation` AS `location_name`
                 FROM `overtime_request` orq
@@ -245,6 +250,12 @@ class OvertimeRepository
             $row['projects'] = $projects;
             $row['project_name'] = $this->formatProjectSummary($projects);
             $row['approver_details'] = $related['approvers'][$requestId] ?? [];
+            if (array_key_exists('has_follow_up', $row)) {
+                $row['has_follow_up'] = ((int) $row['has_follow_up']) === 1;
+            }
+            if (array_key_exists('origin_request_id', $row)) {
+                $row['is_follow_up'] = $row['origin_request_id'] !== null && $row['origin_request_id'] !== '';
+            }
         }
         unset($row);
 
@@ -420,6 +431,10 @@ class OvertimeRepository
     {
         $sql = "SELECT orq.`id`, orq.`duration`, orq.`remarks`, orq.`request_date`, orq.`status`,
                        orq.`date_created`, orq.`submitted_by`, orq.`origin_request_id`,
+                       EXISTS (
+                           SELECT 1 FROM `overtime_request` fu
+                           WHERE fu.`origin_request_id` = orq.`id`
+                       ) AS `has_follow_up`,
                        el.`id` AS `employee_id`,
                        el.`surname` AS `employee_name`,
                        gl.`abbreviation` AS `group_name`,
