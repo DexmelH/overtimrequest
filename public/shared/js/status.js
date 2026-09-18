@@ -27,10 +27,13 @@ function isTruthyFlag(value) {
   return value === true || value === 1 || value === "1";
 }
 
-/** Employee-history display: auto-rejected rows that were re-filed. */
+/** Employee-history display: auto-rejected rows that were re-filed, auto-approved with no chain. */
 export function historyStatusClass(item) {
   if (isTruthyFlag(item?.has_follow_up) && (item.status == 0 || item.status === "0")) {
     return "status-resubmitted";
+  }
+  if (isAutoApprovedHistory(item)) {
+    return "status-auto-approved";
   }
   return statusClass(item?.status);
 }
@@ -39,7 +42,19 @@ export function historyStatusText(item) {
   if (isTruthyFlag(item?.has_follow_up) && (item.status == 0 || item.status === "0")) {
     return "Re-submitted";
   }
+  if (isAutoApprovedHistory(item)) {
+    return "Auto-approved";
+  }
   return statusText(item?.status);
+}
+
+function isAutoApprovedHistory(item) {
+  if (isTruthyFlag(item?.is_auto_approved)) {
+    return true;
+  }
+  const approved = item?.status == 1 || item?.status === "1";
+  const chain = item?.approver_details;
+  return approved && Array.isArray(chain) && chain.length === 0;
 }
 
 const REQUEST_STATUS_CLASSES = {

@@ -110,7 +110,7 @@ return function (Container $c, array $config): void {
 
     $c->set(UserController::class, static fn (Container $c) => new UserController(
         $c->get(UserRepository::class),
-        $c->get(GroupApproverRepository::class),
+        $c->get(ApproverDirectoryService::class),
         $c->get(AdminAccessService::class),
         $c->get('config.approval_cutoff_time')
     ));

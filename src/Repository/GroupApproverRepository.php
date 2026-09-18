@@ -71,6 +71,20 @@ class GroupApproverRepository
         return (int) $stmt->fetchColumn() > 0;
     }
 
+    public function findHighestApprovalLevel(int $approverId): int
+    {
+        if ($approverId <= 0) {
+            return 0;
+        }
+
+        $sql = "SELECT MAX(`approval_level`) FROM `overtime_group_approvers`
+                WHERE `approver_id` = :approverId";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':approverId' => $approverId]);
+
+        return (int) ($stmt->fetchColumn() ?: 0);
+    }
+
     public function hasConfiguredApprovers(int $groupId): bool
     {
         $sql = "SELECT COUNT(*) FROM `overtime_group_approvers` WHERE `group_id` = :groupId";

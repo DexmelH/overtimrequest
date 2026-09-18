@@ -250,6 +250,8 @@ class OvertimeRepository
             $row['projects'] = $projects;
             $row['project_name'] = $this->formatProjectSummary($projects);
             $row['approver_details'] = $related['approvers'][$requestId] ?? [];
+            $row['is_auto_approved'] = (string) ($row['status'] ?? '') === '1'
+                && empty($row['approver_details']);
             if (array_key_exists('has_follow_up', $row)) {
                 $row['has_follow_up'] = ((int) $row['has_follow_up']) === 1;
             }

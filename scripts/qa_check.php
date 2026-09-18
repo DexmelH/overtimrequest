@@ -184,6 +184,14 @@ qa(
     'levels=' . implode(',', $levels)
 );
 
+$level10 = $approverDir->findHighestApprovalLevel(10);
+qa(
+    'Self L3+ auto-approve',
+    'Highest approval level is an int 0–4',
+    $level10 >= 0 && $level10 <= 4,
+    'user 10 level=' . $level10 . ' senior=' . ($approverDir->isSeniorApprover(10) ? 'yes' : 'no')
+);
+
 // ---------------------------------------------------------------------------
 // 7. On-behalf main-group gate
 // ---------------------------------------------------------------------------

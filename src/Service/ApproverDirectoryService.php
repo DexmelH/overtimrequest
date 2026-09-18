@@ -67,6 +67,26 @@ class ApproverDirectoryService
     }
 
     /**
+     * Highest OGA level or Form PIC role this user holds (any group).
+     */
+    public function findHighestApprovalLevel(int $userId): int
+    {
+        if ($userId <= 0) {
+            return 0;
+        }
+
+        return max(
+            $this->groupApproverRepo->findHighestApprovalLevel($userId),
+            $this->userRepo->findHighestFormPicRole($userId)
+        );
+    }
+
+    public function isSeniorApprover(int $userId, int $minLevel = 3): bool
+    {
+        return $this->findHighestApprovalLevel($userId) >= $minLevel;
+    }
+
+    /**
      * Resolve approvers for a group (OGA first, then Form PIC fallback).
      * Self-filed and on-behalf submit both pass the employee's main group, not
      * the selected OT group.

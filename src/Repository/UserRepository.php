@@ -131,6 +131,19 @@ class UserRepository
         return (int) $stmt->fetchColumn() > 0;
     }
 
+    public function findHighestFormPicRole(int $employeeId): int
+    {
+        if ($employeeId <= 0) {
+            return 0;
+        }
+
+        $sql = "SELECT MAX(`fldRole`) FROM `formspic` WHERE `fldEmployeeNum` = :employeeId";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':employeeId' => $employeeId]);
+
+        return (int) ($stmt->fetchColumn() ?: 0);
+    }
+
     private function formPicGroupsContains(string $serialized, string $abbreviation): bool
     {
         $groups = @unserialize($serialized);

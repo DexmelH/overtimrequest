@@ -19,7 +19,10 @@ export async function addOvertimeRequest(formData) {
       if (payload.id) {
         openModal(payload.id);
       }
-      showToast("Overtime request submitted successfully.", { type: "success" });
+      showToast(
+        payload.message || "Overtime request submitted successfully.",
+        { type: "success" },
+      );
       return payload;
     }
     showToast(payload?.message || "Failed to submit request.", { type: "warning" });

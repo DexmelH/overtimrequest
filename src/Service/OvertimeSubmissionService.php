@@ -39,11 +39,13 @@ class OvertimeSubmissionService
      */
     public function addOvertime(array $user, array $input): array
     {
-        if ($this->cutoff->isPastCutoff()) {
+        $userID = (int) $user['id'];
+        $selfLevel = $this->approverDirectory->findHighestApprovalLevel($userID);
+        $selfAutoApprove = $selfLevel >= 3;
+
+        if (!$selfAutoApprove && $this->cutoff->isPastCutoff()) {
             return ['success' => false, 'message' => $this->cutoff->employeeLockMessage()];
         }
-
-        $userID = $user['id'];
         
         $groupID = (int) ($input['group'] ?? 0);
         $locationID = (int) ($input['location'] ?? 0);
@@ -93,45 +95,66 @@ class OvertimeSubmissionService
         try {
             $pdo->beginTransaction();
 
-            $id = $this->overtimeRepo->addOvertime($payload);
-            $this->overtimeRepo->addProjectAllocations((int) $id, $projects);
-            $approver = $this->approverDirectory->resolveApprovers(
-                $mainGroupId,
-                $mainGroupAbbrev,
-                (int) $userID
-            );
-            foreach ($approver as $app) {
-                $emailPayload = [
-                    'email_to' => $app['email'],
-                    'approver_name' => $app['surname'] ?? 'Approver',
-                    'overtime_id' => $id,
-                    'email_type' => 'new_request',
-                ];
-                $this->overtimeRepo->insertEmailQueue($emailPayload);
-                $this->overtimeRepo->addAcceptance(
+            $id = (int) $this->overtimeRepo->addOvertime($payload);
+            $this->overtimeRepo->addProjectAllocations($id, $projects);
+
+            if ($selfAutoApprove) {
+                // L3+ approvers do not enter an approval chain: accept immediately.
+                $this->overtimeRepo->updateOvertimeStatus($id, '1');
+                $this->overtimeRepo->addAcceptedRequestToDailyReport($id);
+                $this->overtimeRepo->queueRequestorStatusEmail(
                     $id,
-                    (int) $app['id'],
-                    $this->resolveApprovalLevel($app)
+                    1,
+                    (string) ($user['surname'] ?? 'System')
                 );
+            } else {
+                $approver = $this->approverDirectory->resolveApprovers(
+                    $mainGroupId,
+                    $mainGroupAbbrev,
+                    $userID
+                );
+                foreach ($approver as $app) {
+                    $this->overtimeRepo->insertEmailQueue([
+                        'email_to' => $app['email'],
+                        'approver_name' => $app['surname'] ?? 'Approver',
+                        'overtime_id' => $id,
+                        'email_type' => 'new_request',
+                    ]);
+                    $this->overtimeRepo->addAcceptance(
+                        $id,
+                        (int) $app['id'],
+                        $this->resolveApprovalLevel($app)
+                    );
+                }
             }
 
             $pdo->commit();
 
             $this->logger->log(
                 'request.submit',
-                (int) $userID,
+                $userID,
                 $user['surname'] ?? null,
                 'overtime_request',
-                (int) $id,
+                $id,
                 [
                     'group_id' => $groupID,
                     'hours' => $duration,
                     'projects' => $projects,
                     'request_date' => $requestDate,
+                    'auto_approved' => $selfAutoApprove,
+                    'approval_level' => $selfAutoApprove ? $selfLevel : null,
                 ]
             );
 
-            return ["success" => true, "id" => $id];
+            if ($selfAutoApprove) {
+                return [
+                    'success' => true,
+                    'id' => $id,
+                    'message' => 'Your overtime request has been submitted and approved.',
+                ];
+            }
+
+            return ['success' => true, 'id' => $id];
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();

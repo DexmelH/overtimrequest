@@ -90,7 +90,8 @@ class OvertimeApprovalService
         }
 
         if ((string) $status === '1') {
-            return $request['is_on_behalf']
+            $emptyChain = empty($request['approver_details']);
+            return ($request['is_on_behalf'] || $emptyChain)
                 ? ['auto_approved', 'Auto-approved']
                 : ['approved', 'Approved'];
         }
