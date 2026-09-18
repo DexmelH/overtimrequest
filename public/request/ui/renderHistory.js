@@ -5,6 +5,10 @@ import { formatDuration } from "../../shared/js/formatDuration.js";
 import { openModal } from "../components/modal.js";
 import { renderPager } from "../../shared/js/listQuery.js";
 
+function isTruthyFlag(value) {
+  return value === true || value === 1 || value === "1";
+}
+
 export function renderHistory() {
   const $list = $("#historyList").empty();
 
@@ -13,6 +17,19 @@ export function renderHistory() {
     const durationLabel =
       item.duration_label ||
       formatDuration(item.duration, item.duration_minutes);
+
+    const badges = [
+      `<span class="status-badge ${historyStatusClass(item)}">${escapeHtml(
+        historyStatusText(item),
+      )}</span>`,
+    ];
+    if (isTruthyFlag(item.is_on_behalf)) {
+      badges.push('<span class="status-badge status-onbehalf">On behalf</span>');
+    }
+    if (isTruthyFlag(item.is_follow_up)) {
+      badges.push('<span class="status-badge status-followup">Follow-up</span>');
+    }
+
     const $row = $(`
       <div class="history-item" data-id="${escapeHtml(item.id)}" role="listitem" tabindex="0">
         <div class="history-left">
@@ -22,7 +39,7 @@ export function renderHistory() {
             <div class="history-sub">${escapeHtml(item.request_date || "")} · ${escapeHtml(durationLabel)} · ${escapeHtml(item.location_name || "")}</div>
           </div>
         </div>
-        <span class="status-badge ${historyStatusClass(item)}">${escapeHtml(historyStatusText(item))}</span>
+        <div class="history-badges">${badges.join("")}</div>
       </div>
     `);
 
