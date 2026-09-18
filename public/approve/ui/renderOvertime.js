@@ -3,6 +3,7 @@ import {
   getPendingFilteredOvertime,
   getSelectedCount,
   isSelected,
+  pagination,
   toggleSelected,
 } from "../services/state.js";
 import { populateModal } from "./populateModal.js";
@@ -12,6 +13,19 @@ import {
   formatDateShort,
 } from "../../shared/js/status.js";
 import { escapeHtml } from "../../shared/js/escapeHtml.js";
+import { renderPager } from "../../shared/js/listQuery.js";
+
+function syncPager() {
+  renderPager(
+    {
+      info: "#listPagerInfo",
+      prev: "#listPrevPage",
+      next: "#listNextPage",
+    },
+    pagination,
+    { emptyLabel: "No requests in this date range" },
+  );
+}
 
 export function syncBulkBar() {
   const count = getSelectedCount();
@@ -40,6 +54,7 @@ export function renderTable() {
   if (!requests.length) {
     $("#tableEmpty").removeClass("d-none");
     syncBulkBar();
+    syncPager();
     return;
   }
   $("#tableEmpty").addClass("d-none");
@@ -138,4 +153,5 @@ export function renderTable() {
   });
 
   syncBulkBar();
+  syncPager();
 }

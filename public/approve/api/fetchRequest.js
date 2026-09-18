@@ -1,11 +1,21 @@
 import { apiUrl } from "../../shared/js/api.js";
 import { apiGet } from "../../shared/js/http.js";
 import { dataSignature } from "../../shared/js/livePoll.js";
-import { setOvertime } from "../services/state.js";
+import { buildListQuery } from "../../shared/js/listQuery.js";
+import {
+  listQuery,
+  setListCounts,
+  setOvertime,
+  setPagination,
+} from "../services/state.js";
 import { renderTable } from "../ui/renderOvertime.js";
 import { updateStats } from "../ui/stats.js";
 
 let lastSignature = null;
+
+export function resetRequestSignature() {
+  lastSignature = null;
+}
 
 /**
  * @param {{silent?: boolean}} options `silent` marks a background refresh: no
@@ -20,16 +30,43 @@ export async function fetchRequest({ silent = false } = {}) {
   }
 
   try {
-    const json = await apiGet(apiUrl("/overtimetoapprove"));
+    const qs = buildListQuery({
+      from: listQuery.from,
+      to: listQuery.to,
+      page: listQuery.page,
+      limit: listQuery.limit,
+      view: listQuery.view,
+    });
+    const json = await apiGet(apiUrl("/overtimetoapprove") + qs);
     const incoming = Array.isArray(json?.data) ? json.data : [];
-    const signature = dataSignature(incoming);
+    const pagination = json?.pagination || {
+      page: listQuery.page,
+      limit: listQuery.limit,
+      total: incoming.length,
+      pages: 1,
+    };
+    const counts = json?.counts || null;
+    const signature = dataSignature({
+      data: incoming,
+      pagination,
+      counts,
+      from: json?.from || listQuery.from,
+      to: json?.to || listQuery.to,
+      view: listQuery.view,
+    });
     if (silent && signature === lastSignature) {
       return false;
     }
 
     lastSignature = signature;
     setOvertime(incoming);
-    updateStats(incoming);
+    setPagination(pagination);
+    if (counts) {
+      setListCounts(counts);
+      updateStats(counts);
+    } else {
+      updateStats(incoming);
+    }
     renderTable();
     return true;
   } catch (error) {
@@ -37,6 +74,7 @@ export async function fetchRequest({ silent = false } = {}) {
     if (!silent) {
       lastSignature = null;
       setOvertime([]);
+      setPagination({ page: 1, limit: listQuery.limit, total: 0, pages: 0 });
       updateStats([]);
       renderTable();
     }

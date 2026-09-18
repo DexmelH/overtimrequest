@@ -19,9 +19,25 @@ class OvertimeApprovalService
         $this->logger = $logger;
     }
 
-    public function getOvertimeToApprove(int $approverId): array
+    public function getOvertimeToApprove(int $approverId, array $filters = []): array
     {
-        $overtimeToApprove = $this->overtimeRepo->findOvertimeToApprove($approverId);
+        $query = \App\Support\ListQuery::normalize($filters);
+        $view = strtolower(trim((string) ($filters['view'] ?? 'all')));
+        $allowedViews = ['all', 'action', 'done', 'auto_rejected', 'auto_approved', 'resubmitted'];
+        if (!in_array($view, $allowedViews, true)) {
+            $view = 'all';
+        }
+
+        $result = $this->overtimeRepo->findOvertimeToApprove($approverId, [
+            'from' => $query['from'],
+            'to' => $query['to'],
+            'page' => $query['page'],
+            'limit' => $query['limit'],
+            'offset' => $query['offset'],
+            'view' => $view,
+        ]);
+
+        $overtimeToApprove = $result['data'];
 
         foreach ($overtimeToApprove as &$request) {
             $alreadyFinalized = $request['status'] !== null && $request['status'] !== '';
@@ -56,19 +72,14 @@ class OvertimeApprovalService
         }
         unset($request);
 
-        usort($overtimeToApprove, static function (array $a, array $b): int {
-            $aPending = !empty($a['is_approved']) ? 1 : 0;
-            $bPending = !empty($b['is_approved']) ? 1 : 0;
-            if ($aPending !== $bPending) {
-                return $aPending <=> $bPending;
-            }
-
-            $aDate = (string) ($a['date_created'] ?? $a['request_date'] ?? '');
-            $bDate = (string) ($b['date_created'] ?? $b['request_date'] ?? '');
-            return strcmp($bDate, $aDate);
-        });
-
-        return ["success" => true, "data" => $overtimeToApprove];
+        return [
+            'success' => true,
+            'data' => $overtimeToApprove,
+            'from' => $query['from'],
+            'to' => $query['to'],
+            'pagination' => $result['pagination'],
+            'counts' => $result['counts'],
+        ];
     }
 
     /**
