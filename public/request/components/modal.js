@@ -1,6 +1,7 @@
 import { history } from "../services/state.js";
 import { historyStatusClass, historyStatusText, isPending } from "../../shared/js/status.js";
 import { renderManagers } from "../../shared/js/approvers.js";
+import { formatDuration } from "../../shared/js/formatDuration.js";
 
 const modalEl = document.getElementById("detailModal");
 let bsModal = null;
@@ -13,7 +14,7 @@ function getModal() {
   return bsModal;
 }
 
-function renderProjects(selector, projects, fallback) {
+function renderProjects(selector, projects, fallback, durationLabel) {
   const $target = $(selector).empty();
   if (!Array.isArray(projects) || projects.length === 0) {
     $target.text(fallback || "—");
@@ -25,10 +26,20 @@ function renderProjects(selector, projects, fallback) {
       .addClass("project-detail-row")
       .append(
         $("<span>").text(project.project_name || "—"),
-        $("<strong>").text(`${project.hours ?? 0} hrs`),
+        $("<strong>").text(
+          durationLabel || formatDuration(project.hours, 0),
+        ),
       )
       .appendTo($target);
   });
+}
+
+function formatDimRevision(item) {
+  const dim = item.work_2d3d ? String(item.work_2d3d) : "";
+  const rev = Number(item.revision) === 1 ? "Revision" : "";
+  if (!dim && !rev) return "—";
+  if (dim && rev) return `${dim} · ${rev}`;
+  return dim || rev;
 }
 
 export function openModal(id) {
@@ -36,12 +47,19 @@ export function openModal(id) {
   if (!item) return;
 
   currentRequestId = item.id;
+  const durationLabel =
+    item.duration_label ||
+    formatDuration(item.duration, item.duration_minutes);
 
   $("#m_date").text(item.request_date || "—");
   $("#m_group").text(item.group_name || "—");
   $("#m_location").text(item.location_name || "—");
-  renderProjects("#m_projects", item.projects, item.project_name);
-  $("#m_hours").text(`${item.duration ?? "—"} hrs`);
+  renderProjects("#m_projects", item.projects, item.project_name, durationLabel);
+  $("#m_item").text(item.item_name || "—");
+  $("#m_job").text(item.job_name || "—");
+  $("#m_tow").text(item.tow_name || "—");
+  $("#m_dim").text(formatDimRevision(item));
+  $("#m_hours").text(durationLabel);
   $("#m_remarks").text(item.remarks || "—");
   $("#m_statusBadge").html(
     `<span class="status-badge ${historyStatusClass(item)}">${historyStatusText(item)}</span>`,

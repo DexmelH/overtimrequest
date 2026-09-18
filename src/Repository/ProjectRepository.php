@@ -14,7 +14,7 @@ class ProjectRepository
 
     public function findProjectByGroupID(string $groupID): array
     {
-        $sql = "SELECT `fldID`, `fldProject` FROM `projectstable` 
+        $sql = "SELECT `fldID`, `fldProject`, `fldDirect` FROM `projectstable` 
         WHERE (`fldGroup` = :groupID OR `fldGroup` IS NULL) AND `fldActive` = 1 AND `fldDelete` = 0
         AND `fldID` NOT IN (5, 6)";
         $stmt = $this->pdo->prepare($sql);
@@ -26,7 +26,9 @@ class ProjectRepository
 
     public function findProjectByUserID(string $userID): array
     {
-        $sql = "SELECT pt.`fldID`, CONCAT(pt.`fldProject`, ' (', pt.`fldGroup`, ')') as `fldProject` FROM `projectstable` as `pt`
+        $sql = "SELECT pt.`fldID`, CONCAT(pt.`fldProject`, ' (', pt.`fldGroup`, ')') as `fldProject`,
+                       pt.`fldDirect`
+                FROM `projectstable` as `pt`
         LEFT JOIN `project_share` as `ps` ON pt.`fldID` = ps.`fldProject`
         WHERE ps.`fldEmployeeNum` = :userID AND pt.`fldActive` = 1 AND pt.`fldDelete` = 0";
         $stmt = $this->pdo->prepare($sql);

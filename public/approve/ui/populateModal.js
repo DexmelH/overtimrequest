@@ -6,6 +6,7 @@ import {
   requestStatusClass,
   formatDateShort,
 } from "../../shared/js/status.js";
+import { formatDuration } from "../../shared/js/formatDuration.js";
 
 function getInitials(name) {
   if (!name) return "?";
@@ -18,7 +19,7 @@ function getInitials(name) {
     .toUpperCase();
 }
 
-function renderProjects(projects, fallback) {
+function renderProjects(projects, fallback, durationLabel) {
   const $target = $("#rd-projects").empty();
   if (!Array.isArray(projects) || projects.length === 0) {
     $target.text(fallback || "—");
@@ -30,15 +31,29 @@ function renderProjects(projects, fallback) {
       .addClass("project-detail-row")
       .append(
         $("<span>").text(project.project_name || "—"),
-        $("<strong>").text(`${project.hours ?? 0} hrs`),
+        $("<strong>").text(
+          durationLabel || formatDuration(project.hours, 0),
+        ),
       )
       .appendTo($target);
   });
 }
 
+function formatDimRevision(request) {
+  const dim = request.work_2d3d ? String(request.work_2d3d) : "";
+  const rev = Number(request.revision) === 1 ? "Revision" : "";
+  if (!dim && !rev) return "—";
+  if (dim && rev) return `${dim} · ${rev}`;
+  return dim || rev;
+}
+
 export function populateModal(requestId) {
   const request = overtime.find((r) => String(r.id) === String(requestId));
   if (!request) return;
+
+  const durationLabel =
+    request.duration_label ||
+    formatDuration(request.duration, request.duration_minutes);
 
   $("#rd-requestID").val(request.id);
   $("#rd-avatar").text(getInitials(request.employee_name));
@@ -47,11 +62,15 @@ export function populateModal(requestId) {
   );
   $("#rd-meta").text(`Request #${request.id}`);
   $("#rd-date").text(formatDateShort(request.request_date));
-  $("#rd-hours").text(`${request.duration ?? "—"} hrs`);
+  $("#rd-hours").text(durationLabel);
 
   $("#rd-group").text(request.group_name || "—");
   $("#rd-location").text(request.location_name || "—");
-  renderProjects(request.projects, request.project_name);
+  renderProjects(request.projects, request.project_name, durationLabel);
+  $("#rd-item").text(request.item_name || "—");
+  $("#rd-job").text(request.job_name || "—");
+  $("#rd-tow").text(request.tow_name || "—");
+  $("#rd-dim").text(formatDimRevision(request));
   $("#rd-remarks").text(request.remarks || "—");
 
   $("#rd-status")

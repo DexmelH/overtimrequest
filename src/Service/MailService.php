@@ -2,6 +2,7 @@
 namespace App\Service;
 
 use App\Repository\EmployeeRepository;
+use App\Repository\OvertimeRepository;
 
 class MailService
 {
@@ -166,7 +167,7 @@ class MailService
             '{{project_list}}' => $this->buildProjectListHtml($data),
             '{{location_name}}' => EmailTemplate::escape($data['location_name'] ?? '-'),
             '{{date}}' => EmailTemplate::normalizeDate($data['request_date'] ?? null),
-            '{{hours}}' => EmailTemplate::escape((string) ($data['duration'] ?? '-')),
+            '{{hours}}' => EmailTemplate::escape($this->durationLabel($data)),
             '{{request_id}}' => EmailTemplate::escape((string) ($queueRow['overtime_id'] ?? $data['id'] ?? '-')),
             '{{action_url}}' => $this->actionUrl('/approve/'),
             '{{action_label}}' => 'Open Approval Page',
@@ -190,7 +191,7 @@ class MailService
             '{{project_list}}' => $this->buildProjectListHtml($data),
             '{{location_name}}' => EmailTemplate::escape($data['location_name'] ?? '-'),
             '{{date}}' => EmailTemplate::normalizeDate($data['request_date'] ?? null),
-            '{{hours}}' => EmailTemplate::escape((string) ($data['duration'] ?? '-')),
+            '{{hours}}' => EmailTemplate::escape($this->durationLabel($data)),
             '{{remarks}}' => $remarks !== '' ? $remarks : '-',
             '{{request_id}}' => EmailTemplate::escape((string) ($queueRow['overtime_id'] ?? $data['id'] ?? '-')),
             '{{action_url}}' => $this->actionUrl('/approve/'),
@@ -252,7 +253,7 @@ class MailService
             '{{project_list}}' => $this->buildProjectListHtml($data),
             '{{location_name}}' => EmailTemplate::escape($data['location_name'] ?? '-'),
             '{{date}}' => EmailTemplate::normalizeDate($data['request_date'] ?? null),
-            '{{hours}}' => EmailTemplate::escape((string) ($data['duration'] ?? '-')),
+            '{{hours}}' => EmailTemplate::escape($this->durationLabel($data)),
             '{{remarks}}' => EmailTemplate::escape($data['remarks'] ?? '-'),
             '{{request_id}}' => EmailTemplate::escape((string) ($queueRow['overtime_id'] ?? $data['id'] ?? '-')),
             '{{submitted_at}}' => EmailTemplate::normalizeDate($data['date_created'] ?? null),
@@ -261,18 +262,35 @@ class MailService
         ];
     }
 
+    /** HH:MM label for email bodies (e.g. "1h 30m", "2 hrs"). */
+    private function durationLabel(array $data): string
+    {
+        $label = trim((string) ($data['duration_label'] ?? ''));
+        if ($label !== '') {
+            return $label;
+        }
+
+        return OvertimeRepository::formatDurationLabel(
+            (int) ($data['duration'] ?? 0),
+            (int) ($data['duration_minutes'] ?? 0)
+        );
+    }
+
     private function buildProjectListHtml(array $data): string
     {
         $projects = is_array($data['projects'] ?? null) ? $data['projects'] : [];
+
         if (!$projects) {
-            $fallback = EmailTemplate::escape($data['project_name'] ?? '-');
+            $fallback = trim((string) ($data['project_name'] ?? ''));
+            // Strip a trailing " (Nh Nm)" if an older summary string was passed.
+            $fallback = preg_replace('/\s*\([^)]*\)\s*$/', '', $fallback) ?? $fallback;
+            $fallback = EmailTemplate::escape($fallback !== '' ? $fallback : '-');
             return '<div style="margin:0 0 4px">' . $fallback . '</div>';
         }
 
         $items = array_map(static function (array $project): string {
             $name = EmailTemplate::escape($project['project_name'] ?? '-');
-            $hours = EmailTemplate::escape((string) ($project['hours'] ?? 0));
-            return '<div style="margin:0 0 4px">' . $name . ' - <strong>' . $hours . ' hrs</strong></div>';
+            return '<div style="margin:0 0 4px">' . $name . '</div>';
         }, $projects);
 
         return implode('', $items);

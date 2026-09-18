@@ -356,10 +356,26 @@
                     <div class="value" id="rd-location">—</div>
                   </div>
                   <div class="detail-item full">
-                    <div class="label">Projects and hours</div>
+                    <div class="label">Project and hours</div>
                     <div class="value project-detail-list" id="rd-projects">
                       —
                     </div>
+                  </div>
+                  <div class="detail-item full">
+                    <div class="label">Item of Work</div>
+                    <div class="value" id="rd-item">—</div>
+                  </div>
+                  <div class="detail-item full">
+                    <div class="label">Job Request Description</div>
+                    <div class="value" id="rd-job">—</div>
+                  </div>
+                  <div class="detail-item">
+                    <div class="label">Type of Work</div>
+                    <div class="value" id="rd-tow">—</div>
+                  </div>
+                  <div class="detail-item">
+                    <div class="label">2D/3D / Revision</div>
+                    <div class="value" id="rd-dim">—</div>
                   </div>
                   <div class="detail-item full">
                     <div class="label">Remarks / Reason</div>
@@ -521,7 +537,7 @@
           <div class="modal-body">
             <form id="onBehalfForm" novalidate autocomplete="off">
               <div class="row g-3">
-                <div class="col-md-6 position-relative ob-employee-field">
+                <div class="col-12 position-relative ob-employee-field">
                   <label class="form-label" for="obEmployeeSearch"
                     >Employee Name</label
                   >
@@ -540,16 +556,6 @@
                   ></div>
                 </div>
                 <div class="col-md-6">
-                  <label class="form-label" for="obGroup">Assigned Group</label>
-                  <select class="form-select" id="obGroup" required disabled>
-                    <option value="">Select an employee first</option>
-                  </select>
-                  <div class="form-text text-warning d-none" id="obGroupEmpty">
-                    No assigned groups were found for this employee.
-                  </div>
-                </div>
-
-                <div class="col-md-6">
                   <label class="form-label" for="obDate">Date</label>
                   <input
                     type="date"
@@ -564,28 +570,127 @@
                     <option value="">Select location</option>
                   </select>
                 </div>
-                <div class="col-12">
-                  <div
-                    class="d-flex align-items-center justify-content-between gap-2 mb-2"
-                  >
-                    <label class="form-label mb-0">Projects and hours</label>
-                    <span class="project-allocation-total"
-                      >Total:
-                      <strong id="obProjectHoursTotal">0 hrs</strong></span
-                    >
+                <div class="col-md-6">
+                  <label class="form-label" for="obGroup">Assigned Group</label>
+                  <select class="form-select" id="obGroup" required disabled>
+                    <option value="">Select an employee first</option>
+                  </select>
+                  <div class="form-text text-warning d-none" id="obGroupEmpty">
+                    No assigned groups were found for this employee.
                   </div>
-                  <div
-                    id="obProjectAllocations"
-                    class="project-allocations"
-                  ></div>
-                  <button
-                    type="button"
-                    class="ot-btn ot-btn-secondary btn-sm mt-2"
-                    id="obAddProjectAllocation"
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="obProject">Project</label>
+                  <select class="form-select" id="obProject" required disabled>
+                    <option value="">Select group first</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label class="form-label" for="obItemOfWork"
+                    >Item of Work</label
+                  >
+                  <select
+                    class="form-select"
+                    id="obItemOfWork"
+                    required
                     disabled
                   >
-                    <i class="bi bi-plus-circle"></i> Add project
-                  </button>
+                    <option value="">Select project first</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label class="form-label" for="obJobRequest"
+                    >Job Request Description</label
+                  >
+                  <select
+                    class="form-select"
+                    id="obJobRequest"
+                    required
+                    disabled
+                  >
+                    <option value="">Select item first</option>
+                  </select>
+                </div>
+                <div class="col-12 d-none" id="obWorkDimSection">
+                  <label class="form-label">2D/3D</label>
+                  <div
+                    class="work-dim-cards"
+                    id="obWorkDimCards"
+                    role="radiogroup"
+                    aria-label="2D or 3D"
+                  ></div>
+                </div>
+                <div class="col-12 d-none" id="obWorkRevisionSection">
+                  <div class="work-revision-switch">
+                    <input
+                      type="checkbox"
+                      class="work-revision-checkbox"
+                      id="obWorkRevision"
+                    />
+                    <label class="work-revision-label" for="obWorkRevision"
+                      >Revision</label
+                    >
+                  </div>
+                </div>
+                <div class="col-12">
+                  <label class="form-label" for="obTypeOfWork"
+                    >Type of Work</label
+                  >
+                  <select
+                    class="form-select"
+                    id="obTypeOfWork"
+                    required
+                    disabled
+                  >
+                    <option value="">
+                      Select job request description first
+                    </option>
+                  </select>
+                  <div
+                    class="work-tow-desc"
+                    id="obTypeOfWorkDesc"
+                    aria-live="polite"
+                  ></div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label" for="obHours">No. of Hours</label>
+                  <div class="work-duration-inputs">
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="obHours"
+                      min="0"
+                      step="1"
+                      required
+                      placeholder="HH"
+                      aria-label="Hours"
+                    />
+                    <span class="work-duration-sep" aria-hidden="true">:</span>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="obMinutes"
+                      min="0"
+                      max="59"
+                      step="1"
+                      value="0"
+                      placeholder="MM"
+                      aria-label="Minutes"
+                    />
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Duration</label>
+                  <div
+                    class="work-duration-summary is-empty"
+                    id="obDurationSummary"
+                    aria-live="polite"
+                  >
+                    <strong class="work-duration-summary-label"
+                      >Enter hours and minutes</strong
+                    >
+                    <span class="work-duration-summary-sub">&nbsp;</span>
+                  </div>
                 </div>
                 <div class="col-12">
                   <label class="form-label" for="obRemarks">Remarks</label>

@@ -6,6 +6,7 @@ use App\Repository\HolidayRepository;
 use App\Repository\LeaveRepository;
 use App\Repository\OvertimeRepository;
 use App\Repository\ProjectNotifyRepository;
+use App\Repository\WorkLookupRepository;
 
 class OvertimeSubmissionService
 {
@@ -15,8 +16,12 @@ class OvertimeSubmissionService
     private LeaveRepository $leaveRepo;
     private ApproverDirectoryService $approverDirectory;
     private ProjectNotifyRepository $projectNotifyRepo;
+    private WorkLookupRepository $workLookup;
     private ActivityLogger $logger;
     private ApprovalCutoff $cutoff;
+
+    private const WORK_2D3D_VALUES = ['2D', '3D', '2D3D', '3D2D'];
+    private const DIM_EXCLUDED_GROUP_IDS = [10, 16];
 
     public function __construct(
         OvertimeRepository $overtimeRepo,
@@ -25,6 +30,7 @@ class OvertimeSubmissionService
         LeaveRepository $leaveRepo,
         ApproverDirectoryService $approverDirectory,
         ProjectNotifyRepository $projectNotifyRepo,
+        WorkLookupRepository $workLookup,
         ActivityLogger $logger,
         string $approvalCutoffTime = '15:00'
     ) {
@@ -34,12 +40,17 @@ class OvertimeSubmissionService
         $this->leaveRepo = $leaveRepo;
         $this->approverDirectory = $approverDirectory;
         $this->projectNotifyRepo = $projectNotifyRepo;
+        $this->workLookup = $workLookup;
         $this->logger = $logger;
         $this->cutoff = new ApprovalCutoff($approvalCutoffTime);
     }
 
     /**
-     * @param array{group?: mixed, location?: mixed, remarks?: mixed, date?: mixed, projectsJson?: mixed} $input
+     * @param array{
+     *   group?: mixed, location?: mixed, remarks?: mixed, date?: mixed,
+     *   project_id?: mixed, hours?: mixed, item_id?: mixed, job_id?: mixed,
+     *   tow_id?: mixed, work_2d3d?: mixed, revision?: mixed
+     * } $input
      */
     public function addOvertime(array $user, array $input): array
     {
@@ -75,22 +86,27 @@ class OvertimeSubmissionService
 
         $group = $this->employeeRepo->findGroupById($groupID);
         $groupAbbrev = (string) ($group['abbreviation'] ?? '');
-        [$projects, $projectError] = $this->parseProjectAllocations(
-            (string) ($input['projectsJson'] ?? ''),
-            $groupAbbrev,
-            (int) $userID
-        );
-        if ($projectError !== null) {
-            return ['success' => false, 'message' => $projectError];
+        [$work, $workError] = $this->parseWorkFields($input, $groupID, $groupAbbrev, (int) $userID);
+        if ($workError !== null) {
+            return ['success' => false, 'message' => $workError];
         }
-        $duration = array_sum(array_column($projects, 'hours'));
+        $projects = [['project_id' => $work['project_id'], 'hours' => $work['hours']]];
+        $duration = $work['hours'];
+        $durationMinutes = $work['minutes'];
 
         $payload = [
             "user_id" => $userID,
             "group_id" => $groupID,
             "location_id" => $locationID,
+            "project_id" => $work['project_id'],
+            "item_id" => $work['item_id'],
+            "job_id" => $work['job_id'],
+            "tow_id" => $work['tow_id'],
+            "work_2d3d" => $work['work_2d3d'],
+            "revision" => $work['revision'],
             "remarks" => $remarks,
             "duration" => $duration,
+            "duration_minutes" => $durationMinutes,
             "request_date" => $requestDate
         ];
 
@@ -138,7 +154,7 @@ class OvertimeSubmissionService
 
                 $this->queueProjectNotifyEmails(
                     $id,
-                    array_column($projects, 'project_id'),
+                    [$work['project_id']],
                     $queuedEmails
                 );
             }
@@ -154,7 +170,14 @@ class OvertimeSubmissionService
                 [
                     'group_id' => $groupID,
                     'hours' => $duration,
+                    'minutes' => $durationMinutes,
                     'projects' => $projects,
+                    'project_id' => $work['project_id'],
+                    'item_id' => $work['item_id'],
+                    'job_id' => $work['job_id'],
+                    'tow_id' => $work['tow_id'],
+                    'work_2d3d' => $work['work_2d3d'],
+                    'revision' => $work['revision'],
                     'request_date' => $requestDate,
                     'auto_approved' => $selfAutoApprove,
                     'approval_level' => $selfAutoApprove ? $selfLevel : null,
@@ -180,7 +203,11 @@ class OvertimeSubmissionService
     }
 
     /**
-     * @param array{employee_id?: mixed, group?: mixed, location?: mixed, remarks?: mixed, date?: mixed, projectsJson?: mixed} $input
+     * @param array{
+     *   employee_id?: mixed, group?: mixed, location?: mixed, remarks?: mixed, date?: mixed,
+     *   project_id?: mixed, hours?: mixed, item_id?: mixed, job_id?: mixed,
+     *   tow_id?: mixed, work_2d3d?: mixed, revision?: mixed, origin_request_id?: mixed
+     * } $input
      */
     public function addOvertimeOnBehalf(array $approver, array $input): array
     {
@@ -240,15 +267,13 @@ class OvertimeSubmissionService
 
         $group = $this->employeeRepo->findGroupById($groupID);
         $groupAbbrev = (string) ($group['abbreviation'] ?? '');
-        [$projects, $projectError] = $this->parseProjectAllocations(
-            (string) ($input['projectsJson'] ?? ''),
-            $groupAbbrev,
-            $employeeId
-        );
-        if ($projectError !== null) {
-            return ['success' => false, 'message' => $projectError];
+        [$work, $workError] = $this->parseWorkFields($input, $groupID, $groupAbbrev, $employeeId);
+        if ($workError !== null) {
+            return ['success' => false, 'message' => $workError];
         }
-        $duration = array_sum(array_column($projects, 'hours'));
+        $projects = [['project_id' => $work['project_id'], 'hours' => $work['hours']]];
+        $duration = $work['hours'];
+        $durationMinutes = $work['minutes'];
 
         $originRequestId = (int) ($input['origin_request_id'] ?? 0);
 
@@ -258,8 +283,15 @@ class OvertimeSubmissionService
             'origin_request_id' => $originRequestId > 0 ? $originRequestId : null,
             'group_id' => $groupID,
             'location_id' => $locationID,
+            'project_id' => $work['project_id'],
+            'item_id' => $work['item_id'],
+            'job_id' => $work['job_id'],
+            'tow_id' => $work['tow_id'],
+            'work_2d3d' => $work['work_2d3d'],
+            'revision' => $work['revision'],
             'remarks' => $remarks,
             'duration' => $duration,
+            'duration_minutes' => $durationMinutes,
             'request_date' => $requestDate,
         ];
 
@@ -318,7 +350,14 @@ class OvertimeSubmissionService
                     'main_group_id' => $mainGroupId > 0 ? $mainGroupId : null,
                     'main_group_abbr' => $mainGroupAbbrev !== '' ? $mainGroupAbbrev : null,
                     'hours' => $duration,
+                    'minutes' => $durationMinutes,
                     'projects' => $projects,
+                    'project_id' => $work['project_id'],
+                    'item_id' => $work['item_id'],
+                    'job_id' => $work['job_id'],
+                    'tow_id' => $work['tow_id'],
+                    'work_2d3d' => $work['work_2d3d'],
+                    'revision' => $work['revision'],
                     'request_date' => $requestDate,
                     'auto_approved' => true,
                     'approval_level' => $approverLevel,
@@ -377,12 +416,12 @@ class OvertimeSubmissionService
             return ['success' => false, 'message' => 'The original request has no projects to copy.'];
         }
 
-        $projectsJson = json_encode(array_map(static function (array $project): array {
-            return [
-                'project_id' => (int) $project['project_id'],
-                'hours' => (int) $project['hours'],
-            ];
-        }, $projects));
+        $hours = (int) ($original['duration'] ?? $projects[0]['hours'] ?? 0);
+        $minutes = (int) ($original['duration_minutes'] ?? 0);
+        $projectId = (int) ($original['project_id'] ?? $projects[0]['project_id'] ?? 0);
+        if ($projectId <= 0 || ($hours <= 0 && $minutes <= 0)) {
+            return ['success' => false, 'message' => 'The original request is missing project or hours.'];
+        }
 
         return $this->addOvertimeOnBehalf($approver, [
             'employee_id' => (int) $original['user_id'],
@@ -390,7 +429,14 @@ class OvertimeSubmissionService
             'location' => (int) $original['location_id'],
             'remarks' => (string) ($original['remarks'] ?? ''),
             'date' => (string) $original['request_date'],
-            'projectsJson' => (string) $projectsJson,
+            'project_id' => $projectId,
+            'hours' => $hours,
+            'minutes' => $minutes,
+            'item_id' => (int) ($original['item_id'] ?? 0),
+            'job_id' => (int) ($original['job_id'] ?? 0),
+            'tow_id' => (int) ($original['tow_id'] ?? 0),
+            'work_2d3d' => $original['work_2d3d'] ?? null,
+            'revision' => (int) ($original['revision'] ?? 0),
             'origin_request_id' => $overtimeId,
         ]);
     }
@@ -530,40 +576,95 @@ class OvertimeSubmissionService
     }
 
     /**
-     * @return array{0: array<int, array{project_id: int, hours: int}>, 1: ?string}
+     * @param array<string, mixed> $input
+     * @return array{0: array{
+     *   project_id: int, hours: int, minutes: int, item_id: int, job_id: int, tow_id: int,
+     *   work_2d3d: ?string, revision: int
+     * }|null, 1: ?string}
      */
-    private function parseProjectAllocations(string $json, string $groupAbbreviation, int $actorUserId = 0): array
+    private function parseWorkFields(array $input, int $groupId, string $groupAbbreviation, int $actorUserId = 0): array
     {
-        $decoded = json_decode($json, true);
-        if (!is_array($decoded) || !$decoded) {
-            return [[], 'Add at least one project with its hours.'];
+        $projectId = (int) ($input['project_id'] ?? 0);
+        $hours = filter_var($input['hours'] ?? null, FILTER_VALIDATE_INT);
+        $minutes = filter_var($input['minutes'] ?? 0, FILTER_VALIDATE_INT);
+        $itemId = (int) ($input['item_id'] ?? 0);
+        $jobId = (int) ($input['job_id'] ?? 0);
+        $towId = (int) ($input['tow_id'] ?? 0);
+
+        if ($projectId <= 0) {
+            return [null, 'Please select a project.'];
+        }
+        if ($hours === false || $hours < 0) {
+            return [null, 'Hours must be a whole number (0 or more).'];
+        }
+        if ($minutes === false || $minutes < 0 || $minutes > 59) {
+            return [null, 'Minutes must be between 0 and 59.'];
+        }
+        if ($hours === 0 && $minutes === 0) {
+            return [null, 'Enter at least 1 minute of overtime.'];
+        }
+        if ($itemId <= 0) {
+            return [null, 'Please select an item of work.'];
+        }
+        if ($jobId <= 0) {
+            return [null, 'Please select a job request description.'];
+        }
+        if ($towId <= 0) {
+            return [null, 'Please select a type of work.'];
         }
 
-        $projects = [];
-        $seen = [];
-        foreach ($decoded as $row) {
-            if (!is_array($row)) {
-                return [[], 'The project allocation list is invalid.'];
-            }
-
-            $projectId = (int) ($row['project_id'] ?? 0);
-            $hours = filter_var($row['hours'] ?? null, FILTER_VALIDATE_INT);
-            if ($projectId <= 0 || $hours === false || $hours <= 0) {
-                return [[], 'Each project must have a positive whole number of hours.'];
-            }
-            if (isset($seen[$projectId])) {
-                return [[], 'Each project can only be selected once.'];
-            }
-
-            $seen[$projectId] = true;
-            $projects[] = ['project_id' => $projectId, 'hours' => $hours];
+        if (!$this->overtimeRepo->projectsBelongToGroup([$projectId], $groupAbbreviation, $actorUserId)) {
+            return [null, 'The selected project does not belong to the selected group.'];
         }
 
-        if (!$this->overtimeRepo->projectsBelongToGroup(array_keys($seen), $groupAbbreviation, $actorUserId)) {
-            return [[], 'One or more selected projects do not belong to the selected group.'];
+        if (!$this->workLookup->itemBelongsToProject($itemId, $projectId, $groupAbbreviation)) {
+            return [null, 'The selected item of work is not valid for this project.'];
         }
 
-        return [$projects, null];
+        if (!$this->workLookup->jobBelongsToProjectItem($jobId, $projectId, $itemId, $groupAbbreviation)) {
+            return [null, 'The selected job request description is not valid for this item.'];
+        }
+
+        if (!$this->workLookup->towIsValidForProject($towId, $projectId)) {
+            return [null, 'The selected type of work is not valid for this project.'];
+        }
+
+        $requiresDim = $this->requiresDimSection($projectId, $groupId);
+        $work2d3dRaw = trim((string) ($input['work_2d3d'] ?? ''));
+        $revisionRaw = $input['revision'] ?? 0;
+
+        if ($requiresDim) {
+            if (!in_array($work2d3dRaw, self::WORK_2D3D_VALUES, true)) {
+                return [null, 'Please select a 2D/3D option.'];
+            }
+            $work2d3d = $work2d3dRaw;
+            $revision = ((int) $revisionRaw) === 1 ? 1 : 0;
+        } else {
+            $work2d3d = null;
+            $revision = 0;
+        }
+
+        return [[
+            'project_id' => $projectId,
+            'hours' => $hours,
+            'minutes' => $minutes,
+            'item_id' => $itemId,
+            'job_id' => $jobId,
+            'tow_id' => $towId,
+            'work_2d3d' => $work2d3d,
+            'revision' => $revision,
+        ], null];
+    }
+
+    private function requiresDimSection(int $projectId, int $groupId): bool
+    {
+        if ($groupId <= 0 || in_array($groupId, self::DIM_EXCLUDED_GROUP_IDS, true)) {
+            return false;
+        }
+
+        $direct = $this->workLookup->findProjectDirect($projectId);
+
+        return $direct === 1;
     }
 
     private function validateRequestDate(string $date, int $employeeId, bool $relaxed = false): ?string

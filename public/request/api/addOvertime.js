@@ -10,7 +10,14 @@ export async function addOvertimeRequest(formData) {
   body.append("date", formData.date);
   body.append("group", formData.group);
   body.append("location", formData.location);
-  body.append("projects", JSON.stringify(formData.projects));
+  body.append("project_id", String(formData.project_id ?? ""));
+  body.append("hours", String(formData.hours ?? ""));
+  body.append("minutes", String(formData.minutes ?? 0));
+  body.append("item_id", String(formData.item_id ?? ""));
+  body.append("job_id", String(formData.job_id ?? ""));
+  body.append("tow_id", String(formData.tow_id ?? ""));
+  body.append("work_2d3d", String(formData.work_2d3d ?? ""));
+  body.append("revision", String(formData.revision ?? 0));
   body.append("remarks", formData.remarks);
 
   try {

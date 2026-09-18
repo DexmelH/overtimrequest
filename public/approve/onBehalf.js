@@ -3,7 +3,7 @@ import { apiGet, apiPost } from "../shared/js/http.js";
 import { showToast } from "../shared/js/toast.js";
 import { configureFormFields, getFieldId } from "../request/ui/formFields.js";
 import { fetchLocations } from "../request/api/fetchLocations.js";
-import { createProjectAllocations } from "../shared/js/projectAllocations.js";
+import { createWorkFields } from "../shared/js/workFields.js";
 import {
   applyDateConstraints,
   configureRequestDate,
@@ -29,11 +29,20 @@ const ON_BEHALF_FIELDS = {
 };
 // Date rules use relaxed mode (past dates OK); server validateRequestDate(..., true) matches.
 
-const projectAllocations = createProjectAllocations({
-  containerId: "obProjectAllocations",
-  addButtonId: "obAddProjectAllocation",
-  totalId: "obProjectHoursTotal",
+const workFields = createWorkFields({
   groupSelector: "#obGroup",
+  projectId: "obProject",
+  hoursId: "obHours",
+  minutesId: "obMinutes",
+  durationSummaryId: "obDurationSummary",
+  itemId: "obItemOfWork",
+  jobId: "obJobRequest",
+  towId: "obTypeOfWork",
+  towDescId: "obTypeOfWorkDesc",
+  dimSectionId: "obWorkDimSection",
+  dimCardsId: "obWorkDimCards",
+  revisionSectionId: "obWorkRevisionSection",
+  revisionId: "obWorkRevision",
   employeeIdSelector: "#obEmployeeId",
 });
 
@@ -82,7 +91,7 @@ function renderEmployeeGroupSelect(groups) {
     $sel.prop("disabled", false);
     if (employeeGroups.length === 1) {
       $sel.val(String(employeeGroups[0].id));
-      projectAllocations.loadProjects().catch(() => {});
+      workFields.loadProjects().catch(() => {});
     }
   } else {
     $empty.removeClass("d-none");
@@ -149,7 +158,7 @@ async function selectEmployee(employee) {
   $("#obEmployeeId").val(employee.id);
   $("#obEmployeeSearch").val(`${employee.surname || ""}, ${employee.firstname || ""}`.trim());
   clearFieldInvalid("#obEmployeeSearch");
-  projectAllocations.reset();
+  workFields.reset();
   await loadEmployeeGroups(employee.id);
   reloadDateRules().catch(() => {});
   clearEmployeeSuggestions();
@@ -160,7 +169,7 @@ function resetOnBehalfForm() {
   employeeGroups = [];
   renderEmployeeGroupSelect([]);
   $("#obEmployeeId").val("");
-  projectAllocations.reset();
+  workFields.reset();
   reloadDateRules().catch(() => {});
   clearEmployeeSuggestions();
   clearInvalidIn("#onBehalfForm");
@@ -171,16 +180,9 @@ function isObDateAllowed(isoDate) {
   return isAllowedRequestDate(isoDate);
 }
 
-function bindProjectHandlers() {
-  $(`#${getFieldId("group")}`).on("change", function () {
-    projectAllocations.loadProjects().catch(() => {});
-  });
-}
-
 export function initOnBehalf() {
   configureFormFields(ON_BEHALF_FIELDS);
   bindDateField();
-  bindProjectHandlers();
   renderEmployeeGroupSelect([]);
 
   checkOnBehalfAccess()
@@ -194,7 +196,7 @@ export function initOnBehalf() {
   $("#obEmployeeSearch").on("input", function () {
     $("#obEmployeeId").val("");
     renderEmployeeGroupSelect([]);
-    projectAllocations.reset();
+    workFields.reset();
     clearTimeout(searchTimer);
     const q = $(this).val().trim();
     if (q.length < 1) {
@@ -245,7 +247,7 @@ export function initOnBehalf() {
       date: $("#obDate").val(),
       group: $(`#${getFieldId("group")}`).val(),
       location: $(`#${getFieldId("location")}`).val(),
-      projects: projectAllocations.getAllocations(),
+      ...workFields.getValues(),
       remarks: $("#obRemarks").val().trim(),
     };
 
@@ -262,7 +264,7 @@ export function initOnBehalf() {
     valid = requireFilled("#obDate") && valid;
     valid = requireFilled(`#${getFieldId("group")}`) && valid;
     valid = requireFilled(`#${getFieldId("location")}`) && valid;
-    valid = projectAllocations.markInvalidFields() && valid;
+    valid = workFields.markInvalidFields() && valid;
 
     if (payload.date && !isObDateAllowed(payload.date)) {
       validateDateInput(true);
@@ -285,7 +287,7 @@ export function initOnBehalf() {
     const $btn = $("#obSubmitBtn").prop("disabled", true);
     const body = new FormData();
     Object.entries(payload).forEach(([key, value]) => {
-      body.append(key, key === "projects" ? JSON.stringify(value) : String(value));
+      body.append(key, String(value ?? ""));
     });
 
     try {

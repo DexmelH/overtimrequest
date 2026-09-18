@@ -77,10 +77,10 @@
         </header>
 
         <main class="container ot-main">
-          <div class="row g-4">
+          <div class="row g-4 request-layout-row">
             <!-- Request form -->
             <div class="col-lg-7">
-              <div class="ot-card h-100">
+              <div class="ot-card w-100" id="requestFormCard">
                 <div class="ot-card-header">
                   <div>
                     <h2>New Overtime Request</h2>
@@ -120,12 +120,6 @@
                         />
                       </div>
                       <div class="col-md-6">
-                        <label class="form-label" for="group">Group</label>
-                        <select class="form-select" id="group" required>
-                          <option value="">Select group</option>
-                        </select>
-                      </div>
-                      <div class="col-md-6">
                         <label class="form-label" for="location"
                           >Location</label
                         >
@@ -133,33 +127,125 @@
                           <option value="">Select location</option>
                         </select>
                       </div>
-
+                      <div class="col-md-6">
+                        <label class="form-label" for="group">Group</label>
+                        <select class="form-select" id="group" required>
+                          <option value="">Select group</option>
+                        </select>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="project">Project</label>
+                        <select class="form-select" id="project" required disabled>
+                          <option value="">Select group first</option>
+                        </select>
+                      </div>
                       <div class="col-12">
-                        <div
-                          class="d-flex align-items-center justify-content-between gap-2 mb-2"
+                        <label class="form-label" for="itemOfWork"
+                          >Item of Work</label
                         >
-                          <label class="form-label mb-0"
-                            >Projects and hours</label
-                          >
-                          <span class="project-allocation-total"
-                            >Total:
-                            <strong id="projectHoursTotal">0 hrs</strong></span
-                          >
-                        </div>
-                        <div
-                          id="projectAllocations"
-                          class="project-allocations"
-                        ></div>
-                        <button
-                          type="button"
-                          class="ot-btn ot-btn-secondary btn-sm mt-2"
-                          id="addProjectAllocation"
+                        <select
+                          class="form-select"
+                          id="itemOfWork"
+                          required
                           disabled
                         >
-                          <i class="bi bi-plus-circle"></i> Add project
-                        </button>
+                          <option value="">Select project first</option>
+                        </select>
                       </div>
-
+                      <div class="col-12">
+                        <label class="form-label" for="jobRequest"
+                          >Job Request Description</label
+                        >
+                        <select
+                          class="form-select"
+                          id="jobRequest"
+                          required
+                          disabled
+                        >
+                          <option value="">Select item first</option>
+                        </select>
+                      </div>
+                      <div class="col-12 d-none" id="workDimSection">
+                        <label class="form-label">2D/3D</label>
+                        <div
+                          class="work-dim-cards"
+                          id="workDimCards"
+                          role="radiogroup"
+                          aria-label="2D or 3D"
+                        ></div>
+                      </div>
+                      <div class="col-12 d-none" id="workRevisionSection">
+                        <div class="work-revision-switch">
+                          <input
+                            type="checkbox"
+                            class="work-revision-checkbox"
+                            id="workRevision"
+                          />
+                          <label class="work-revision-label" for="workRevision"
+                            >Revision</label
+                          >
+                        </div>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label" for="typeOfWork"
+                          >Type of Work</label
+                        >
+                        <select
+                          class="form-select"
+                          id="typeOfWork"
+                          required
+                          disabled
+                        >
+                          <option value="">
+                            Select job request description first
+                          </option>
+                        </select>
+                        <div
+                          class="work-tow-desc"
+                          id="typeOfWorkDesc"
+                          aria-live="polite"
+                        ></div>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="hours">No. of Hours</label>
+                        <div class="work-duration-inputs">
+                          <input
+                            type="number"
+                            class="form-control"
+                            id="hours"
+                            min="0"
+                            step="1"
+                            required
+                            placeholder="HH"
+                            aria-label="Hours"
+                          />
+                          <span class="work-duration-sep" aria-hidden="true">:</span>
+                          <input
+                            type="number"
+                            class="form-control"
+                            id="minutes"
+                            min="0"
+                            max="59"
+                            step="1"
+                            value="0"
+                            placeholder="MM"
+                            aria-label="Minutes"
+                          />
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label">Duration</label>
+                        <div
+                          class="work-duration-summary is-empty"
+                          id="durationSummary"
+                          aria-live="polite"
+                        >
+                          <strong class="work-duration-summary-label"
+                            >Enter hours and minutes</strong
+                          >
+                          <span class="work-duration-summary-sub">&nbsp;</span>
+                        </div>
+                      </div>
                       <div class="col-12">
                         <label class="form-label" for="remarks">Remarks</label>
                         <textarea
@@ -201,7 +287,7 @@
 
             <!-- History -->
             <div class="col-lg-5">
-              <div class="ot-card h-100 d-flex flex-column">
+              <div class="ot-card w-100 d-flex flex-column" id="requestHistoryCard">
                 <div class="ot-card-header flex-wrap">
                   <div>
                     <h2>Your History</h2>
@@ -261,7 +347,7 @@
                   </div>
                 </div>
                 <div class="ot-card-body flex-grow-1 d-flex flex-column p-0">
-                  <div class="ot-list-toolbar px-3 pt-2 pb-2 border-bottom">
+                  <div class="ot-list-toolbar px-3 pt-2 pb-2 border-bottom flex-shrink-0">
                     <div class="ot-date-range" role="group" aria-label="History date range">
                       <label class="visually-hidden" for="historyFrom">From</label>
                       <input
@@ -288,11 +374,11 @@
                     />
                   </div>
                   <div
-                    class="history-list flex-grow-1"
+                    class="history-list"
                     id="historyList"
                     role="list"
                   ></div>
-                  <div class="ot-list-pager border-top">
+                  <div class="ot-list-pager border-top flex-shrink-0">
                     <small class="ot-muted" id="historyPagerInfo">—</small>
                     <div class="btn-group btn-group-sm">
                       <button
@@ -364,10 +450,26 @@
                     <div class="value" id="m_location">—</div>
                   </div>
                   <div class="detail-item full">
-                    <div class="label">Projects and hours</div>
+                    <div class="label">Project and hours</div>
                     <div class="value project-detail-list" id="m_projects">
                       —
                     </div>
+                  </div>
+                  <div class="detail-item full">
+                    <div class="label">Item of Work</div>
+                    <div class="value" id="m_item">—</div>
+                  </div>
+                  <div class="detail-item full">
+                    <div class="label">Job Request Description</div>
+                    <div class="value" id="m_job">—</div>
+                  </div>
+                  <div class="detail-item">
+                    <div class="label">Type of Work</div>
+                    <div class="value" id="m_tow">—</div>
+                  </div>
+                  <div class="detail-item">
+                    <div class="label">2D/3D / Revision</div>
+                    <div class="value" id="m_dim">—</div>
                   </div>
                   <div class="detail-item full">
                     <div class="label">Remarks</div>

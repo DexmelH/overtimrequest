@@ -13,6 +13,7 @@ import {
   formatDateShort,
 } from "../../shared/js/status.js";
 import { escapeHtml } from "../../shared/js/escapeHtml.js";
+import { formatDuration } from "../../shared/js/formatDuration.js";
 import { renderPager } from "../../shared/js/listQuery.js";
 
 function syncPager() {
@@ -110,7 +111,10 @@ export function renderTable() {
         </div>
       `),
       $("<td>").text(formatDateShort(req.request_date)),
-      $("<td>").text(`${req.duration ?? "—"} hrs`),
+      $("<td>").text(
+        req.duration_label ||
+          formatDuration(req.duration, req.duration_minutes),
+      ),
       $("<td>").text(req.location_name || "—"),
       $("<td>").html(
         `<span class="approval-badge">${approvedCount} / ${approvers.length}</span>`,

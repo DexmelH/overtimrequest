@@ -9,6 +9,9 @@ return function (RouteCollector $r): void {
     $r->addRoute('GET', '/api/groups', ['App\Controller\GroupController', 'getGroupsByUserId']);
     $r->addRoute('GET', '/api/locations', ['App\Controller\LocationController', 'getLocations']);
     $r->addRoute('GET', '/api/projects', ['App\Controller\ProjectController', 'getProjects']);
+    $r->addRoute('GET', '/api/work/items', ['App\Controller\WorkController', 'getItems']);
+    $r->addRoute('GET', '/api/work/jobs', ['App\Controller\WorkController', 'getJobs']);
+    $r->addRoute('GET', '/api/work/tow', ['App\Controller\WorkController', 'getTypesOfWork']);
     $r->addRoute('GET', '/api/holidays', ['App\Controller\OvertimeController', 'getHolidays']);
     $r->addRoute('GET', '/api/approve/employee-groups', ['App\Controller\OvertimeController', 'getEmployeeGroups']);
     $r->addRoute('GET', '/api/approve/approver-groups', ['App\Controller\OvertimeController', 'getApproverGroups']);

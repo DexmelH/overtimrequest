@@ -19,7 +19,8 @@ class OvertimeRepository
 
     public function findRequestEmailDetails(int $requestID): array
     {
-        $sql = "SELECT orq.`id`, orq.`remarks`, orq.`duration`, orq.`request_date`, orq.`date_created`, orq.`status`,
+        $sql = "SELECT orq.`id`, orq.`remarks`, orq.`duration`, orq.`duration_minutes`,
+                       orq.`request_date`, orq.`date_created`, orq.`status`,
                     el.`surname`, el.`firstname`, el.`gender`, el.`marital_status`,
                     el.`surname` AS requestor_name, el.`email` AS requestor_email,
                     gl.`abbreviation`, gl.`abbreviation` AS group_name,
@@ -38,7 +39,15 @@ class OvertimeRepository
         }
 
         $data['projects'] = $this->findProjectsByRequestIds([$requestID])[$requestID] ?? [];
-        $data['project_name'] = $this->formatProjectSummary($data['projects']);
+        $data['duration_minutes'] = (int) ($data['duration_minutes'] ?? 0);
+        $data['duration_label'] = self::formatDurationLabel(
+            (int) ($data['duration'] ?? 0),
+            (int) ($data['duration_minutes'] ?? 0)
+        );
+        $data['project_name'] = $this->formatProjectSummary(
+            $data['projects'],
+            $data['duration_label']
+        );
 
         return $data;
     }
@@ -144,14 +153,22 @@ class OvertimeRepository
         $countStmt->execute($params);
         $total = (int) $countStmt->fetchColumn();
 
-        $sql = "SELECT orq.`id`, orq.`duration`, orq.`remarks`, orq.`request_date`, orq.`status`,
+        $sql = "SELECT orq.`id`, orq.`duration`, orq.`duration_minutes`, orq.`remarks`, orq.`request_date`, orq.`status`,
                        orq.`origin_request_id`,
+                       orq.`project_id`, orq.`item_id`, orq.`job_id`, orq.`tow_id`,
+                       orq.`work_2d3d`, orq.`revision`,
+                       iow.`fldItem` AS `item_name`,
+                       dr.`fldJob` AS `job_name`,
+                       tow.`fldTOW` AS `tow_name`,
                        {$followUpExists} AS `has_follow_up`,
                        gl.`abbreviation` AS `group_name`,
                        l.`fldLocation` AS `location_name`
                 FROM `overtime_request` orq
                 LEFT JOIN kdtphdb_new.`group_list` gl ON orq.`group_id` = gl.`id`
                 LEFT JOIN `dispatch_locations` l ON orq.`location_id` = l.`fldID`
+                LEFT JOIN `itemofworkstable` iow ON iow.`fldID` = orq.`item_id`
+                LEFT JOIN `drawingreference` dr ON dr.`fldID` = orq.`job_id`
+                LEFT JOIN `typesofworktable` tow ON tow.`fldID` = orq.`tow_id`
                 WHERE {$whereSql}
                 ORDER BY orq.`request_date` DESC, orq.`id` DESC
                 LIMIT {$limit} OFFSET {$offset}";
@@ -174,10 +191,12 @@ class OvertimeRepository
     {
         $sql = "INSERT INTO `overtime_request`
                     (`user_id`, `submitted_by`, `origin_request_id`, `location_id`, `group_id`,
-                     `duration`, `remarks`, `request_date`)
+                     `project_id`, `item_id`, `job_id`, `tow_id`, `work_2d3d`, `revision`,
+                     `duration`, `duration_minutes`, `remarks`, `request_date`)
                 VALUES
                     (:userID, :submittedBy, :originRequestID, :locationID, :groupID,
-                     :duration, :remarks, :requestDate)";
+                     :projectID, :itemID, :jobID, :towID, :work2d3d, :revision,
+                     :duration, :durationMinutes, :remarks, :requestDate)";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
             ":userID" => $payload["user_id"],
@@ -185,7 +204,14 @@ class OvertimeRepository
             ":originRequestID" => $payload["origin_request_id"] ?? null,
             ":locationID" => $payload["location_id"],
             ":groupID" => $payload["group_id"],
+            ":projectID" => $payload["project_id"] ?? null,
+            ":itemID" => $payload["item_id"] ?? null,
+            ":jobID" => $payload["job_id"] ?? null,
+            ":towID" => $payload["tow_id"] ?? null,
+            ":work2d3d" => $payload["work_2d3d"] ?? null,
+            ":revision" => (int) ($payload["revision"] ?? 0),
             ":duration" => $payload["duration"],
+            ":durationMinutes" => (int) ($payload["duration_minutes"] ?? 0),
             ":remarks" => $payload["remarks"],
             ":requestDate" => $payload["request_date"]
         ]);
@@ -309,7 +335,12 @@ class OvertimeRepository
             $requestId = (int) $row['id'];
             $projects = $related['projects'][$requestId] ?? [];
             $row['projects'] = $projects;
-            $row['project_name'] = $this->formatProjectSummary($projects);
+            $row['duration_minutes'] = (int) ($row['duration_minutes'] ?? 0);
+            $row['duration_label'] = self::formatDurationLabel(
+                (int) ($row['duration'] ?? 0),
+                (int) ($row['duration_minutes'] ?? 0)
+            );
+            $row['project_name'] = $this->formatProjectSummary($projects, $row['duration_label']);
             $row['approver_details'] = $related['approvers'][$requestId] ?? [];
             $row['is_auto_approved'] = (string) ($row['status'] ?? '') === '1'
                 && empty($row['approver_details']);
@@ -335,16 +366,37 @@ class OvertimeRepository
     }
 
     /** @param array<int, array{project_name: string, hours: int}> $projects */
-    private function formatProjectSummary(array $projects): string
+    private function formatProjectSummary(array $projects, ?string $durationLabel = null): string
     {
         if (!$projects) {
             return '';
         }
 
         return implode(', ', array_map(
-            static fn (array $project): string => $project['project_name'] . ' (' . $project['hours'] . ' hrs)',
+            static function (array $project) use ($durationLabel): string {
+                $label = $durationLabel !== null && $durationLabel !== ''
+                    ? $durationLabel
+                    : self::formatDurationLabel((int) ($project['hours'] ?? 0), 0);
+                return $project['project_name'] . ' (' . $label . ')';
+            },
             $projects
         ));
+    }
+
+    public static function formatDurationLabel(int $hours, int $minutes = 0): string
+    {
+        $hours = max(0, $hours);
+        $minutes = max(0, min(59, $minutes));
+        if ($hours <= 0 && $minutes <= 0) {
+            return '0 min';
+        }
+        if ($hours > 0 && $minutes > 0) {
+            return $hours . 'h ' . $minutes . 'm';
+        }
+        if ($hours > 0) {
+            return $hours . ($hours === 1 ? ' hr' : ' hrs');
+        }
+        return $minutes . ' min';
     }
 
     public function insertEmailQueue(array $payload): bool
@@ -568,14 +620,22 @@ class OvertimeRepository
         $statsTotal = (int) ($stats['total'] ?? 0);
         $statsPending = (int) ($stats['pending'] ?? 0);
 
-        $sql = "SELECT orq.`id`, orq.`duration`, orq.`remarks`, orq.`request_date`, orq.`status`,
+        $sql = "SELECT orq.`id`, orq.`duration`, orq.`duration_minutes`, orq.`remarks`, orq.`request_date`, orq.`status`,
                        orq.`date_created`, orq.`submitted_by`, orq.`origin_request_id`,
+                       orq.`project_id`, orq.`item_id`, orq.`job_id`, orq.`tow_id`,
+                       orq.`work_2d3d`, orq.`revision`,
+                       iow.`fldItem` AS `item_name`,
+                       dr.`fldJob` AS `job_name`,
+                       tow.`fldTOW` AS `tow_name`,
                        {$followUpExists} AS `has_follow_up`,
                        el.`id` AS `employee_id`,
                        el.`surname` AS `employee_name`,
                        gl.`abbreviation` AS `group_name`,
                        l.`fldLocation` AS `location_name`
                 {$fromSql}
+                LEFT JOIN `itemofworkstable` iow ON iow.`fldID` = orq.`item_id`
+                LEFT JOIN `drawingreference` dr ON dr.`fldID` = orq.`job_id`
+                LEFT JOIN `typesofworktable` tow ON tow.`fldID` = orq.`tow_id`
                 WHERE {$whereSql}
                 ORDER BY
                     CASE
@@ -707,7 +767,10 @@ class OvertimeRepository
     public function addAcceptedRequestToDailyReport(int $overtimeID): void
     {
         $sql = "SELECT orq.`id`, orq.`user_id`, orq.`group_id`, orq.`location_id`,
-                       orq.`request_date`, orq.`remarks`, gl.`abbreviation`
+                       orq.`request_date`, orq.`remarks`, orq.`project_id`,
+                       orq.`item_id`, orq.`job_id`, orq.`tow_id`, orq.`work_2d3d`, orq.`revision`,
+                       orq.`duration`, orq.`duration_minutes`,
+                       gl.`abbreviation`
                 FROM `overtime_request` orq
                 INNER JOIN kdtphdb_new.`group_list` gl ON gl.`id` = orq.`group_id`
                 WHERE orq.`id` = :overtimeID
@@ -727,15 +790,32 @@ class OvertimeRepository
         $insertStmt = $this->pdo->prepare(
             "INSERT INTO `dailyreport`
                 (`fldEmployeeNum`, `fldGroup`, `fldGroupID`, `fldDate`, `fldLocation`,
-                 `fldProject`, `fldItem`, `fldRevision`, `fldDuration`, `fldMHType`,
-                 `fldRemarks`, `fldChangeLog`)
+                 `fldProject`, `fldItem`, `fldJobRequestDescription`, `fld2D3D`, `fldRevision`,
+                 `fldTOW`, `fldDuration`, `fldMHType`, `fldRemarks`, `fldChangeLog`)
              VALUES
                 (:employeeId, :groupAbbr, :groupId, :reportDate, :locationId,
-                 :projectId, 0, 0, :durationMinutes, 1, :remarks, :changeLog)"
+                 :projectId, :itemId, :jobId, :work2d3d, :revision,
+                 :towId, :durationMinutes, 1, :remarks, :changeLog)"
         );
         $changeLog = date('YmdHis') . '_' . (int) $request['user_id'];
+        $itemId = (int) ($request['item_id'] ?? 0);
+        $jobId = (int) ($request['job_id'] ?? 0);
+        $towId = (int) ($request['tow_id'] ?? 0);
+        $work2d3d = $request['work_2d3d'] !== null && $request['work_2d3d'] !== ''
+            ? (string) $request['work_2d3d']
+            : null;
+        $revision = (int) ($request['revision'] ?? 0);
+        $requestMinutes = ((int) ($request['duration'] ?? 0)) * 60
+            + (int) ($request['duration_minutes'] ?? 0);
 
         foreach ($projects as $project) {
+            $allocationMinutes = (int) $project['hours'] * 60;
+            // Prefer the request's HH:MM total when this is the single allocation row.
+            $durationMinutes = $requestMinutes > 0 ? $requestMinutes : $allocationMinutes;
+            if ($durationMinutes <= 0) {
+                $durationMinutes = $allocationMinutes;
+            }
+
             $insertStmt->execute([
                 ':employeeId' => (int) $request['user_id'],
                 ':groupAbbr' => (string) $request['abbreviation'],
@@ -743,7 +823,12 @@ class OvertimeRepository
                 ':reportDate' => (string) $request['request_date'],
                 ':locationId' => (int) $request['location_id'],
                 ':projectId' => (int) $project['project_id'],
-                ':durationMinutes' => (int) $project['hours'] * 60,
+                ':itemId' => $itemId,
+                ':jobId' => $jobId > 0 ? $jobId : null,
+                ':work2d3d' => $work2d3d,
+                ':revision' => $revision,
+                ':towId' => $towId > 0 ? $towId : null,
+                ':durationMinutes' => $durationMinutes,
                 ':remarks' => $request['remarks'] !== '' ? $request['remarks'] : null,
                 ':changeLog' => $changeLog,
             ]);
@@ -760,6 +845,9 @@ class OvertimeRepository
     {
         $sql = "SELECT orq.`id`, orq.`user_id`, orq.`group_id`, orq.`location_id`,
                        orq.`remarks`, orq.`request_date`, orq.`status`,
+                       orq.`project_id`, orq.`item_id`, orq.`job_id`, orq.`tow_id`,
+                       orq.`work_2d3d`, orq.`revision`,
+                       orq.`duration`, orq.`duration_minutes`,
                        (SELECT COUNT(*) FROM `overtime_accept` oa
                          WHERE oa.`overtime_id` = orq.`id` AND oa.`status` IS NOT NULL) AS `acted_count`
                 FROM `overtime_request` orq

@@ -9,6 +9,7 @@ use App\Controller\LocationController;
 use App\Controller\OvertimeController;
 use App\Controller\ProjectController;
 use App\Controller\UserController;
+use App\Controller\WorkController;
 use App\Database;
 use App\Repository\ActivityLogRepository;
 use App\Repository\AdminMemberRepository;
@@ -22,6 +23,7 @@ use App\Repository\OvertimeRepository;
 use App\Repository\ProjectNotifyRepository;
 use App\Repository\ProjectRepository;
 use App\Repository\UserRepository;
+use App\Repository\WorkLookupRepository;
 use App\Service\ActivityLogger;
 use App\Service\AdminAccessService;
 use App\Service\ApprovalFinalizer;
@@ -58,6 +60,7 @@ return function (Container $c, array $config): void {
     $c->set(OvertimeRepository::class, static fn (Container $c) => new OvertimeRepository($c->get('db.webjmr')));
     $c->set(ProjectRepository::class, static fn (Container $c) => new ProjectRepository($c->get('db.webjmr')));
     $c->set(ProjectNotifyRepository::class, static fn (Container $c) => new ProjectNotifyRepository($c->get('db.webjmr')));
+    $c->set(WorkLookupRepository::class, static fn (Container $c) => new WorkLookupRepository($c->get('db.webjmr')));
     $c->set(UserRepository::class, static fn (Container $c) => new UserRepository($c->get('db.kdtph')));
 
     $c->set(ActivityLogger::class, static fn (Container $c) => new ActivityLogger(
@@ -83,6 +86,7 @@ return function (Container $c, array $config): void {
         $c->get(LeaveRepository::class),
         $c->get(ApproverDirectoryService::class),
         $c->get(ProjectNotifyRepository::class),
+        $c->get(WorkLookupRepository::class),
         $c->get(ActivityLogger::class),
         $c->get('config.approval_cutoff_time')
     ));
@@ -145,6 +149,12 @@ return function (Container $c, array $config): void {
         $c->get(UserRepository::class),
         $c->get(EmployeeRepository::class),
         $c->get(ApproverDirectoryService::class)
+    ));
+
+    $c->set(WorkController::class, static fn (Container $c) => new WorkController(
+        $c->get(WorkLookupRepository::class),
+        $c->get(EmployeeRepository::class),
+        $c->get(UserRepository::class)
     ));
 
     $c->set(OvertimeController::class, static fn (Container $c) => new OvertimeController(

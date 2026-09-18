@@ -123,7 +123,14 @@ class OvertimeController
             'location' => $_POST['location'] ?? 0,
             'remarks' => $_POST['remarks'] ?? '',
             'date' => $_POST['date'] ?? date('Y-m-d'),
-            'projectsJson' => $_POST['projects'] ?? '',
+            'project_id' => $_POST['project_id'] ?? 0,
+            'hours' => $_POST['hours'] ?? 0,
+            'minutes' => $_POST['minutes'] ?? 0,
+            'item_id' => $_POST['item_id'] ?? 0,
+            'job_id' => $_POST['job_id'] ?? 0,
+            'tow_id' => $_POST['tow_id'] ?? 0,
+            'work_2d3d' => $_POST['work_2d3d'] ?? '',
+            'revision' => $_POST['revision'] ?? 0,
         ]);
     }
 
@@ -157,7 +164,14 @@ class OvertimeController
             'location' => $_POST['location'] ?? 0,
             'remarks' => $_POST['remarks'] ?? '',
             'date' => $_POST['date'] ?? date('Y-m-d'),
-            'projectsJson' => $_POST['projects'] ?? '',
+            'project_id' => $_POST['project_id'] ?? 0,
+            'hours' => $_POST['hours'] ?? 0,
+            'minutes' => $_POST['minutes'] ?? 0,
+            'item_id' => $_POST['item_id'] ?? 0,
+            'job_id' => $_POST['job_id'] ?? 0,
+            'tow_id' => $_POST['tow_id'] ?? 0,
+            'work_2d3d' => $_POST['work_2d3d'] ?? '',
+            'revision' => $_POST['revision'] ?? 0,
         ]);
     }
 

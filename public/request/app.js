@@ -10,7 +10,7 @@ import {
   setListPage,
   setSearchQuery,
 } from "./services/state.js";
-import { createProjectAllocations } from "../shared/js/projectAllocations.js";
+import { createWorkFields } from "../shared/js/workFields.js";
 import { showToast } from "../shared/js/toast.js";
 import { cancelOvertimeRequest } from "./api/cancelOvertime.js";
 import { getCurrentRequestId, refreshOpenModal } from "./components/modal.js";
@@ -33,11 +33,20 @@ import {
   requireFilled,
 } from "../shared/js/formValidation.js";
 
-const projectAllocations = createProjectAllocations({
-  containerId: "projectAllocations",
-  addButtonId: "addProjectAllocation",
-  totalId: "projectHoursTotal",
+const workFields = createWorkFields({
   groupSelector: "#group",
+  projectId: "project",
+  hoursId: "hours",
+  minutesId: "minutes",
+  durationSummaryId: "durationSummary",
+  itemId: "itemOfWork",
+  jobId: "jobRequest",
+  towId: "typeOfWork",
+  towDescId: "typeOfWorkDesc",
+  dimSectionId: "workDimSection",
+  dimCardsId: "workDimCards",
+  revisionSectionId: "workRevisionSection",
+  revisionId: "workRevision",
 });
 
 let requestLocked = false;
@@ -102,6 +111,7 @@ function applyRequestCutoffLock(locked, message) {
     $banner.addClass("d-none");
     $form.removeClass("is-cutoff-locked");
     $fields.prop("disabled", false);
+    workFields.syncDisabledState();
     setSubmitLoading(false);
   }
 }
@@ -117,11 +127,6 @@ async function loadRequestCutoffLock() {
     /* keep form usable if session probe fails; server still enforces lock */
   }
 }
-
-$("#group").on("change", function () {
-  if (requestLocked) return;
-  projectAllocations.loadProjects().catch(() => {});
-});
 
 // History filters, search, date range, pager
 function reloadHistory() {
@@ -223,7 +228,7 @@ $("#overtimeForm").on("submit", async function (e) {
     date: $("#date").val(),
     group: $("#group").val(),
     location: $("#location").val(),
-    projects: projectAllocations.getAllocations(),
+    ...workFields.getValues(),
     remarks: $("#remarks").val().trim(),
   };
 
@@ -232,7 +237,7 @@ $("#overtimeForm").on("submit", async function (e) {
   valid = requireFilled("#date") && valid;
   valid = requireFilled("#group") && valid;
   valid = requireFilled("#location") && valid;
-  valid = projectAllocations.markInvalidFields() && valid;
+  valid = workFields.markInvalidFields() && valid;
 
   if (payload.date && !isAllowedRequestDate(payload.date)) {
     validateDateInput(true);
@@ -254,7 +259,7 @@ $("#overtimeForm").on("submit", async function (e) {
     await addOvertimeRequest(payload);
     this.reset();
     setDefaultDate();
-    projectAllocations.reset();
+    workFields.reset();
     clearInvalidIn("#overtimeForm");
   } finally {
     actionInProgress = false;
@@ -290,13 +295,46 @@ $("#resetBtn").on("click", function () {
   if (requestLocked) return;
   $("#overtimeForm")[0].reset();
   setDefaultDate();
-  projectAllocations.reset();
+  workFields.reset();
 });
 
 $("#date").on("change input", function () {
   if (requestLocked) return;
   validateDateInput(true);
 });
+
+/**
+ * History card height follows the form card (form is the source of truth).
+ * On smaller breakpoints the cards stack, so height is left natural.
+ */
+function syncHistoryCardHeight() {
+  const formCard = document.getElementById("requestFormCard");
+  const historyCard = document.getElementById("requestHistoryCard");
+  if (!formCard || !historyCard) return;
+
+  if (window.matchMedia("(max-width: 991.98px)").matches) {
+    historyCard.style.height = "";
+    return;
+  }
+
+  historyCard.style.height = `${formCard.offsetHeight}px`;
+}
+
+function bindHistoryCardHeightSync() {
+  const formCard = document.getElementById("requestFormCard");
+  if (!formCard || typeof ResizeObserver === "undefined") {
+    syncHistoryCardHeight();
+    window.addEventListener("resize", syncHistoryCardHeight);
+    return;
+  }
+
+  const observer = new ResizeObserver(() => {
+    syncHistoryCardHeight();
+  });
+  observer.observe(formCard);
+  window.addEventListener("resize", syncHistoryCardHeight);
+  syncHistoryCardHeight();
+}
 
 // Init
 initShell();
@@ -305,6 +343,7 @@ setDefaultDate();
 $("#historyFrom").val(listQuery.from);
 $("#historyTo").val(listQuery.to);
 bindClearInvalidOnEdit("#overtimeForm");
+bindHistoryCardHeightSync();
 loadBlockedHolidays().catch(() => {});
 fetchLocations().catch(() => {});
 fetchGroups().catch(() => {});
