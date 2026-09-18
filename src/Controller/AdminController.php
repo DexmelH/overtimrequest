@@ -5,6 +5,8 @@ use App\Repository\ActivityLogRepository;
 use App\Repository\AdminMemberRepository;
 use App\Repository\EmployeeRepository;
 use App\Repository\GroupApproverRepository;
+use App\Repository\ProjectNotifyRepository;
+use App\Repository\ProjectRepository;
 use App\Repository\UserRepository;
 use App\Service\ActivityLogger;
 use App\Service\AdminAccessService;
@@ -15,6 +17,8 @@ class AdminController
     private UserRepository $userRepo;
     private EmployeeRepository $employeeRepo;
     private GroupApproverRepository $approverRepo;
+    private ProjectNotifyRepository $projectNotifyRepo;
+    private ProjectRepository $projectRepo;
     private AdminMemberRepository $adminMemberRepo;
     private AdminAccessService $adminAccess;
     private ActivityLogger $logger;
@@ -24,6 +28,8 @@ class AdminController
         UserRepository $userRepo,
         EmployeeRepository $employeeRepo,
         GroupApproverRepository $approverRepo,
+        ProjectNotifyRepository $projectNotifyRepo,
+        ProjectRepository $projectRepo,
         AdminMemberRepository $adminMemberRepo,
         AdminAccessService $adminAccess,
         ActivityLogger $logger
@@ -32,6 +38,8 @@ class AdminController
         $this->userRepo = $userRepo;
         $this->employeeRepo = $employeeRepo;
         $this->approverRepo = $approverRepo;
+        $this->projectNotifyRepo = $projectNotifyRepo;
+        $this->projectRepo = $projectRepo;
         $this->adminMemberRepo = $adminMemberRepo;
         $this->adminAccess = $adminAccess;
         $this->logger = $logger;
@@ -293,11 +301,244 @@ class AdminController
         $this->requireAdmin((int) $user['id']);
 
         $query = $_GET['q'] ?? '';
-        $employees = $this->employeeRepo->searchEmployees($query);
+        $groupId = (int) ($_GET['group_id'] ?? 0);
+        $excludeIds = $groupId > 0
+            ? $this->approverRepo->findAssignedApproverIds($groupId)
+            : [];
+        $employees = $this->employeeRepo->searchEmployees($query, 25, $excludeIds);
 
         return [
             'success' => true,
             'data' => $employees,
+        ];
+    }
+
+    public function getProjectNotify(): array
+    {
+        $user = $this->currentUser();
+        $this->requireAdmin((int) $user['id']);
+
+        $groupId = (int) ($_GET['group_id'] ?? 0);
+        $projectId = (int) ($_GET['project_id'] ?? 0);
+        $groupAbbrev = null;
+
+        if ($groupId > 0) {
+            $group = $this->employeeRepo->findGroupById($groupId);
+            if (!$group) {
+                return ['success' => false, 'message' => 'Group not found.'];
+            }
+            $groupAbbrev = (string) ($group['abbreviation'] ?? '');
+        }
+
+        return [
+            'success' => true,
+            'recipients' => $this->projectNotifyRepo->findAll(
+                $groupAbbrev,
+                $projectId > 0 ? $projectId : null
+            ),
+            'filter_projects' => $this->projectNotifyRepo->findFilterProjects($groupAbbrev),
+        ];
+    }
+
+    public function getProjectNotifyEmployees(): array
+    {
+        $user = $this->currentUser();
+        $this->requireAdmin((int) $user['id']);
+
+        $groupId = (int) ($_GET['group_id'] ?? 0);
+        if ($groupId <= 0) {
+            return ['success' => false, 'message' => 'Invalid group ID.'];
+        }
+
+        $group = $this->employeeRepo->findGroupById($groupId);
+        if (!$group) {
+            return ['success' => false, 'message' => 'Group not found.'];
+        }
+
+        return [
+            'success' => true,
+            'data' => $this->employeeRepo->findByMainGroupId($groupId),
+        ];
+    }
+
+    public function getProjectNotifyProjects(): array
+    {
+        $user = $this->currentUser();
+        $this->requireAdmin((int) $user['id']);
+
+        $groupId = (int) ($_GET['group_id'] ?? 0);
+        $employeeId = (int) ($_GET['employee_id'] ?? 0);
+        if ($groupId <= 0) {
+            return ['success' => false, 'message' => 'Invalid group ID.'];
+        }
+        if ($employeeId <= 0) {
+            return ['success' => false, 'message' => 'Select an employee first.'];
+        }
+
+        $group = $this->employeeRepo->findGroupById($groupId);
+        if (!$group) {
+            return ['success' => false, 'message' => 'Group not found.'];
+        }
+
+        $employee = $this->employeeRepo->findById($employeeId);
+        if (!$employee) {
+            return ['success' => false, 'message' => 'Invalid employee.'];
+        }
+
+        if ((int) ($employee['group_id'] ?? 0) !== $groupId) {
+            return ['success' => false, 'message' => 'Employee main group does not match the selected group.'];
+        }
+
+        $abbr = (string) ($group['abbreviation'] ?? '');
+        $projects = $this->projectRepo->findProjectsForGroupAndUser($abbr, (string) $employeeId);
+
+        return [
+            'success' => true,
+            'data' => array_map(static function (array $row): array {
+                return [
+                    'id' => (int) ($row['fldID'] ?? 0),
+                    'name' => (string) ($row['fldProject'] ?? ''),
+                ];
+            }, $projects),
+        ];
+    }
+
+    public function addProjectNotify(): array
+    {
+        $user = $this->currentUser();
+        $this->requireAdmin((int) $user['id']);
+
+        $groupId = (int) ($_POST['group_id'] ?? 0);
+        $employeeId = (int) ($_POST['employee_id'] ?? 0);
+        $projectId = (int) ($_POST['project_id'] ?? 0);
+
+        if ($groupId <= 0) {
+            return ['success' => false, 'message' => 'Invalid group ID.'];
+        }
+        if ($employeeId <= 0) {
+            return ['success' => false, 'message' => 'Select an employee to add.'];
+        }
+        if ($projectId <= 0) {
+            return ['success' => false, 'message' => 'Select a project.'];
+        }
+
+        $group = $this->employeeRepo->findGroupById($groupId);
+        if (!$group) {
+            return ['success' => false, 'message' => 'Group not found.'];
+        }
+
+        $employee = $this->employeeRepo->findById($employeeId);
+        if (!$employee) {
+            return ['success' => false, 'message' => 'Invalid employee.'];
+        }
+
+        if ((int) ($employee['group_id'] ?? 0) !== $groupId) {
+            return ['success' => false, 'message' => 'Employee main group does not match the selected group.'];
+        }
+
+        $email = trim((string) ($employee['email'] ?? ''));
+        if ($email === '') {
+            return ['success' => false, 'message' => 'This employee has no email address.'];
+        }
+
+        $abbr = (string) ($group['abbreviation'] ?? '');
+        $allowed = $this->projectRepo->findProjectsForGroupAndUser($abbr, (string) $employeeId);
+        $allowedIds = array_map(static fn (array $row): int => (int) ($row['fldID'] ?? 0), $allowed);
+        if (!in_array($projectId, $allowedIds, true)) {
+            return ['success' => false, 'message' => 'Selected project is not available for this group and user.'];
+        }
+
+        $employeeName = trim((string) ($_POST['employee_name'] ?? ''));
+        if ($employeeName === '') {
+            $employeeName = trim(($employee['surname'] ?? '') . ' ' . ($employee['firstname'] ?? ''));
+        }
+
+        try {
+            $this->projectNotifyRepo->add($projectId, $employeeId, (int) $user['id']);
+        } catch (\RuntimeException $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+
+        $projectName = $this->projectNotifyRepo->findProjectName($projectId);
+
+        $this->logger->log(
+            'admin.project_notify.add',
+            (int) $user['id'],
+            $user['surname'] ?? null,
+            'project',
+            $projectId,
+            [
+                'employee_id' => $employeeId,
+                'employee_name' => $employeeName !== '' ? $employeeName : null,
+                'project_id' => $projectId,
+                'project_name' => $projectName !== '' ? $projectName : null,
+                'group_id' => $groupId,
+                'group_abbr' => $abbr !== '' ? $abbr : null,
+            ]
+        );
+
+        return [
+            'success' => true,
+            'message' => 'Notify recipient added.',
+        ];
+    }
+
+    public function removeProjectNotify(): array
+    {
+        $user = $this->currentUser();
+        $this->requireAdmin((int) $user['id']);
+
+        $employeeId = (int) ($_POST['employee_id'] ?? 0);
+        $projectId = (int) ($_POST['project_id'] ?? 0);
+        $groupId = (int) ($_POST['group_id'] ?? 0);
+
+        if ($employeeId <= 0 || $projectId <= 0) {
+            return ['success' => false, 'message' => 'Invalid notify assignment.'];
+        }
+
+        $employeeName = trim((string) ($_POST['employee_name'] ?? ''));
+        if ($employeeName === '') {
+            $employee = $this->employeeRepo->findById($employeeId);
+            if ($employee) {
+                $employeeName = trim(($employee['surname'] ?? '') . ' ' . ($employee['firstname'] ?? ''));
+            }
+        }
+
+        $projectName = trim((string) ($_POST['project_name'] ?? ''));
+        if ($projectName === '') {
+            $projectName = $this->projectNotifyRepo->findProjectName($projectId);
+        }
+
+        $groupAbbr = trim((string) ($_POST['group_abbr'] ?? ''));
+        if ($groupAbbr === '' && $groupId > 0) {
+            $group = $this->employeeRepo->findGroupById($groupId);
+            $groupAbbr = (string) ($group['abbreviation'] ?? '');
+        }
+
+        $removed = $this->projectNotifyRepo->remove($projectId, $employeeId);
+        if (!$removed) {
+            return ['success' => false, 'message' => 'Notify assignment was not found.'];
+        }
+
+        $this->logger->log(
+            'admin.project_notify.remove',
+            (int) $user['id'],
+            $user['surname'] ?? null,
+            'project',
+            $projectId,
+            [
+                'employee_id' => $employeeId,
+                'employee_name' => $employeeName !== '' ? $employeeName : null,
+                'project_id' => $projectId,
+                'project_name' => $projectName !== '' ? $projectName : null,
+                'group_id' => $groupId > 0 ? $groupId : null,
+                'group_abbr' => $groupAbbr !== '' ? $groupAbbr : null,
+            ]
+        );
+
+        return [
+            'success' => true,
+            'message' => 'Notify recipient removed.',
         ];
     }
 
@@ -317,19 +558,19 @@ class AdminController
         }
 
         $approvers = $this->userRepo->findFormPicApproversByGroupAbbrev((string) $group['abbreviation']);
-        $savedLevels = $this->approverRepo->findByGroupId($groupId);
+        $savedApprovers = $this->approverRepo->findByGroupId($groupId);
 
         return [
             'success' => true,
             'group_id' => $groupId,
             'group' => $group,
             'source' => 'formspic',
-            'saved_levels' => $savedLevels,
+            'saved_approvers' => $savedApprovers,
             'approvers' => $approvers,
         ];
     }
 
-    public function saveGroupApproverLevel(): array
+    public function addGroupApprover(): array
     {
         $user = $this->currentUser();
         $this->requireAdmin((int) $user['id']);
@@ -344,51 +585,174 @@ class AdminController
             return ['success' => false, 'message' => 'Group not found.'];
         }
 
-        $levelRaw = trim((string) ($_POST['level'] ?? ''));
-        if (preg_match('/^L?(\d)$/i', $levelRaw, $matches)) {
-            $level = (int) $matches[1];
-        } else {
-            $level = (int) $levelRaw;
-        }
-        if ($level < 1 || $level > 4) {
+        $level = $this->parseApprovalLevel($_POST['level'] ?? '');
+        if ($level === null) {
             return ['success' => false, 'message' => 'Invalid approval level.'];
         }
 
         $approverId = (int) ($_POST['approver_id'] ?? 0);
-        $approverName = trim((string) ($_POST['approver_name'] ?? ''));
+        if ($approverId <= 0) {
+            return ['success' => false, 'message' => 'Select an employee to add.'];
+        }
 
-        if ($approverId > 0) {
-            $employee = $this->employeeRepo->findById($approverId);
-            if (!$employee) {
-                return ['success' => false, 'message' => 'Invalid employee for this level.'];
-            }
-            if ($approverName === '') {
-                $approverName = trim(($employee['surname'] ?? '') . ' ' . ($employee['firstname'] ?? ''));
-            }
-            $this->approverRepo->saveLevel($groupId, $level, $approverId, (int) $user['id']);
-        } else {
-            $this->approverRepo->deleteLevel($groupId, $level);
+        $employee = $this->employeeRepo->findById($approverId);
+        if (!$employee) {
+            return ['success' => false, 'message' => 'Invalid employee.'];
+        }
+
+        $approverName = trim((string) ($_POST['approver_name'] ?? ''));
+        if ($approverName === '') {
+            $approverName = trim(($employee['surname'] ?? '') . ' ' . ($employee['firstname'] ?? ''));
+        }
+
+        try {
+            $this->approverRepo->addApprover($groupId, $level, $approverId, (int) $user['id']);
+        } catch (\RuntimeException $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
         }
 
         $this->logger->log(
-            'admin.approvers.save',
+            'admin.approvers.add',
             (int) $user['id'],
             $user['surname'] ?? null,
             'group',
             $groupId,
             [
                 'level' => 'L' . $level,
-                'approver_id' => $approverId > 0 ? $approverId : null,
+                'approver_id' => $approverId,
                 'approver_name' => $approverName !== '' ? $approverName : null,
                 'group_abbr' => $group['abbreviation'] ?? null,
-                'cleared' => $approverId <= 0,
             ]
         );
 
         return [
             'success' => true,
-            'message' => $approverId > 0 ? 'Approver saved.' : 'Approver cleared.',
-            'saved_levels' => $this->approverRepo->findByGroupId($groupId),
+            'message' => 'Approver added.',
+            'saved_approvers' => $this->approverRepo->findByGroupId($groupId),
+        ];
+    }
+
+    public function removeGroupApprover(): array
+    {
+        $user = $this->currentUser();
+        $this->requireAdmin((int) $user['id']);
+
+        $groupId = (int) ($_POST['group_id'] ?? 0);
+        if ($groupId <= 0) {
+            return ['success' => false, 'message' => 'Invalid group ID.'];
+        }
+
+        $group = $this->employeeRepo->findGroupById($groupId);
+        if (!$group) {
+            return ['success' => false, 'message' => 'Group not found.'];
+        }
+
+        $approverId = (int) ($_POST['approver_id'] ?? 0);
+        if ($approverId <= 0) {
+            return ['success' => false, 'message' => 'Invalid approver.'];
+        }
+
+        $approverName = trim((string) ($_POST['approver_name'] ?? ''));
+        if ($approverName === '') {
+            $employee = $this->employeeRepo->findById($approverId);
+            if ($employee) {
+                $approverName = trim(($employee['surname'] ?? '') . ' ' . ($employee['firstname'] ?? ''));
+            }
+        }
+
+        $removed = $this->approverRepo->removeApprover($groupId, $approverId);
+        if (!$removed) {
+            return ['success' => false, 'message' => 'Approver was not assigned to this group.'];
+        }
+
+        $this->logger->log(
+            'admin.approvers.remove',
+            (int) $user['id'],
+            $user['surname'] ?? null,
+            'group',
+            $groupId,
+            [
+                'approver_id' => $approverId,
+                'approver_name' => $approverName !== '' ? $approverName : null,
+                'group_abbr' => $group['abbreviation'] ?? null,
+            ]
+        );
+
+        return [
+            'success' => true,
+            'message' => 'Approver removed.',
+            'saved_approvers' => $this->approverRepo->findByGroupId($groupId),
+        ];
+    }
+
+    public function changeGroupApproverLevel(): array
+    {
+        $user = $this->currentUser();
+        $this->requireAdmin((int) $user['id']);
+
+        $groupId = (int) ($_POST['group_id'] ?? 0);
+        if ($groupId <= 0) {
+            return ['success' => false, 'message' => 'Invalid group ID.'];
+        }
+
+        $group = $this->employeeRepo->findGroupById($groupId);
+        if (!$group) {
+            return ['success' => false, 'message' => 'Group not found.'];
+        }
+
+        $level = $this->parseApprovalLevel($_POST['level'] ?? '');
+        if ($level === null) {
+            return ['success' => false, 'message' => 'Invalid approval level.'];
+        }
+
+        $approverId = (int) ($_POST['approver_id'] ?? 0);
+        if ($approverId <= 0) {
+            return ['success' => false, 'message' => 'Invalid approver.'];
+        }
+
+        $approverName = trim((string) ($_POST['approver_name'] ?? ''));
+        if ($approverName === '') {
+            $employee = $this->employeeRepo->findById($approverId);
+            if ($employee) {
+                $approverName = trim(($employee['surname'] ?? '') . ' ' . ($employee['firstname'] ?? ''));
+            }
+        }
+
+        try {
+            $this->approverRepo->changeApproverLevel($groupId, $approverId, $level, (int) $user['id']);
+        } catch (\RuntimeException $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+
+        $this->logger->log(
+            'admin.approvers.change_level',
+            (int) $user['id'],
+            $user['surname'] ?? null,
+            'group',
+            $groupId,
+            [
+                'level' => 'L' . $level,
+                'approver_id' => $approverId,
+                'approver_name' => $approverName !== '' ? $approverName : null,
+                'group_abbr' => $group['abbreviation'] ?? null,
+            ]
+        );
+
+        return [
+            'success' => true,
+            'message' => 'Approver level updated.',
+            'saved_approvers' => $this->approverRepo->findByGroupId($groupId),
+        ];
+    }
+
+    /**
+     * @deprecated Bulk one-per-level save; use add/remove/change-level endpoints.
+     */
+    public function saveGroupApprovers(): array
+    {
+        return [
+            'success' => false,
+            'message' => 'Bulk level save is no longer supported. Add or remove approvers individually.',
         ];
     }
 
@@ -438,48 +802,20 @@ class AdminController
         return ['success' => true];
     }
 
-    public function saveGroupApprovers(): array
+    private function parseApprovalLevel($raw): ?int
     {
-        $user = $this->currentUser();
-        $this->requireAdmin((int) $user['id']);
-
-        $groupId = (int) ($_POST['group_id'] ?? 0);
-        if ($groupId <= 0) {
-            return ['success' => false, 'message' => 'Invalid group ID.'];
+        $levelRaw = trim((string) $raw);
+        if (preg_match('/^L?(\d)$/i', $levelRaw, $matches)) {
+            $level = (int) $matches[1];
+        } else {
+            $level = (int) $levelRaw;
         }
 
-        $levels = [];
-        for ($i = 1; $i <= 4; $i++) {
-            $key = 'l' . $i;
-            $val = $_POST[$key] ?? '';
-            if ($val !== '' && $val !== null) {
-                $levels[$i] = (int) $val;
-            }
+        if ($level < 1 || $level > 4) {
+            return null;
         }
 
-        $employees = $this->employeeRepo->findByIds(array_values($levels));
-        foreach ($levels as $level => $approverId) {
-            if (!isset($employees[$approverId])) {
-                return ['success' => false, 'message' => "Invalid employee for L{$level}."];
-            }
-        }
-
-        $this->approverRepo->saveForGroup($groupId, $levels, (int) $user['id']);
-
-        $this->logger->log(
-            'admin.approvers.save',
-            (int) $user['id'],
-            $user['surname'] ?? null,
-            'group',
-            $groupId,
-            ['levels' => $levels]
-        );
-
-        return [
-            'success' => true,
-            'message' => 'Group approvers saved successfully.',
-            'levels' => $this->approverRepo->findByGroupId($groupId),
-        ];
+        return $level;
     }
 
     private function currentUser(): array

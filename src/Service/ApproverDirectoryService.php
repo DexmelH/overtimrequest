@@ -28,14 +28,14 @@ class ApproverDirectoryService
         }
 
         return $this->groupApproverRepo->isAssignedApprover($approverId)
-            || $this->userRepo->isFormPicApprover($approverId);
+            || $this->findFormPicFallbackGroupsForUser($approverId) !== [];
     }
 
     /**
      * Groups the user approves for, used for on-behalf / search:
      * - groups where they are configured in overtime_group_approvers
-     * - groups where they are a Form PIC, even if that group also has OGA
-     *   configuration; being either kind of approver is enough
+     * - groups where they are a Form PIC and that group has no OGA rows
+     *   (saved approvers replace Forms PIC for that group)
      *
      * @return array<int, array{id: int, abbreviation: string, name: string}>
      */
@@ -46,8 +46,7 @@ class ApproverDirectoryService
             $groups[(int) $row['id']] = $row;
         }
 
-        $picAbbrs = $this->userRepo->findFormPicGroupAbbreviationsByEmployeeId($approverId);
-        foreach ($this->employeeRepo->findGroupsByAbbreviations($picAbbrs) as $row) {
+        foreach ($this->findFormPicFallbackGroupsForUser($approverId) as $row) {
             $groups[(int) $row['id']] = $row;
         }
 
@@ -67,7 +66,7 @@ class ApproverDirectoryService
     }
 
     /**
-     * Highest OGA level or Form PIC role this user holds (any group).
+     * Highest OGA level, or Form PIC role only for groups that still use Forms PIC fallback.
      */
     public function findHighestApprovalLevel(int $userId): int
     {
@@ -75,10 +74,12 @@ class ApproverDirectoryService
             return 0;
         }
 
-        return max(
-            $this->groupApproverRepo->findHighestApprovalLevel($userId),
-            $this->userRepo->findHighestFormPicRole($userId)
-        );
+        $ogaLevel = $this->groupApproverRepo->findHighestApprovalLevel($userId);
+        $picLevel = $this->findFormPicFallbackGroupsForUser($userId) !== []
+            ? $this->userRepo->findHighestFormPicRole($userId)
+            : 0;
+
+        return max($ogaLevel, $picLevel);
     }
 
     public function isSeniorApprover(int $userId, int $minLevel = 3): bool
@@ -107,5 +108,43 @@ class ApproverDirectoryService
         }
 
         return [];
+    }
+
+    /**
+     * Form PIC groups that still apply because they have no saved OGA approvers.
+     *
+     * @return array<int, array{id: int, abbreviation: string, name: string}>
+     */
+    private function findFormPicFallbackGroupsForUser(int $approverId): array
+    {
+        if ($approverId <= 0) {
+            return [];
+        }
+
+        $picAbbrs = $this->userRepo->findFormPicGroupAbbreviationsByEmployeeId($approverId);
+        if (!$picAbbrs) {
+            return [];
+        }
+
+        $picGroups = $this->employeeRepo->findGroupsByAbbreviations($picAbbrs);
+        if (!$picGroups) {
+            return [];
+        }
+
+        $picGroupIds = array_map(static fn(array $row): int => (int) $row['id'], $picGroups);
+        $configuredIds = array_fill_keys(
+            $this->groupApproverRepo->findConfiguredGroupIds($picGroupIds),
+            true
+        );
+
+        $fallback = [];
+        foreach ($picGroups as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            if ($id > 0 && !isset($configuredIds[$id])) {
+                $fallback[] = $row;
+            }
+        }
+
+        return $fallback;
     }
 }

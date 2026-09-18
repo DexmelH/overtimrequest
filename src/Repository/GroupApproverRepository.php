@@ -2,6 +2,8 @@
 namespace App\Repository;
 
 use PDO;
+use PDOException;
+use RuntimeException;
 
 class GroupApproverRepository
 {
@@ -12,6 +14,11 @@ class GroupApproverRepository
         $this->pdo = $pdo;
     }
 
+    /**
+     * Flat list of OGA rows for a group (multiple people per level allowed).
+     *
+     * @return array<int, array<string, mixed>>
+     */
     public function findByGroupId(int $groupId): array
     {
         $sql = "SELECT oga.`approval_level`, oga.`approver_id`, oga.`updated_at`,
@@ -19,16 +26,39 @@ class GroupApproverRepository
                 FROM `overtime_group_approvers` oga
                 LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = oga.`approver_id`
                 WHERE oga.`group_id` = :groupId
-                ORDER BY oga.`approval_level` ASC";
+                ORDER BY oga.`approval_level` ASC, el.`surname` ASC, el.`firstname` ASC";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([':groupId' => $groupId]);
-        $rows = $stmt->fetchAll() ?: [];
 
-        $levels = [];
-        foreach ($rows as $row) {
-            $levels[(int) $row['approval_level']] = $row;
+        return $stmt->fetchAll() ?: [];
+    }
+
+    /** @return int[] */
+    public function findAssignedApproverIds(int $groupId): array
+    {
+        $sql = "SELECT `approver_id` FROM `overtime_group_approvers` WHERE `group_id` = :groupId";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':groupId' => $groupId]);
+        $ids = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
+        return array_map('intval', $ids);
+    }
+
+    public function isApproverInGroup(int $groupId, int $approverId): bool
+    {
+        if ($groupId <= 0 || $approverId <= 0) {
+            return false;
         }
-        return $levels;
+
+        $sql = "SELECT COUNT(*) FROM `overtime_group_approvers`
+                WHERE `group_id` = :groupId AND `approver_id` = :approverId";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':groupId' => $groupId,
+            ':approverId' => $approverId,
+        ]);
+
+        return (int) $stmt->fetchColumn() > 0;
     }
 
     public function findApproversByGroupId(int $groupId, int $excludeUserId): array
@@ -93,52 +123,112 @@ class GroupApproverRepository
         return (int) $stmt->fetchColumn() > 0;
     }
 
-    public function saveForGroup(int $groupId, array $levels, int $updatedBy): void
+    /**
+     * @param int[] $groupIds
+     * @return int[] group ids that have at least one OGA row
+     */
+    public function findConfiguredGroupIds(array $groupIds = []): array
     {
-        $delete = $this->pdo->prepare(
-            "DELETE FROM `overtime_group_approvers` WHERE `group_id` = :groupId AND `approval_level` = :level"
-        );
-        $upsert = $this->pdo->prepare(
-            "INSERT INTO `overtime_group_approvers` (`group_id`, `approval_level`, `approver_id`, `updated_by`)
-             VALUES (:groupId, :level, :approverId, :updatedBy)
-             ON DUPLICATE KEY UPDATE `approver_id` = VALUES(`approver_id`), `updated_by` = VALUES(`updated_by`)"
-        );
+        $groupIds = array_values(array_unique(array_filter(
+            array_map('intval', $groupIds),
+            static fn (int $id): bool => $id > 0
+        )));
 
-        for ($level = 1; $level <= 4; $level++) {
-            $approverId = isset($levels[$level]) ? (int) $levels[$level] : 0;
-            if ($approverId <= 0) {
-                $delete->execute([':groupId' => $groupId, ':level' => $level]);
-                continue;
+        if ($groupIds) {
+            $placeholders = [];
+            $params = [];
+            foreach ($groupIds as $i => $id) {
+                $key = ':g' . $i;
+                $placeholders[] = $key;
+                $params[$key] = $id;
             }
-            $upsert->execute([
+            $sql = "SELECT DISTINCT `group_id` FROM `overtime_group_approvers`
+                    WHERE `group_id` IN (" . implode(',', $placeholders) . ")";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+        } else {
+            $sql = "SELECT DISTINCT `group_id` FROM `overtime_group_approvers`";
+            $stmt = $this->pdo->query($sql);
+        }
+
+        $ids = $stmt ? ($stmt->fetchAll(PDO::FETCH_COLUMN) ?: []) : [];
+
+        return array_map('intval', $ids);
+    }
+
+    /**
+     * @throws RuntimeException when the person is already an approver for this group
+     */
+    public function addApprover(int $groupId, int $level, int $approverId, int $updatedBy): void
+    {
+        if ($level < 1 || $level > 4 || $approverId <= 0) {
+            throw new RuntimeException('Invalid level or approver.');
+        }
+
+        try {
+            $stmt = $this->pdo->prepare(
+                "INSERT INTO `overtime_group_approvers` (`group_id`, `approval_level`, `approver_id`, `updated_by`)
+                 VALUES (:groupId, :level, :approverId, :updatedBy)"
+            );
+            $stmt->execute([
                 ':groupId' => $groupId,
                 ':level' => $level,
                 ':approverId' => $approverId,
                 ':updatedBy' => $updatedBy,
             ]);
+        } catch (PDOException $e) {
+            if ($this->isDuplicateKey($e)) {
+                throw new RuntimeException('This employee is already an approver for this group.');
+            }
+            throw $e;
         }
     }
 
-    public function saveLevel(int $groupId, int $level, int $approverId, int $updatedBy): void
+    public function removeApprover(int $groupId, int $approverId): bool
     {
         $stmt = $this->pdo->prepare(
-            "INSERT INTO `overtime_group_approvers` (`group_id`, `approval_level`, `approver_id`, `updated_by`)
-             VALUES (:groupId, :level, :approverId, :updatedBy)
-             ON DUPLICATE KEY UPDATE `approver_id` = VALUES(`approver_id`), `updated_by` = VALUES(`updated_by`)"
+            "DELETE FROM `overtime_group_approvers`
+             WHERE `group_id` = :groupId AND `approver_id` = :approverId"
         );
         $stmt->execute([
             ':groupId' => $groupId,
-            ':level' => $level,
             ':approverId' => $approverId,
-            ':updatedBy' => $updatedBy,
         ]);
+
+        return $stmt->rowCount() > 0;
     }
 
-    public function deleteLevel(int $groupId, int $level): void
+    /**
+     * @throws RuntimeException when row missing or level invalid
+     */
+    public function changeApproverLevel(int $groupId, int $approverId, int $newLevel, int $updatedBy): void
     {
+        if ($newLevel < 1 || $newLevel > 4 || $approverId <= 0) {
+            throw new RuntimeException('Invalid level or approver.');
+        }
+
         $stmt = $this->pdo->prepare(
-            "DELETE FROM `overtime_group_approvers` WHERE `group_id` = :groupId AND `approval_level` = :level"
+            "UPDATE `overtime_group_approvers`
+             SET `approval_level` = :level, `updated_by` = :updatedBy
+             WHERE `group_id` = :groupId AND `approver_id` = :approverId"
         );
-        $stmt->execute([':groupId' => $groupId, ':level' => $level]);
+        $stmt->execute([
+            ':level' => $newLevel,
+            ':updatedBy' => $updatedBy,
+            ':groupId' => $groupId,
+            ':approverId' => $approverId,
+        ]);
+
+        if ($stmt->rowCount() === 0 && !$this->isApproverInGroup($groupId, $approverId)) {
+            throw new RuntimeException('Approver is not assigned to this group.');
+        }
+    }
+
+    private function isDuplicateKey(PDOException $e): bool
+    {
+        $code = (string) ($e->errorInfo[1] ?? '');
+        $msg = $e->getMessage();
+
+        return $code === '1062' || stripos($msg, 'Duplicate') !== false;
     }
 }

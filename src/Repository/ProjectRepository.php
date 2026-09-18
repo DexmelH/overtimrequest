@@ -35,4 +35,38 @@ class ProjectRepository
 
         return $data ? $data : [];
     }
+
+    /**
+     * Same merge as the request page: group catalog + projects shared to the user.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function findProjectsForGroupAndUser(string $groupAbbrev, string $userID): array
+    {
+        $groupAbbrev = trim($groupAbbrev);
+        $groupProjects = $groupAbbrev !== '' ? $this->findProjectByGroupID($groupAbbrev) : [];
+        $sharedProjects = $userID !== '' ? $this->findProjectByUserID($userID) : [];
+
+        return $this->mergeProjectsById($sharedProjects, $groupProjects);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> ...$lists
+     * @return array<int, array<string, mixed>>
+     */
+    public function mergeProjectsById(array ...$lists): array
+    {
+        $merged = [];
+        foreach ($lists as $list) {
+            foreach ($list as $row) {
+                $id = (int) ($row['fldID'] ?? 0);
+                if ($id <= 0) {
+                    continue;
+                }
+                $merged[$id] = $row;
+            }
+        }
+
+        return array_values($merged);
+    }
 }

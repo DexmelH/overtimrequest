@@ -90,6 +90,12 @@
             </button>
           </li>
           <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-notify" data-bs-toggle="pill"
+              data-bs-target="#panel-notify" type="button" role="tab">
+              <i class="bi bi-envelope me-1"></i> Notify only
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
             <button class="nav-link" id="tab-members" data-bs-toggle="pill"
               data-bs-target="#panel-members" type="button" role="tab">
               <i class="bi bi-shield-check me-1"></i> Admins
@@ -112,7 +118,9 @@
                   <div class="ot-card-header flex-wrap">
                     <div>
                       <h2>Group Approvers</h2>
-                      <p class="ot-muted mb-0">Search and add L1–L4 approvers. Saved approvers are used for overtime request routing.</p>
+                      <p class="ot-muted mb-0">
+                        Add multiple L1–L4 approvers per group. Multiple people at the same level are notified together; highest level wins at cutoff.
+                      </p>
                     </div>
                   </div>
                   <div class="ot-card-body">
@@ -123,7 +131,9 @@
                           <option value="">Select a group</option>
                         </select>
                         <p class="ot-muted small mt-2 mb-0">
-                          Pick a group, search employees, then click <strong>Add</strong> for each level.
+                          Pick a group, search under a level, then click <strong>Add</strong>.
+                          People already saved as approvers for this group are hidden from search.
+                          Change level or remove from <strong>Saved approvers</strong>.
                         </p>
                       </div>
                       <div class="col-md-7">
@@ -140,7 +150,7 @@
                   <div class="ot-card-header py-2">
                     <div>
                       <h3 class="h6 mb-0">Saved approvers</h3>
-                      <p class="ot-muted small mb-0">Stored in overtime_group_approvers</p>
+                      <p class="ot-muted small mb-0">Change level or remove assignments here</p>
                     </div>
                     <span class="status-badge status-approved">Saved</span>
                   </div>
@@ -156,6 +166,85 @@
                     <span class="status-badge status-approved">Active</span>
                   </div>
                   <div class="ot-card-body pt-2" id="officialApproversList"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notify only -->
+          <div class="tab-pane fade" id="panel-notify" role="tabpanel">
+            <div class="row g-4">
+              <div class="col-lg-5">
+                <div class="ot-card h-100 notify-only-card">
+                  <div class="ot-card-header">
+                    <div>
+                      <h2>Add notify recipient</h2>
+                      <p class="ot-muted mb-0">
+                        Choose a group, then a user in that main group, then a project
+                        (same list as the request page: group projects plus shared projects).
+                        They get email when OT is filed for that project — cannot approve.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="ot-card-body">
+                    <div class="mb-3">
+                      <label class="form-label" for="notifyAddGroupSelect">Group</label>
+                      <select class="form-select" id="notifyAddGroupSelect">
+                        <option value="">Select a group</option>
+                      </select>
+                    </div>
+                    <div class="mb-3 position-relative">
+                      <label class="form-label" for="notifyAddUserSearch">User</label>
+                      <input
+                        type="search"
+                        class="form-control"
+                        id="notifyAddUserSearch"
+                        placeholder="Select a group first"
+                        autocomplete="off"
+                        disabled
+                      />
+                      <input type="hidden" id="notifyAddUserId" value="" />
+                      <div class="employee-suggestions d-none" id="notifyUserSuggestions"></div>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label" for="notifyAddProjectSelect">Project</label>
+                      <select class="form-select" id="notifyAddProjectSelect" disabled>
+                        <option value="">Select a user first</option>
+                      </select>
+                    </div>
+                    <button type="button" class="ot-btn ot-btn-primary" id="notifyAddBtn" disabled>
+                      <i class="bi bi-plus-lg"></i> Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-lg-7">
+                <div class="ot-card h-100">
+                  <div class="ot-card-header flex-wrap">
+                    <div>
+                      <h2>Notify recipients</h2>
+                      <p class="ot-muted mb-0">All users with notify-only access, with group and project</p>
+                    </div>
+                    <span class="status-badge status-notify">Notify</span>
+                  </div>
+                  <div class="ot-card-body">
+                    <div class="row g-3 mb-3">
+                      <div class="col-md-6">
+                        <label class="form-label" for="notifyFilterGroupSelect">Filter by group</label>
+                        <select class="form-select form-select-sm" id="notifyFilterGroupSelect">
+                          <option value="">All groups</option>
+                        </select>
+                      </div>
+                      <div class="col-md-6">
+                        <label class="form-label" for="notifyFilterProjectSelect">Filter by project</label>
+                        <select class="form-select form-select-sm" id="notifyFilterProjectSelect">
+                          <option value="">All projects</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div id="projectNotifyList"></div>
+                  </div>
                 </div>
               </div>
             </div>

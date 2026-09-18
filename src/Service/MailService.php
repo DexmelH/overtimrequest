@@ -46,6 +46,10 @@ class MailService
             return $this->sendCancelNotificationEmail($queueRow, $requestData);
         }
 
+        if ($emailType === 'project_notify') {
+            return $this->sendProjectNotifyEmail($queueRow, $requestData);
+        }
+
         return $this->sendNewRequestEmail($queueRow, $requestData);
     }
 
@@ -67,6 +71,30 @@ class MailService
         $body = $this->templates->render($html, $map);
         $subject = sprintf(
             'New overtime request from %s',
+            $map['{{requestor_name}}'] ?? 'employee'
+        );
+
+        return $this->deliver($recipientEmail, $recipientName, $subject, $body);
+    }
+
+    /**
+     * FYI email for project notify-only watchers (no approval action).
+     */
+    public function sendProjectNotifyEmail(array $queueRow, array $requestData): bool
+    {
+        $recipientEmail = trim((string) ($queueRow['email_to'] ?? ''));
+        $recipientName = $this->plainName($queueRow['approver_name'] ?? 'Notify');
+
+        if ($recipientEmail === '') {
+            error_log('MailService: missing notify email for overtime ' . ($queueRow['overtime_id'] ?? ''));
+            return false;
+        }
+
+        $html = $this->templates->load('notify_email.html');
+        $map = $this->buildNewRequestVars($queueRow, $requestData, $recipientEmail);
+        $body = $this->templates->render($html, $map);
+        $subject = sprintf(
+            'FYI: Overtime request from %s',
             $map['{{requestor_name}}'] ?? 'employee'
         );
 

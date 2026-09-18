@@ -3,6 +3,7 @@ import { apiGet } from "../shared/js/http.js";
 import { showToast } from "../shared/js/toast.js";
 import { initApprovers } from "./approvers.js";
 import { initAdminMembers } from "./members.js";
+import { initProjectNotify } from "./notify.js";
 import { initShell } from "../shared/js/shell.js";
 import { escapeHtml } from "../shared/js/escapeHtml.js";
 
@@ -41,6 +42,21 @@ const ACTION_META = {
     icon: "bi-people",
     tone: "admin",
   },
+  "admin.approvers.add": {
+    label: "Added group approver",
+    icon: "bi-person-plus",
+    tone: "admin",
+  },
+  "admin.approvers.remove": {
+    label: "Removed group approver",
+    icon: "bi-person-dash",
+    tone: "danger",
+  },
+  "admin.approvers.change_level": {
+    label: "Changed approver level",
+    icon: "bi-arrow-left-right",
+    tone: "admin",
+  },
   "admin.approvers.preview.add": {
     label: "Added preview approver",
     icon: "bi-person-plus",
@@ -50,6 +66,16 @@ const ACTION_META = {
     label: "Cleared preview approver",
     icon: "bi-person-dash",
     tone: "muted",
+  },
+  "admin.project_notify.add": {
+    label: "Added project notify recipient",
+    icon: "bi-envelope-plus",
+    tone: "admin",
+  },
+  "admin.project_notify.remove": {
+    label: "Removed project notify recipient",
+    icon: "bi-envelope-x",
+    tone: "danger",
   },
   "admin.members.add": {
     label: "Added admin member",
@@ -245,6 +271,9 @@ function formatDetailsHtml(action, details) {
       break;
 
     case "admin.approvers.save":
+    case "admin.approvers.add":
+    case "admin.approvers.remove":
+    case "admin.approvers.change_level":
       if (details.group_abbr)
         items.push({ label: "Group", value: details.group_abbr });
       if (details.level) {
@@ -282,6 +311,28 @@ function formatDetailsHtml(action, details) {
         items.push({
           label: "Approver",
           value: `Employee #${details.approver_id}`,
+        });
+      }
+      break;
+
+    case "admin.project_notify.add":
+    case "admin.project_notify.remove":
+      if (details.group_abbr)
+        items.push({ label: "Group", value: details.group_abbr });
+      if (details.project_name) {
+        items.push({ label: "Project", value: details.project_name });
+      } else if (details.project_id) {
+        items.push({
+          label: "Project",
+          value: `Project #${details.project_id}`,
+        });
+      }
+      if (details.employee_name) {
+        items.push({ label: "Employee", value: details.employee_name });
+      } else if (details.employee_id) {
+        items.push({
+          label: "Employee",
+          value: `Employee #${details.employee_id}`,
         });
       }
       break;
@@ -479,5 +530,6 @@ checkAccess().then((ok) => {
   if (ok) {
     initApprovers();
     initAdminMembers();
+    initProjectNotify();
   }
 });

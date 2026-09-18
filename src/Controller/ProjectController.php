@@ -48,10 +48,7 @@ class ProjectController
             $shareUserId = $requestedEmployeeId;
         }
 
-        $groupProjects = $group !== '' ? $this->projectRepo->findProjectByGroupID($group) : [];
-        $sharedProjects = $this->projectRepo->findProjectByUserID((string) $shareUserId);
-
-        return $this->mergeProjectsById($sharedProjects, $groupProjects);
+        return $this->projectRepo->findProjectsForGroupAndUser($group, (string) $shareUserId);
     }
 
     private function canLoadProjectsForEmployee(int $actorId, int $employeeId): bool
@@ -72,25 +69,5 @@ class ProjectController
 
         $mainGroupId = (int) ($employee['group_id'] ?? 0);
         return $mainGroupId > 0 && in_array($mainGroupId, $approverGroupIds, true);
-    }
-
-    /**
-     * @param array<int, array<string, mixed>> ...$lists
-     * @return array<int, array<string, mixed>>
-     */
-    private function mergeProjectsById(array ...$lists): array
-    {
-        $merged = [];
-        foreach ($lists as $list) {
-            foreach ($list as $row) {
-                $id = (int) ($row['fldID'] ?? 0);
-                if ($id <= 0) {
-                    continue;
-                }
-                $merged[$id] = $row;
-            }
-        }
-
-        return array_values($merged);
     }
 }

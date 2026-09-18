@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Overtime Notification</title>
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      background: #eef2f8;
+      font-family: &quot;Segoe UI&quot;, Arial, Helvetica, sans-serif;
+      color: #0f172a;
+    "
+  >
+    <table
+      role="presentation"
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      border="0"
+      style="background: #eef2f8; margin: 0; padding: 32px 12px"
+    >
+      <tr>
+        <td align="center">
+          <table
+            role="presentation"
+            width="600"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            style="
+              width: 600px;
+              max-width: 600px;
+              background: #ffffff;
+              border: 1px solid #e2e8f0;
+              border-radius: 16px;
+              overflow: hidden;
+              box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+            "
+          >
+            <tr>
+              <!-- bgcolor is the fallback for clients that drop CSS gradients;
+                   without it the white header text lands on white. -->
+              <td
+                bgcolor="#d97706"
+                style="
+                  padding: 28px 32px;
+                  background: #d97706;
+                  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                "
+              >
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                >
+                  <tr>
+                    <td
+                      style="
+                        font-size: 13px;
+                        color: #ffedd5;
+                        letter-spacing: 0.04em;
+                        text-transform: uppercase;
+                      "
+                    >
+                      {{app_name}}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        padding-top: 8px;
+                        font-size: 24px;
+                        line-height: 1.3;
+                        font-weight: 700;
+                        color: #ffffff;
+                      "
+                    >
+                      Overtime notification
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        padding-top: 8px;
+                        font-size: 15px;
+                        line-height: 1.5;
+                        color: #ffedd5;
+                      "
+                    >
+                      You are receiving this because you are set as notify-only
+                      for a project on this request.
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 28px 32px 12px 32px">
+                <p
+                  style="
+                    margin: 0 0 16px 0;
+                    font-size: 16px;
+                    line-height: 1.6;
+                    color: #334155;
+                  "
+                >
+                  Hello
+                  <strong style="color: #0f172a">{{recipient_name}}</strong>,
+                </p>
+                <p
+                  style="
+                    margin: 0 0 20px 0;
+                    font-size: 15px;
+                    line-height: 1.6;
+                    color: #475569;
+                  "
+                >
+                  An overtime request was submitted. This is for your
+                  information only &mdash; no action is required.
+                </p>
+                <table
+                  role="presentation"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                  style="margin-bottom: 20px"
+                >
+                  <tr>
+                    <td
+                      style="
+                        background: #fffbeb;
+                        border: 1px solid #fde68a;
+                        border-radius: 999px;
+                        padding: 8px 14px;
+                        font-size: 13px;
+                        font-weight: 600;
+                        color: #b45309;
+                      "
+                    >
+                      Submitted {{submitted_at}}
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 0 32px 28px 32px">
+                <table
+                  role="presentation"
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                  style="
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    background: #f8fafc;
+                  "
+                >
+                  <tr>
+                    <td
+                      style="
+                        padding: 14px 18px;
+                        border-bottom: 1px solid #e2e8f0;
+                        font-size: 12px;
+                        font-weight: 700;
+                        color: #64748b;
+                        text-transform: uppercase;
+                        letter-spacing: 0.04em;
+                      "
+                    >
+                      Request Details
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        padding: 12px 18px;
+                        border-bottom: 1px solid #eef2f6;
+                      "
+                    >
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
+                        <tr>
+                          <td
+                            width="130"
+                            style="
+                              font-size: 13px;
+                              color: #64748b;
+                              vertical-align: top;
+                            "
+                          >
+                            Requestor
+                          </td>
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
+                            {{requestor_name}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        padding: 12px 18px;
+                        border-bottom: 1px solid #eef2f6;
+                      "
+                    >
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
+                        <tr>
+                          <td
+                            width="130"
+                            style="font-size: 13px; color: #64748b"
+                          >
+                            Group
+                          </td>
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
+                            {{group_name}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        padding: 12px 18px;
+                        border-bottom: 1px solid #eef2f6;
+                      "
+                    >
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
+                        <tr>
+                          <td
+                            width="130"
+                            style="font-size: 13px; color: #64748b"
+                          >
+                            Location
+                          </td>
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
+                            {{location_name}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        padding: 12px 18px;
+                        border-bottom: 1px solid #eef2f6;
+                      "
+                    >
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
+                        <tr>
+                          <td
+                            width="130"
+                            style="font-size: 13px; color: #64748b"
+                          >
+                            Projects and hours
+                          </td>
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
+                            {{project_list}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        padding: 12px 18px;
+                        border-bottom: 1px solid #eef2f6;
+                      "
+                    >
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
+                        <tr>
+                          <td
+                            width="130"
+                            style="font-size: 13px; color: #64748b"
+                          >
+                            Overtime Date
+                          </td>
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
+                            {{date}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="
+                        padding: 12px 18px;
+                        border-bottom: 1px solid #eef2f6;
+                      "
+                    >
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
+                        <tr>
+                          <td
+                            width="130"
+                            style="font-size: 13px; color: #64748b"
+                          >
+                            Hours
+                          </td>
+                          <td
+                            style="
+                              font-size: 14px;
+                              font-weight: 600;
+                              color: #0f172a;
+                            "
+                          >
+                            {{hours}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 12px 18px">
+                      <table
+                        role="presentation"
+                        width="100%"
+                        cellpadding="0"
+                        cellspacing="0"
+                      >
+                        <tr>
+                          <td
+                            width="130"
+                            style="
+                              font-size: 13px;
+                              color: #64748b;
+                              vertical-align: top;
+                            "
+                          >
+                            Remarks
+                          </td>
+                          <td
+                            style="
+                              font-size: 14px;
+                              color: #0f172a;
+                              line-height: 1.5;
+                            "
+                          >
+                            {{remarks}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+                <p
+                  style="
+                    margin: 22px 0 0 0;
+                    font-size: 14px;
+                    line-height: 1.6;
+                    color: #64748b;
+                  "
+                >
+                  No approval action is needed from you. Approvers for this
+                  request have been notified separately.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="
+                  padding: 20px 32px 28px 32px;
+                  border-top: 1px solid #e2e8f0;
+                  background: #f8fafc;
+                "
+              >
+                <p style="margin: 0; font-size: 14px; color: #475569">
+                  Best regards,<br /><strong style="color: #0f172a"
+                    >KDTDev Team</strong
+                  >
+                </p>
+                <p style="margin: 12px 0 0 0; font-size: 12px; color: #64748b">
+                  This is an automated message &mdash; please do not reply.
+                </p>
+              </td>
+            </tr>
+          </table>
+          <p style="margin: 14px 0 0 0; font-size: 12px; color: #64748b">
+            &copy; {{year}} KHI Design &amp; Technical Service, Inc.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

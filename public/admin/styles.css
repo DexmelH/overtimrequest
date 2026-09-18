@@ -545,6 +545,81 @@ body[data-page="admin"] .ot-main {
   border-radius: var(--ot-radius-sm) 0 0 var(--ot-radius-sm) !important;
 }
 
+.approver-level-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.approver-level-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--ot-border);
+  background: var(--ot-surface);
+  font-size: 0.78rem;
+}
+
+.approver-level-chip-name {
+  font-weight: 700;
+}
+
+.saved-approver-controls {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.saved-approver-controls .saved-level-select {
+  width: 4.25rem;
+  min-width: 4.25rem;
+}
+
+.approver-preview-item.saved-edit-row {
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.saved-approver-identity {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.saved-edit-row .remove-approver-btn {
+  white-space: nowrap;
+}
+
+@media (max-width: 575.98px) {
+  .saved-edit-row .remove-approver-label {
+    display: none;
+  }
+}
+
+.notify-only-card .ot-card-header {
+  background: linear-gradient(180deg, rgba(217, 119, 6, 0.1) 0%, transparent 100%);
+}
+
+.status-badge.status-notify {
+  background: rgba(217, 119, 6, 0.14);
+  color: #d97706;
+}
+
+.notify-recipient-row {
+  align-items: flex-start;
+}
+
+.notify-recipient-row .approver-preview-name {
+  white-space: normal;
+}
+
+.notify-recipient-row .saved-approver-controls {
+  padding-top: 0.1rem;
+}
+
 #accessDenied .ot-empty i {
   color: var(--ot-danger);
 }

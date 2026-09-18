@@ -5,6 +5,7 @@ use App\Repository\EmployeeRepository;
 use App\Repository\HolidayRepository;
 use App\Repository\LeaveRepository;
 use App\Repository\OvertimeRepository;
+use App\Repository\ProjectNotifyRepository;
 
 class OvertimeSubmissionService
 {
@@ -13,6 +14,7 @@ class OvertimeSubmissionService
     private HolidayRepository $holidayRepo;
     private LeaveRepository $leaveRepo;
     private ApproverDirectoryService $approverDirectory;
+    private ProjectNotifyRepository $projectNotifyRepo;
     private ActivityLogger $logger;
     private ApprovalCutoff $cutoff;
 
@@ -22,6 +24,7 @@ class OvertimeSubmissionService
         HolidayRepository $holidayRepo,
         LeaveRepository $leaveRepo,
         ApproverDirectoryService $approverDirectory,
+        ProjectNotifyRepository $projectNotifyRepo,
         ActivityLogger $logger,
         string $approvalCutoffTime = '15:00'
     ) {
@@ -30,6 +33,7 @@ class OvertimeSubmissionService
         $this->holidayRepo = $holidayRepo;
         $this->leaveRepo = $leaveRepo;
         $this->approverDirectory = $approverDirectory;
+        $this->projectNotifyRepo = $projectNotifyRepo;
         $this->logger = $logger;
         $this->cutoff = new ApprovalCutoff($approvalCutoffTime);
     }
@@ -113,7 +117,12 @@ class OvertimeSubmissionService
                     $mainGroupAbbrev,
                     $userID
                 );
+                $queuedEmails = [];
                 foreach ($approver as $app) {
+                    $email = trim((string) ($app['email'] ?? ''));
+                    if ($email !== '') {
+                        $queuedEmails[strtolower($email)] = true;
+                    }
                     $this->overtimeRepo->insertEmailQueue([
                         'email_to' => $app['email'],
                         'approver_name' => $app['surname'] ?? 'Approver',
@@ -126,6 +135,12 @@ class OvertimeSubmissionService
                         $this->resolveApprovalLevel($app)
                     );
                 }
+
+                $this->queueProjectNotifyEmails(
+                    $id,
+                    array_column($projects, 'project_id'),
+                    $queuedEmails
+                );
             }
 
             $pdo->commit();
@@ -468,6 +483,34 @@ class OvertimeSubmissionService
             'to' => $query['to'],
             'pagination' => $result['pagination'],
         ];
+    }
+
+    /**
+     * Queue project_notify emails for project notify-only watchers.
+     * Does not create overtime_accept rows. Skips emails already queued to approvers.
+     *
+     * @param int[] $projectIds
+     * @param array<string, true> $alreadyQueuedEmails lowercase email => true
+     */
+    private function queueProjectNotifyEmails(
+        int $overtimeId,
+        array $projectIds,
+        array $alreadyQueuedEmails
+    ): void {
+        $recipients = $this->projectNotifyRepo->findRecipientsByProjectIds($projectIds);
+        foreach ($recipients as $recipient) {
+            $email = strtolower(trim((string) ($recipient['email'] ?? '')));
+            if ($email === '' || isset($alreadyQueuedEmails[$email])) {
+                continue;
+            }
+            $alreadyQueuedEmails[$email] = true;
+            $this->overtimeRepo->insertEmailQueue([
+                'email_to' => $recipient['email'],
+                'approver_name' => $recipient['surname'] ?? 'Notify',
+                'overtime_id' => $overtimeId,
+                'email_type' => 'project_notify',
+            ]);
+        }
     }
 
     /**

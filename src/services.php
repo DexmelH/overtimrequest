@@ -19,6 +19,7 @@ use App\Repository\HolidayRepository;
 use App\Repository\LeaveRepository;
 use App\Repository\LocationRepository;
 use App\Repository\OvertimeRepository;
+use App\Repository\ProjectNotifyRepository;
 use App\Repository\ProjectRepository;
 use App\Repository\UserRepository;
 use App\Service\ActivityLogger;
@@ -56,6 +57,7 @@ return function (Container $c, array $config): void {
     $c->set(LocationRepository::class, static fn (Container $c) => new LocationRepository($c->get('db.webjmr')));
     $c->set(OvertimeRepository::class, static fn (Container $c) => new OvertimeRepository($c->get('db.webjmr')));
     $c->set(ProjectRepository::class, static fn (Container $c) => new ProjectRepository($c->get('db.webjmr')));
+    $c->set(ProjectNotifyRepository::class, static fn (Container $c) => new ProjectNotifyRepository($c->get('db.webjmr')));
     $c->set(UserRepository::class, static fn (Container $c) => new UserRepository($c->get('db.kdtph')));
 
     $c->set(ActivityLogger::class, static fn (Container $c) => new ActivityLogger(
@@ -80,6 +82,7 @@ return function (Container $c, array $config): void {
         $c->get(HolidayRepository::class),
         $c->get(LeaveRepository::class),
         $c->get(ApproverDirectoryService::class),
+        $c->get(ProjectNotifyRepository::class),
         $c->get(ActivityLogger::class),
         $c->get('config.approval_cutoff_time')
     ));
@@ -120,6 +123,8 @@ return function (Container $c, array $config): void {
         $c->get(UserRepository::class),
         $c->get(EmployeeRepository::class),
         $c->get(GroupApproverRepository::class),
+        $c->get(ProjectNotifyRepository::class),
+        $c->get(ProjectRepository::class),
         $c->get(AdminMemberRepository::class),
         $c->get(AdminAccessService::class),
         $c->get(ActivityLogger::class)

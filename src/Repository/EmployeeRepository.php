@@ -19,6 +19,30 @@ class EmployeeRepository
         return $stmt ? ($stmt->fetchAll() ?: []) : [];
     }
 
+    /**
+     * Active employees whose main group (employee_list.group_id) matches.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function findByMainGroupId(int $groupId): array
+    {
+        if ($groupId <= 0) {
+            return [];
+        }
+
+        $sql = "SELECT el.`id`, el.`surname`, el.`firstname`, el.`email`,
+                       gl.`abbreviation` AS group_abbr
+                FROM `employee_list` el
+                LEFT JOIN `group_list` gl ON gl.`id` = el.`group_id`
+                WHERE el.`emp_status` = 1
+                  AND el.`group_id` = :groupId
+                ORDER BY el.`surname` ASC, el.`firstname` ASC";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':groupId' => $groupId]);
+
+        return $stmt->fetchAll() ?: [];
+    }
+
     public function findGroupById(int $id): ?array
     {
         $sql = "SELECT `id`, `abbreviation`, `name` FROM `group_list` WHERE `id` = :id LIMIT 1";
@@ -50,7 +74,10 @@ class EmployeeRepository
         return $map;
     }
 
-    public function searchEmployees(string $query, int $limit = 25): array
+    /**
+     * @param int[] $excludeIds Employee IDs to omit (e.g. already OGA for a group)
+     */
+    public function searchEmployees(string $query, int $limit = 25, array $excludeIds = []): array
     {
         $query = trim($query);
         $sql = "SELECT el.`id`, el.`surname`, el.`firstname`, el.`email`,
@@ -59,6 +86,20 @@ class EmployeeRepository
                 LEFT JOIN `group_list` gl ON gl.`id` = el.`group_id`
                 WHERE el.`emp_status` = 1";
         $params = [];
+
+        $excludeIds = array_values(array_unique(array_filter(
+            array_map('intval', $excludeIds),
+            static fn(int $id): bool => $id > 0
+        )));
+        if ($excludeIds) {
+            $placeholders = [];
+            foreach ($excludeIds as $i => $id) {
+                $key = ':ex' . $i;
+                $placeholders[] = $key;
+                $params[$key] = $id;
+            }
+            $sql .= ' AND el.`id` NOT IN (' . implode(',', $placeholders) . ')';
+        }
 
         if ($query !== '') {
             if (ctype_digit($query)) {

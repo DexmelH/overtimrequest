@@ -2,6 +2,7 @@ import { apiUrl } from "../shared/js/api.js";
 import { apiGet, apiPost } from "../shared/js/http.js";
 import { showToast } from "../shared/js/toast.js";
 import { escapeHtml } from "../shared/js/escapeHtml.js";
+import { confirmAction } from "../shared/js/confirm.js";
 import {
   bindClearInvalidOnEdit,
   clearFieldInvalid,
@@ -9,52 +10,48 @@ import {
 } from "../shared/js/formValidation.js";
 
 const LEVELS = ["L1", "L2", "L3", "L4"];
+const META_SEP = "\u00b7";
 
 let groups = [];
 let activeSearchLevel = null;
 let searchTimer = null;
-/** @type {Record<string, Record<number, object>>} */
-let savedLevelsCache = {};
+/** @type {Record<string, object[]>} flat saved rows keyed by group id */
+let savedApproversCache = {};
 /** @type {Record<string, object[]>} */
 let searchResults = {};
 
 function levelNum(label) {
-  return parseInt(label.replace("L", ""), 10);
+  return parseInt(String(label).replace("L", ""), 10);
+}
+
+function levelLabel(n) {
+  return `L${n}`;
 }
 
 function getCurrentGroupId() {
   return $("#approverGroupSelect").val() || "";
 }
 
-function employeeFromSavedRow(row) {
-  if (!row?.approver_id) return null;
-  return {
-    id: row.approver_id,
-    surname: row.surname || "",
-    firstname: row.firstname || "",
-    email: row.email || "",
-  };
-}
-
-function setSavedLevels(groupId, savedLevels) {
+function setSavedApprovers(groupId, rows) {
   if (!groupId) return;
-  savedLevelsCache[groupId] = savedLevels || {};
+  savedApproversCache[groupId] = Array.isArray(rows) ? rows : [];
 }
 
-function getSavedLevels(groupId) {
-  return groupId ? savedLevelsCache[groupId] || {} : {};
+function getSavedApprovers(groupId) {
+  return groupId ? savedApproversCache[groupId] || [] : [];
 }
 
-function getSavedApproverId(groupId, level) {
-  const saved = getSavedLevels(groupId)[levelNum(level)];
-  return saved?.approver_id ? Number(saved.approver_id) : null;
+function getAssignedIds(groupId) {
+  return new Set(
+    getSavedApprovers(groupId).map((row) => String(row.approver_id)),
+  );
 }
 
-function hasApproverChange(level, employee) {
-  if (!employee?.id) return false;
-  const groupId = getCurrentGroupId();
-  if (!groupId) return false;
-  return getSavedApproverId(groupId, level) !== Number(employee.id);
+function employeesForLevel(groupId, level) {
+  const n = levelNum(level);
+  return getSavedApprovers(groupId).filter(
+    (row) => Number(row.approval_level) === n,
+  );
 }
 
 function updateAddButtonState(level, employee) {
@@ -65,13 +62,47 @@ function updateAddButtonState(level, employee) {
     return;
   }
 
+  const groupId = getCurrentGroupId();
+  const already = getAssignedIds(groupId).has(String(employee.id));
   $addBtn.data("pending", employee);
-  const changed = hasApproverChange(level, employee);
-  $addBtn.prop("disabled", !changed);
+  $addBtn.prop("disabled", already || !groupId);
   $addBtn.attr(
     "title",
-    changed ? "Save this approver for the selected level" : "No changes — this approver is already saved",
+    already
+      ? "This employee is already an approver for this group"
+      : "Add this approver at " + level,
   );
+}
+
+function renderLevelMembers(level) {
+  const n = levelNum(level);
+  const groupId = getCurrentGroupId();
+  const members = employeesForLevel(groupId, level);
+  const $box = $(`#levelMembers${n}`).empty();
+
+  if (!groupId) {
+    $box.append('<div class="ot-muted small">Select a group first.</div>');
+    return;
+  }
+
+  if (!members.length) {
+    $box.append('<div class="ot-muted small">No approvers at this level yet.</div>');
+    return;
+  }
+
+  members.forEach((row) => {
+    const name = `${row.surname || ""} ${row.firstname || ""}`.trim() || "-";
+    $box.append(`
+      <div class="approver-level-chip">
+        <span class="approver-level-chip-name">${escapeHtml(name)}</span>
+        <span class="ot-muted small">ID ${escapeHtml(String(row.approver_id))}</span>
+      </div>
+    `);
+  });
+}
+
+function refreshAllLevelMembers() {
+  LEVELS.forEach((level) => renderLevelMembers(level));
 }
 
 function renderLevelRows() {
@@ -82,7 +113,6 @@ function renderLevelRows() {
       <div class="approver-level-row" data-level="${level}">
         <div class="level-badge">${level}</div>
         <div class="flex-grow-1 position-relative">
-          <input type="hidden" class="approver-id" id="approverId${n}" value="" />
           <div class="input-group input-group-sm">
             <input type="text" class="form-control approver-search"
               id="approverSearch${n}" placeholder="Search employee by name or ID..."
@@ -93,44 +123,12 @@ function renderLevelRows() {
             </button>
           </div>
           <div class="employee-suggestions d-none" id="suggestions${n}"></div>
-          <div class="selected-approver ot-muted small mt-1" id="selected${n}">No approver saved</div>
+          <div class="approver-level-members mt-2" id="levelMembers${n}"></div>
         </div>
-        <button type="button" class="ot-btn ot-btn-secondary btn-sm clear-level" data-level="${level}">
-          Clear
-        </button>
       </div>
     `);
   });
-}
-
-function setLevelRow(level, employee) {
-  const n = levelNum(level);
-  const $id = $(`#approverId${n}`);
-  const $search = $(`#approverSearch${n}`);
-  const $selected = $(`#selected${n}`);
-
-  if (!employee) {
-    $id.val("");
-    $search.val("");
-    $selected.text("No approver saved");
-    updateAddButtonState(level, null);
-    return;
-  }
-
-  $id.val(employee.id);
-  $search.val(`${employee.surname || ""} ${employee.firstname || ""}`.trim());
-  $selected.html(
-    `<strong>${escapeHtml(employee.surname || "")}</strong> ${escapeHtml(employee.firstname || "")} <span class="ot-muted">(ID ${employee.id})</span>`,
-  );
-  updateAddButtonState(level, employee);
-}
-
-function loadSavedIntoForm(groupId) {
-  const saved = getSavedLevels(groupId);
-  LEVELS.forEach((level) => {
-    setLevelRow(level, employeeFromSavedRow(saved[levelNum(level)]));
-  });
-  renderSavedPreview(groupId);
+  refreshAllLevelMembers();
 }
 
 function clearSuggestions() {
@@ -142,18 +140,24 @@ function showSuggestions(level, employees) {
   const n = levelNum(level);
   const $box = $(`#suggestions${n}`).empty().removeClass("d-none");
   activeSearchLevel = level;
-  searchResults[level] = employees;
+  const assigned = getAssignedIds(getCurrentGroupId());
+  const filtered = (employees || []).filter(
+    (emp) => !assigned.has(String(emp.id)),
+  );
+  searchResults[level] = filtered;
 
-  if (!employees.length) {
-    $box.append('<div class="suggestion-empty">No employees found</div>');
+  if (!filtered.length) {
+    $box.append(
+      '<div class="suggestion-empty">No available employees (already assigned are hidden)</div>',
+    );
     return;
   }
 
-  employees.forEach((emp) => {
+  filtered.forEach((emp) => {
     $box.append(`
       <button type="button" class="suggestion-item" data-level="${level}" data-id="${emp.id}">
         <strong>${escapeHtml(emp.surname)}</strong> ${escapeHtml(emp.firstname || "")}
-        <span class="ot-muted">ID ${emp.id} · ${escapeHtml(emp.group_abbr || "")}</span>
+        <span class="ot-muted">ID ${emp.id} ${META_SEP} ${escapeHtml(emp.group_abbr || "")}</span>
       </button>
     `);
   });
@@ -163,7 +167,20 @@ function findEmployeeInSearch(level, id) {
   return (searchResults[level] || []).find((emp) => String(emp.id) === String(id));
 }
 
-async function saveApproverLevel(level, employee) {
+function selectPendingEmployee(level, employee) {
+  const n = levelNum(level);
+  const $search = $(`#approverSearch${n}`);
+  $search.val(`${employee.surname || ""} ${employee.firstname || ""}`.trim());
+  updateAddButtonState(level, employee);
+}
+
+function clearPendingSearch(level) {
+  const n = levelNum(level);
+  $(`#approverSearch${n}`).val("");
+  updateAddButtonState(level, null);
+}
+
+async function addApprover(level, employee) {
   const groupId = getCurrentGroupId();
   if (!groupId) {
     markFieldInvalid("#approverGroupSelect");
@@ -183,82 +200,148 @@ async function saveApproverLevel(level, employee) {
 
   const $btn = $(`.add-approver-btn[data-level="${level}"]`).prop("disabled", true);
   try {
-    const json = await apiPost(apiUrl("/admin/approver-level"), body);
+    const json = await apiPost(apiUrl("/admin/approver-add"), body);
     if (!json?.success) {
-      showToast(json?.message || "Could not save approver.", { type: "error" });
+      showToast(json?.message || "Could not add approver.", { type: "error" });
       return false;
     }
 
-    setSavedLevels(groupId, json.saved_levels || {});
-    setLevelRow(level, employee);
-    renderSavedPreview(groupId);
+    setSavedApprovers(groupId, json.saved_approvers || []);
+    refreshAllLevelMembers();
+    renderSavedList(groupId);
+    clearPendingSearch(level);
     clearSuggestions();
-    showToast(`${level} approver saved.`, { type: "success", duration: 2500 });
+    showToast(`${level} approver added.`, { type: "success", duration: 2500 });
     return true;
   } catch {
-    showToast("Could not save approver.", { type: "error" });
+    showToast("Could not add approver.", { type: "error" });
     return false;
   } finally {
-    updateAddButtonState(level, employee);
+    updateAddButtonState(level, null);
+    $btn.prop("disabled", true);
   }
 }
 
-async function clearApproverLevel(level) {
+async function changeApproverLevel(approverId, newLevel, approverName) {
   const groupId = getCurrentGroupId();
-  if (!groupId) return false;
+  if (!groupId || !approverId) return false;
 
   const body = new FormData();
   body.append("group_id", groupId);
-  body.append("level", String(levelNum(level)));
-  body.append("approver_id", "0");
+  body.append("approver_id", String(approverId));
+  body.append("level", String(levelNum(newLevel)));
+  if (approverName) body.append("approver_name", approverName);
 
-  const $btn = $(`.clear-level[data-level="${level}"]`).prop("disabled", true);
   try {
     const json = await apiPost(apiUrl("/admin/approver-level"), body);
     if (!json?.success) {
-      showToast(json?.message || "Could not clear approver.", { type: "error" });
+      showToast(json?.message || "Could not change level.", { type: "error" });
+      renderSavedList(groupId);
+      refreshAllLevelMembers();
       return false;
     }
 
-    setSavedLevels(groupId, json.saved_levels || {});
-    setLevelRow(level, null);
-    renderSavedPreview(groupId);
-    showToast(`${level} approver cleared.`, { type: "success", duration: 2500 });
+    setSavedApprovers(groupId, json.saved_approvers || []);
+    refreshAllLevelMembers();
+    renderSavedList(groupId);
+    showToast("Approver level updated.", { type: "success", duration: 2500 });
     return true;
   } catch {
-    showToast("Could not clear approver.", { type: "error" });
+    showToast("Could not change level.", { type: "error" });
+    renderSavedList(groupId);
+    refreshAllLevelMembers();
     return false;
-  } finally {
-    $btn.prop("disabled", false);
   }
 }
 
-function renderSavedPreview(groupId) {
+async function removeApprover(approverId, approverName) {
+  const groupId = getCurrentGroupId();
+  if (!groupId || !approverId) return false;
+
+  const confirmed = await confirmAction({
+    title: "Remove this approver?",
+    message: approverName
+      ? `${approverName} will no longer receive overtime requests for this group.`
+      : "This person will no longer receive overtime requests for this group.",
+    confirmText: "Remove",
+    cancelText: "Keep",
+    variant: "danger",
+    icon: "bi-person-x-fill",
+  });
+  if (!confirmed) return false;
+
+  const body = new FormData();
+  body.append("group_id", groupId);
+  body.append("approver_id", String(approverId));
+  if (approverName) body.append("approver_name", approverName);
+
+  try {
+    const json = await apiPost(apiUrl("/admin/approver-remove"), body);
+    if (!json?.success) {
+      showToast(json?.message || "Could not remove approver.", { type: "error" });
+      return false;
+    }
+
+    setSavedApprovers(groupId, json.saved_approvers || []);
+    refreshAllLevelMembers();
+    renderSavedList(groupId);
+    showToast("Approver removed.", { type: "success", duration: 2500 });
+    return true;
+  } catch {
+    showToast("Could not remove approver.", { type: "error" });
+    return false;
+  }
+}
+
+function renderSavedList(groupId) {
   const $wrap = $("#draftApproversPreview").empty();
   if (!groupId) {
     $wrap.append('<p class="ot-muted small mb-0">Select a group to view saved approvers.</p>');
     return;
   }
 
-  const saved = getSavedLevels(groupId);
-  const entries = LEVELS.map((level) => ({
-    level,
-    employee: employeeFromSavedRow(saved[levelNum(level)]),
-  })).filter((e) => e.employee);
-
-  if (!entries.length) {
-    $wrap.append('<p class="ot-muted small mb-0">No approvers saved yet. Search and click Add for each level.</p>');
+  const rows = getSavedApprovers(groupId);
+  if (!rows.length) {
+    $wrap.append(
+      '<p class="ot-muted small mb-0">No approvers saved yet. Search under a level and click Add.</p>',
+    );
     return;
   }
 
-  const $list = $('<div class="approver-preview-list"></div>');
-  entries.forEach(({ level, employee }) => {
+  const $list = $('<div class="approver-preview-list saved-editable"></div>');
+  rows.forEach((row) => {
+    const name = `${row.surname || ""} ${row.firstname || ""}`.trim() || "-";
+    const currentLevel = Number(row.approval_level) || 1;
+    const meta = `ID ${row.approver_id}${row.email ? ` ${META_SEP} ${row.email}` : ""}`;
+    const options = LEVELS.map((level) => {
+      const n = levelNum(level);
+      const selected = n === currentLevel ? " selected" : "";
+      return `<option value="${n}"${selected}>${level}</option>`;
+    }).join("");
+
     $list.append(`
-      <div class="approver-preview-item">
-        <span class="level-badge level-badge-sm">${level}</span>
-        <div class="flex-grow-1 min-w-0">
-          <div class="approver-preview-name">${escapeHtml(employee.surname)} ${escapeHtml(employee.firstname || "")}</div>
-          <div class="ot-muted small">ID ${employee.id}${employee.email ? ` · ${escapeHtml(employee.email)}` : ""}</div>
+      <div class="approver-preview-item saved-edit-row" data-approver-id="${escapeHtml(String(row.approver_id))}">
+        <div class="saved-approver-identity min-w-0">
+          <div class="approver-preview-name" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
+          <div class="ot-muted small text-truncate" title="${escapeHtml(meta)}">${escapeHtml(meta)}</div>
+        </div>
+        <div class="saved-approver-controls">
+          <label class="visually-hidden" for="levelSelect${row.approver_id}">Level</label>
+          <select class="form-select form-select-sm saved-level-select"
+            id="levelSelect${row.approver_id}"
+            data-approver-id="${escapeHtml(String(row.approver_id))}"
+            data-approver-name="${escapeHtml(name)}"
+            data-current-level="${currentLevel}"
+            title="Change approval level">
+            ${options}
+          </select>
+          <button type="button" class="ot-btn ot-btn-secondary btn-sm remove-approver-btn"
+            data-approver-id="${escapeHtml(String(row.approver_id))}"
+            data-approver-name="${escapeHtml(name)}"
+            title="Remove approver">
+            <i class="bi bi-person-x"></i>
+            <span class="remove-approver-label">Remove</span>
+          </button>
         </div>
       </div>
     `);
@@ -270,7 +353,7 @@ function renderOfficialApprovers(payload) {
   const $wrap = $("#officialApproversList").empty();
   const approvers = payload?.approvers || [];
   const groupLabel = payload?.group?.abbreviation
-    ? `${payload.group.abbreviation}${payload.group.name ? ` — ${payload.group.name}` : ""}`
+    ? `${payload.group.abbreviation}${payload.group.name ? ` - ${payload.group.name}` : ""}`
     : "";
 
   if (!approvers.length) {
@@ -281,19 +364,21 @@ function renderOfficialApprovers(payload) {
   }
 
   if (groupLabel) {
-    $wrap.append(`<p class="ot-muted small mb-2">Forms PIC for <strong>${escapeHtml(groupLabel)}</strong> (fallback when no saved approvers)</p>`);
+    $wrap.append(
+      `<p class="ot-muted small mb-2">Forms PIC for <strong>${escapeHtml(groupLabel)}</strong> (fallback when no saved approvers)</p>`,
+    );
   }
 
   const $list = $('<div class="approver-preview-list official"></div>');
   approvers.forEach((row) => {
     const level = row.role ? `L${row.role}` : "PIC";
-    const name = `${row.surname || ""} ${row.firstname || ""}`.trim() || "—";
+    const name = `${row.surname || ""} ${row.firstname || ""}`.trim() || "-";
     $list.append(`
       <div class="approver-preview-item official">
         <span class="level-badge level-badge-sm">${escapeHtml(level)}</span>
         <div class="flex-grow-1 min-w-0">
           <div class="approver-preview-name">${escapeHtml(name)}</div>
-          <div class="ot-muted small">ID ${row.id}${row.email ? ` · ${escapeHtml(row.email)}` : ""}</div>
+          <div class="ot-muted small">ID ${row.id}${row.email ? ` ${META_SEP} ${escapeHtml(row.email)}` : ""}</div>
         </div>
         <span class="status-badge status-approved">Forms PIC</span>
       </div>
@@ -307,14 +392,15 @@ async function loadGroups() {
   groups = json?.data || [];
   const $sel = $("#approverGroupSelect").empty().append('<option value="">Select a group</option>');
   groups.forEach((g) => {
-    $sel.append(`<option value="${g.id}">${g.abbreviation} — ${g.name}</option>`);
+    $sel.append(`<option value="${g.id}">${g.abbreviation} - ${g.name}</option>`);
   });
 }
 
 async function loadGroupApprovers(groupId) {
   if (!groupId) {
-    setSavedLevels("", {});
-    loadSavedIntoForm("");
+    setSavedApprovers("", []);
+    refreshAllLevelMembers();
+    renderSavedList("");
     renderOfficialApprovers({});
     return;
   }
@@ -325,8 +411,9 @@ async function loadGroupApprovers(groupId) {
       showToast(json?.message || "Could not load approvers.", { type: "error" });
       return;
     }
-    setSavedLevels(groupId, json.saved_levels || {});
-    loadSavedIntoForm(groupId);
+    setSavedApprovers(groupId, json.saved_approvers || []);
+    refreshAllLevelMembers();
+    renderSavedList(groupId);
     renderOfficialApprovers(json);
   } catch {
     showToast("Could not load approvers.", { type: "error" });
@@ -335,7 +422,7 @@ async function loadGroupApprovers(groupId) {
 
 export function initApprovers() {
   renderLevelRows();
-  renderSavedPreview("");
+  renderSavedList("");
   renderOfficialApprovers({});
   loadGroups().catch(() => showToast("Could not load groups.", { type: "error" }));
   bindClearInvalidOnEdit("#adminContent");
@@ -344,6 +431,8 @@ export function initApprovers() {
     if (String($(this).val() || "").trim()) {
       clearFieldInvalid(this);
     }
+    clearSuggestions();
+    LEVELS.forEach((level) => clearPendingSearch(level));
     loadGroupApprovers($(this).val()).catch(() => {});
   });
 
@@ -357,8 +446,20 @@ export function initApprovers() {
       return;
     }
     searchTimer = setTimeout(async () => {
+      const groupId = getCurrentGroupId();
+      if (!groupId) {
+        markFieldInvalid("#approverGroupSelect");
+        showToast("Select a group first.", { type: "warning" });
+        clearSuggestions();
+        return;
+      }
       try {
-        const json = await apiGet(apiUrl("/admin/employees") + "?q=" + encodeURIComponent(q));
+        const qs =
+          "?q=" +
+          encodeURIComponent(q) +
+          "&group_id=" +
+          encodeURIComponent(groupId);
+        const json = await apiGet(apiUrl("/admin/employees") + qs);
         if (!json?.success) {
           showToast(json?.message || "Employee search failed.", { type: "error" });
           clearSuggestions();
@@ -376,29 +477,39 @@ export function initApprovers() {
     const level = $(this).data("level");
     const employee = findEmployeeInSearch(level, $(this).data("id"));
     if (!employee) return;
-    setLevelRow(level, employee);
+    selectPendingEmployee(level, employee);
     clearSuggestions();
   });
 
   $(document).on("click", ".add-approver-btn", function () {
     const level = $(this).data("level");
     const employee = $(this).data("pending");
-    if (!employee || !hasApproverChange(level, employee)) {
-      showToast("Search and select a different employee first.", { type: "warning" });
+    if (!employee?.id) {
+      showToast("Search and select an employee first.", { type: "warning" });
       return;
     }
-    saveApproverLevel(level, employee).catch(() => {});
+    if (getAssignedIds(getCurrentGroupId()).has(String(employee.id))) {
+      showToast("This employee is already an approver for this group.", {
+        type: "warning",
+      });
+      return;
+    }
+    addApprover(level, employee).catch(() => {});
   });
 
-  $(document).on("click", ".clear-level", function () {
-    const level = $(this).data("level");
-    const groupId = getCurrentGroupId();
-    const saved = getSavedLevels(groupId)[levelNum(level)];
-    if (!saved) {
-      setLevelRow(level, null);
-      return;
-    }
-    clearApproverLevel(level).catch(() => {});
+  $(document).on("change", ".saved-level-select", function () {
+    const approverId = $(this).data("approver-id");
+    const approverName = $(this).data("approver-name") || "";
+    const previous = String($(this).data("current-level") || "");
+    const next = String($(this).val() || "");
+    if (!approverId || next === previous) return;
+    changeApproverLevel(approverId, levelLabel(next), approverName).catch(() => {});
+  });
+
+  $(document).on("click", ".remove-approver-btn", function () {
+    const approverId = $(this).data("approver-id");
+    const approverName = $(this).data("approver-name") || "";
+    removeApprover(approverId, approverName).catch(() => {});
   });
 
   $(document).on("click", function (e) {

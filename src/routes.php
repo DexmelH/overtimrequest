@@ -31,6 +31,13 @@ return function (RouteCollector $r): void {
     $r->addRoute('POST', '/api/admin/members/remove', ['App\Controller\AdminController', 'removeAdminMember']);
     $r->addRoute('GET', '/api/admin/approvers', ['App\Controller\AdminController', 'getGroupApprovers']);
     $r->addRoute('POST', '/api/admin/approvers', ['App\Controller\AdminController', 'saveGroupApprovers']);
-    $r->addRoute('POST', '/api/admin/approver-level', ['App\Controller\AdminController', 'saveGroupApproverLevel']);
+    $r->addRoute('POST', '/api/admin/approver-add', ['App\Controller\AdminController', 'addGroupApprover']);
+    $r->addRoute('POST', '/api/admin/approver-remove', ['App\Controller\AdminController', 'removeGroupApprover']);
+    $r->addRoute('POST', '/api/admin/approver-level', ['App\Controller\AdminController', 'changeGroupApproverLevel']);
     $r->addRoute('POST', '/api/admin/approver-logs', ['App\Controller\AdminController', 'logApproverAction']);
+    $r->addRoute('GET', '/api/admin/project-notify', ['App\Controller\AdminController', 'getProjectNotify']);
+    $r->addRoute('GET', '/api/admin/project-notify/employees', ['App\Controller\AdminController', 'getProjectNotifyEmployees']);
+    $r->addRoute('GET', '/api/admin/project-notify/projects', ['App\Controller\AdminController', 'getProjectNotifyProjects']);
+    $r->addRoute('POST', '/api/admin/project-notify', ['App\Controller\AdminController', 'addProjectNotify']);
+    $r->addRoute('POST', '/api/admin/project-notify/remove', ['App\Controller\AdminController', 'removeProjectNotify']);
 };
