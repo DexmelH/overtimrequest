@@ -27,10 +27,10 @@ function isTruthyFlag(value) {
   return value === true || value === 1 || value === "1";
 }
 
-/** Employee-history display: auto-rejected rows that were re-filed, auto-approved with no chain. */
+/** Employee-history display: followed-up denials count as approved; on-behalf / empty-chain auto-approved. */
 export function historyStatusClass(item) {
   if (isTruthyFlag(item?.has_follow_up) && (item.status == 0 || item.status === "0")) {
-    return "status-resubmitted";
+    return "status-approved";
   }
   if (isAutoApprovedHistory(item)) {
     return "status-auto-approved";
@@ -40,7 +40,7 @@ export function historyStatusClass(item) {
 
 export function historyStatusText(item) {
   if (isTruthyFlag(item?.has_follow_up) && (item.status == 0 || item.status === "0")) {
-    return "Re-submitted";
+    return "Approved";
   }
   if (isAutoApprovedHistory(item)) {
     return "Auto-approved";
@@ -49,12 +49,19 @@ export function historyStatusText(item) {
 }
 
 function isAutoApprovedHistory(item) {
+  const approved = item?.status == 1 || item?.status === "1";
+  if (!approved) {
+    return false;
+  }
   if (isTruthyFlag(item?.is_auto_approved)) {
     return true;
   }
-  const approved = item?.status == 1 || item?.status === "1";
+  // On-behalf filings are auto-approved by the submitting approver.
+  if (isTruthyFlag(item?.is_on_behalf) && !isTruthyFlag(item?.is_follow_up)) {
+    return true;
+  }
   const chain = item?.approver_details;
-  return approved && Array.isArray(chain) && chain.length === 0;
+  return Array.isArray(chain) && chain.length === 0;
 }
 
 const REQUEST_STATUS_CLASSES = {

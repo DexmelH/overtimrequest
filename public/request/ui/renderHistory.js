@@ -9,6 +9,17 @@ function isTruthyFlag(value) {
   return value === true || value === 1 || value === "1";
 }
 
+/** Follow-up and on-behalf are mutually exclusive secondary badges. */
+function secondaryHistoryBadge(item) {
+  if (isTruthyFlag(item.is_follow_up)) {
+    return '<span class="status-badge status-followup">Follow-up</span>';
+  }
+  if (isTruthyFlag(item.is_on_behalf)) {
+    return '<span class="status-badge status-onbehalf">On behalf</span>';
+  }
+  return "";
+}
+
 export function renderHistory() {
   const $list = $("#historyList").empty();
 
@@ -17,18 +28,7 @@ export function renderHistory() {
     const durationLabel =
       item.duration_label ||
       formatDuration(item.duration, item.duration_minutes);
-
-    const badges = [
-      `<span class="status-badge ${historyStatusClass(item)}">${escapeHtml(
-        historyStatusText(item),
-      )}</span>`,
-    ];
-    if (isTruthyFlag(item.is_on_behalf)) {
-      badges.push('<span class="status-badge status-onbehalf">On behalf</span>');
-    }
-    if (isTruthyFlag(item.is_follow_up)) {
-      badges.push('<span class="status-badge status-followup">Follow-up</span>');
-    }
+    const secondary = secondaryHistoryBadge(item);
 
     const $row = $(`
       <div class="history-item" data-id="${escapeHtml(item.id)}" role="listitem" tabindex="0">
@@ -39,7 +39,12 @@ export function renderHistory() {
             <div class="history-sub">${escapeHtml(item.request_date || "")} · ${escapeHtml(durationLabel)} · ${escapeHtml(item.location_name || "")}</div>
           </div>
         </div>
-        <div class="history-badges">${badges.join("")}</div>
+        <div class="history-badges">
+          <span class="status-badge ${historyStatusClass(item)}">${escapeHtml(
+            historyStatusText(item),
+          )}</span>
+          ${secondary}
+        </div>
       </div>
     `);
 

@@ -125,9 +125,9 @@ class OvertimeRepository
         if ($status === 'pending') {
             $where[] = '(orq.`status` IS NULL OR orq.`status` = \'\')';
         } elseif ($status === 'approved') {
-            $where[] = 'orq.`status` = 1';
-        } elseif ($status === 'resubmitted') {
-            $where[] = "orq.`status` = 0 AND {$followUpExists}";
+            // Approved outcomes, plus denied origins that already have a follow-up
+            // (treated as completed / approved path for employee history filters).
+            $where[] = "(orq.`status` = 1 OR (orq.`status` = 0 AND {$followUpExists}))";
         } elseif ($status === 'denied') {
             $where[] = "orq.`status` = 0 AND NOT {$followUpExists}";
         } elseif ($status === 'cancelled') {

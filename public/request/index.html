@@ -288,8 +288,8 @@
             <!-- History -->
             <div class="col-lg-5">
               <div class="ot-card w-100 d-flex flex-column" id="requestHistoryCard">
-                <div class="ot-card-header flex-wrap">
-                  <div>
+                <div class="ot-card-header history-card-header">
+                  <div class="history-card-heading">
                     <h2>Your History</h2>
                     <p class="ot-muted mb-0">Click a row to view details</p>
                     <span class="ot-live" title="This list updates on its own">
@@ -298,7 +298,7 @@
                     </span>
                   </div>
                   <div
-                    class="ot-filter-group"
+                    class="ot-filter-group history-filter-group"
                     role="group"
                     aria-label="Filter history"
                   >
@@ -329,13 +329,6 @@
                       type="button"
                     >
                       Denied
-                    </button>
-                    <button
-                      class="ot-filter-btn"
-                      data-filter="resubmitted"
-                      type="button"
-                    >
-                      Re-submitted
                     </button>
                     <button
                       class="ot-filter-btn"

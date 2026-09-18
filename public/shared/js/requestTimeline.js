@@ -174,10 +174,11 @@ export function renderHistoryStatusBadges(item) {
       historyStatusText(item),
     )}</span>`,
   );
-  if (isTruthyFlag(item.is_on_behalf)) {
-    $badge.append('<span class="status-badge status-onbehalf">On behalf</span>');
-  }
+
+  // Follow-up and on-behalf are mutually exclusive (follow-up wins).
   if (isTruthyFlag(item.is_follow_up)) {
     $badge.append('<span class="status-badge status-followup">Follow-up</span>');
+  } else if (isTruthyFlag(item.is_on_behalf)) {
+    $badge.append('<span class="status-badge status-onbehalf">On behalf</span>');
   }
 }

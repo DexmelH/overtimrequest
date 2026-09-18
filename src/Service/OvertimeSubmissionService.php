@@ -524,7 +524,7 @@ class OvertimeSubmissionService
 
         $query = \App\Support\ListQuery::normalize($filters);
         $status = strtolower(trim((string) ($filters['status'] ?? '')));
-        $allowedStatus = ['pending', 'approved', 'denied', 'cancelled', 'resubmitted'];
+        $allowedStatus = ['pending', 'approved', 'denied', 'cancelled'];
         if (!in_array($status, $allowedStatus, true)) {
             $status = '';
         }
