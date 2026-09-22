@@ -458,8 +458,94 @@ body[data-page="admin"] .ot-main {
 .approver-levels {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
   overflow: visible;
+}
+
+.approver-level-band {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.75rem;
+  border: 1px solid var(--ot-border);
+  border-radius: var(--ot-radius-sm);
+  background: var(--ot-surface);
+}
+
+.approver-level-band.is-standard {
+  border-left: 3px solid var(--ot-accent);
+}
+
+.approver-level-band.is-senior {
+  border-left: 3px solid var(--ot-success);
+  background: rgba(5, 150, 105, 0.04);
+}
+
+.approver-level-band-header {
+  position: relative;
+  padding: 0.15rem 0.25rem 0.35rem;
+  cursor: help;
+  outline: none;
+}
+
+.approver-level-band-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.approver-level-band-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--ot-text);
+}
+
+.approver-level-band-info {
+  font-size: 0.85rem;
+  color: var(--ot-muted);
+}
+
+.approver-level-band-summary {
+  margin-top: 0.15rem;
+  font-size: 0.74rem;
+  color: var(--ot-muted);
+  line-height: 1.35;
+}
+
+.approver-level-band-tooltip {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 0.35rem);
+  z-index: 20;
+  width: min(100%, 22rem);
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--ot-border);
+  border-radius: var(--ot-radius-sm);
+  background: var(--ot-surface);
+  color: var(--ot-text);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.45;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s ease;
+}
+
+.approver-level-band-header:hover .approver-level-band-tooltip,
+.approver-level-band-header:focus-visible .approver-level-band-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.approver-level-band-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
 }
 
 .approver-level-row {
@@ -471,6 +557,15 @@ body[data-page="admin"] .ot-main {
   border-radius: var(--ot-radius-sm);
   background: var(--ot-surface-muted);
   transition: border-color 0.15s ease;
+}
+
+.approver-level-band.is-senior .approver-level-row {
+  background: var(--ot-surface);
+}
+
+.approver-level-band.is-senior .level-badge {
+  background: rgba(5, 150, 105, 0.12);
+  color: var(--ot-success);
 }
 
 .approver-level-row:focus-within {

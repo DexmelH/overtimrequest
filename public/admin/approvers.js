@@ -107,27 +107,68 @@ function refreshAllLevelMembers() {
 
 function renderLevelRows() {
   const $body = $("#approverLevels").empty();
-  LEVELS.forEach((level) => {
-    const n = levelNum(level);
-    $body.append(`
-      <div class="approver-level-row" data-level="${level}">
-        <div class="level-badge">${level}</div>
-        <div class="flex-grow-1 position-relative">
-          <div class="input-group input-group-sm">
-            <input type="text" class="form-control approver-search"
-              id="approverSearch${n}" placeholder="Search employee by name or ID..."
-              autocomplete="off" data-level="${level}" />
-            <button type="button" class="ot-btn ot-btn-primary btn-sm add-approver-btn"
-              data-level="${level}" disabled title="Select an employee from search results">
-              <i class="bi bi-plus-lg"></i> Add
-            </button>
+
+  const bands = [
+    {
+      id: "standard",
+      levels: ["L1", "L2"],
+      title: "L1 & L2 — Standard",
+      summary: "Self-requests still need approval",
+      detail:
+        "Approvers at these levels still go through the normal approval chain when they request overtime for themselves, and they cannot file after the daily cutoff (same lock as regular employees).",
+    },
+    {
+      id: "senior",
+      levels: ["L3", "L4"],
+      title: "L3 & L4 — Senior",
+      summary: "Self-requests are auto-approved",
+      detail:
+        "Approvers at these levels are auto-approved when they request overtime for themselves, and they can still file after the daily cutoff. Level 4 can also finalize a pending request immediately when they act.",
+    },
+  ];
+
+  bands.forEach((band) => {
+    const $band = $(`
+      <div class="approver-level-band is-${escapeHtml(band.id)}" data-band="${escapeHtml(band.id)}">
+        <div class="approver-level-band-header" tabindex="0"
+          aria-label="${escapeHtml(band.title)}. ${escapeHtml(band.detail)}">
+          <div class="approver-level-band-title-row">
+            <span class="approver-level-band-title">${escapeHtml(band.title)}</span>
+            <i class="bi bi-info-circle approver-level-band-info" aria-hidden="true"></i>
           </div>
-          <div class="employee-suggestions d-none" id="suggestions${n}"></div>
-          <div class="approver-level-members mt-2" id="levelMembers${n}"></div>
+          <p class="approver-level-band-summary mb-0">${escapeHtml(band.summary)}</p>
+          <div class="approver-level-band-tooltip" role="tooltip">${escapeHtml(band.detail)}</div>
         </div>
+        <div class="approver-level-band-body"></div>
       </div>
     `);
+    const $bandBody = $band.find(".approver-level-band-body");
+
+    band.levels.forEach((level) => {
+      const n = levelNum(level);
+      $bandBody.append(`
+        <div class="approver-level-row" data-level="${level}">
+          <div class="level-badge">${level}</div>
+          <div class="flex-grow-1 position-relative">
+            <div class="input-group input-group-sm">
+              <input type="text" class="form-control approver-search"
+                id="approverSearch${n}" placeholder="Search employee by name or ID..."
+                autocomplete="off" data-level="${level}" />
+              <button type="button" class="ot-btn ot-btn-primary btn-sm add-approver-btn"
+                data-level="${level}" disabled title="Select an employee from search results">
+                <i class="bi bi-plus-lg"></i> Add
+              </button>
+            </div>
+            <div class="employee-suggestions d-none" id="suggestions${n}"></div>
+            <div class="approver-level-members mt-2" id="levelMembers${n}"></div>
+          </div>
+        </div>
+      `);
+    });
+
+    $body.append($band);
   });
+
   refreshAllLevelMembers();
 }
 
