@@ -260,7 +260,69 @@ qa(
 );
 
 // ---------------------------------------------------------------------------
-// 9. Email templates — contrast / links
+// 9. Same-level majority vote at finalize
+// ---------------------------------------------------------------------------
+$finalizer = $container->get(\App\Service\ApprovalFinalizer::class);
+$mk = static function (int $id, int $level, int $status, string $when): array {
+    return [
+        'approver_id' => $id,
+        'surname' => 'A' . $id,
+        'status' => $status,
+        'remarks' => '',
+        'approval_level' => $level,
+        'date_accepted' => $when,
+    ];
+};
+
+$tie = $finalizer->pickHighestLevelDecision([
+    $mk(1, 2, 1, '2026-09-22 14:00:00'),
+    $mk(2, 2, 0, '2026-09-22 14:30:00'),
+]);
+qa(
+    'Finalize vote',
+    'Same-level tie → Approved (not latest reject)',
+    (int) $tie['status'] === 1 && (int) $tie['approver_id'] === 1,
+    'winner=' . ($tie['approver_id'] ?? '?') . ' status=' . ($tie['status'] ?? '?')
+);
+
+$majorityReject = $finalizer->pickHighestLevelDecision([
+    $mk(1, 2, 1, '2026-09-22 14:00:00'),
+    $mk(2, 2, 0, '2026-09-22 14:10:00'),
+    $mk(3, 2, 0, '2026-09-22 14:20:00'),
+]);
+qa(
+    'Finalize vote',
+    'Same-level majority reject → Rejected',
+    (int) $majorityReject['status'] === 0,
+    'winner=' . ($majorityReject['approver_id'] ?? '?') . ' status=' . ($majorityReject['status'] ?? '?')
+);
+
+$higherLevel = $finalizer->pickHighestLevelDecision([
+    $mk(1, 3, 1, '2026-09-22 13:00:00'),
+    $mk(2, 2, 0, '2026-09-22 14:00:00'),
+    $mk(3, 2, 0, '2026-09-22 14:10:00'),
+]);
+qa(
+    'Finalize vote',
+    'Higher level still beats lower-level majority',
+    (int) $higherLevel['status'] === 1 && (int) $higherLevel['approval_level'] === 3,
+    'level=' . ($higherLevel['approval_level'] ?? '?') . ' status=' . ($higherLevel['status'] ?? '?')
+);
+
+$majorityApproveRep = $finalizer->pickHighestLevelDecision([
+    $mk(1, 2, 1, '2026-09-22 14:00:00'),
+    $mk(2, 2, 1, '2026-09-22 14:45:00'),
+    $mk(3, 2, 0, '2026-09-22 14:50:00'),
+]);
+qa(
+    'Finalize vote',
+    'Majority approve uses latest approve as representative',
+    (int) $majorityApproveRep['status'] === 1 && (int) $majorityApproveRep['approver_id'] === 2,
+    'winner=' . ($majorityApproveRep['approver_id'] ?? '?')
+);
+
+// ---------------------------------------------------------------------------
+// 10. Email templates — contrast / links
 // ---------------------------------------------------------------------------
 $mailRef = new ReflectionClass($mailSvc);
 $buildStatus = $mailRef->getMethod('buildStatusVars');
@@ -309,12 +371,13 @@ qa('Email', 'New request email has Review link', str_contains($newHtml, '/approv
 qa('Email', 'New request email no #94a3b8 faint grey', !preg_match('/#94a3b8/i', $newHtml));
 
 // ---------------------------------------------------------------------------
-// 10. PHP syntax on touched files
+// 11. PHP syntax on touched files
 // ---------------------------------------------------------------------------
 $phpFiles = [
     'src/Service/OvertimeSubmissionService.php',
     'src/Service/OvertimeApprovalService.php',
     'src/Service/ApproverDirectoryService.php',
+    'src/Service/ApprovalFinalizer.php',
     'src/Service/MailService.php',
     'src/Application.php',
     'public/api.php',

@@ -143,21 +143,60 @@ class ApprovalFinalizer
     }
 
     /**
+     * Pick the winning decision for cutoff finalize.
+     * Highest approval_level wins; within that level, majority approve/reject
+     * wins; ties go to Approved. Representative vote = latest on the winning side.
+     *
      * @param array<int, array{approver_id: int, surname: string, status: int, remarks: string, approval_level: int, date_accepted: ?string}> $decisions
      * @return array{approver_id: int, surname: string, status: int, remarks: string, approval_level: int, date_accepted: ?string}
      */
     public function pickHighestLevelDecision(array $decisions): array
     {
-        usort($decisions, static function (array $a, array $b): int {
-            $levelCmp = $b['approval_level'] <=> $a['approval_level'];
-            if ($levelCmp !== 0) {
-                return $levelCmp;
-            }
+        if (!$decisions) {
+            throw new \InvalidArgumentException('No decisions to pick from.');
+        }
 
+        $maxLevel = 0;
+        foreach ($decisions as $decision) {
+            $level = (int) ($decision['approval_level'] ?? 0);
+            if ($level > $maxLevel) {
+                $maxLevel = $level;
+            }
+        }
+
+        $atLevel = array_values(array_filter(
+            $decisions,
+            static fn (array $d): bool => (int) ($d['approval_level'] ?? 0) === $maxLevel
+        ));
+
+        $approveCount = 0;
+        $rejectCount = 0;
+        foreach ($atLevel as $decision) {
+            if ((int) ($decision['status'] ?? -1) === 1) {
+                $approveCount++;
+            } elseif ((int) ($decision['status'] ?? -1) === 0) {
+                $rejectCount++;
+            }
+        }
+
+        // Tie (or more approves) → Approved; only more rejects → Rejected.
+        $winningStatus = $approveCount >= $rejectCount ? 1 : 0;
+
+        $winners = array_values(array_filter(
+            $atLevel,
+            static fn (array $d): bool => (int) ($d['status'] ?? -1) === $winningStatus
+        ));
+
+        if (!$winners) {
+            // Defensive: no matching side (e.g. only null statuses) — fall back to latest at level.
+            $winners = $atLevel;
+        }
+
+        usort($winners, static function (array $a, array $b): int {
             return strcmp((string) ($b['date_accepted'] ?? ''), (string) ($a['date_accepted'] ?? ''));
         });
 
-        return $decisions[0];
+        return $winners[0];
     }
 
     private function applyFinalDecision(
