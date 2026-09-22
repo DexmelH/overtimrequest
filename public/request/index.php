@@ -1,11 +1,21 @@
+<?php
+declare(strict_types=1);
+require_once dirname(__DIR__) . '/shared/php/assets.php';
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
+?>
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="api-base" content="/overtime/api" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>Overtime Request</title>
-    <script src="../shared/js/theme-init.js"></script>
+    <script src="<?= htmlspecialchars(ot_asset('../shared/js/theme-init.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
 
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
@@ -15,8 +25,8 @@
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
       rel="stylesheet"
     />
-    <link href="../shared/css/theme.css" rel="stylesheet" />
-    <link href="styles.css" rel="stylesheet" />
+    <link href="<?= htmlspecialchars(ot_asset('../shared/css/theme.css'), ENT_QUOTES, 'UTF-8') ?>" rel="stylesheet" />
+    <link href="<?= htmlspecialchars(ot_asset('styles.css'), ENT_QUOTES, 'UTF-8') ?>" rel="stylesheet" />
   </head>
   <body data-page="request">
     <div
@@ -511,6 +521,9 @@
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script type="module" src="app.js"></script>
+    <script type="importmap">
+<?= ot_import_map_json() ?>
+</script>
+    <script type="module" src="<?= htmlspecialchars(ot_asset('app.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
   </body>
 </html>
