@@ -619,9 +619,6 @@ class OvertimeSubmissionService
         if ($jobId <= 0) {
             return [null, 'Please select a job request description.'];
         }
-        if ($towId <= 0) {
-            return [null, 'Please select a type of work.'];
-        }
 
         if (!$this->overtimeRepo->projectsBelongToGroup([$projectId], $groupAbbreviation, $actorUserId)) {
             return [null, 'The selected project does not belong to the selected group.'];
@@ -635,8 +632,16 @@ class OvertimeSubmissionService
             return [null, 'The selected job request description is not valid for this item.'];
         }
 
-        if (!$this->workLookup->towIsValidForProject($towId, $projectId)) {
-            return [null, 'The selected type of work is not valid for this project.'];
+        $requiresTow = $this->workLookup->findProjectDirect($projectId) === 1;
+        if ($requiresTow) {
+            if ($towId <= 0) {
+                return [null, 'Please select a type of work.'];
+            }
+            if (!$this->workLookup->towIsValidForProject($towId, $projectId)) {
+                return [null, 'The selected type of work is not valid for this project.'];
+            }
+        } else {
+            $towId = 0;
         }
 
         $requiresDim = $this->requiresDimSection($projectId, $groupId);
@@ -660,7 +665,7 @@ class OvertimeSubmissionService
             'minutes' => $minutes,
             'item_id' => $itemId,
             'job_id' => $jobId,
-            'tow_id' => $towId,
+            'tow_id' => $requiresTow ? $towId : null,
             'work_2d3d' => $work2d3d,
             'revision' => $revision,
         ], null];

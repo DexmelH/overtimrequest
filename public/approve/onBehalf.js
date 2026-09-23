@@ -39,6 +39,7 @@ const workFields = createWorkFields({
   jobId: "obJobRequest",
   towId: "obTypeOfWork",
   towDescId: "obTypeOfWorkDesc",
+  towSectionId: "obWorkTowSection",
   dimSectionId: "obWorkDimSection",
   dimCardsId: "obWorkDimCards",
   revisionSectionId: "obWorkRevisionSection",

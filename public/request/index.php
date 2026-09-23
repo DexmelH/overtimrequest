@@ -196,14 +196,13 @@ header('Expires: 0');
                           >
                         </div>
                       </div>
-                      <div class="col-12">
+                      <div class="col-12 d-none" id="workTowSection">
                         <label class="form-label" for="typeOfWork"
                           >Type of Work</label
                         >
                         <select
                           class="form-select"
                           id="typeOfWork"
-                          required
                           disabled
                         >
                           <option value="">

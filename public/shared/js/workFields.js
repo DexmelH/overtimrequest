@@ -24,6 +24,7 @@ const WORK_2D3D_OPTIONS = [
  *   jobId: string,
  *   towId: string,
  *   towDescId?: string,
+ *   towSectionId?: string,
  *   dimSectionId: string,
  *   dimCardsId: string,
  *   revisionSectionId: string,
@@ -43,6 +44,9 @@ export function createWorkFields(ids) {
   const $job = $(`#${ids.jobId}`);
   const $tow = $(`#${ids.towId}`);
   const $towDesc = ids.towDescId ? $(`#${ids.towDescId}`) : $();
+  const $towSection = ids.towSectionId
+    ? $(`#${ids.towSectionId}`)
+    : $tow.closest(".col-12");
   const $dimSection = $(`#${ids.dimSectionId}`);
   const $dimCards = $(`#${ids.dimCardsId}`);
   const $revSection = $(`#${ids.revisionSectionId}`);
@@ -93,6 +97,24 @@ export function createWorkFields(ids) {
       !DIM_EXCLUDED_GROUPS.has(groupId) &&
       Boolean($project.val())
     );
+  }
+
+  function towVisible() {
+    return selectedDirect() && Boolean($project.val());
+  }
+
+  function syncTowVisibility() {
+    const show = towVisible();
+    if ($towSection.length) {
+      $towSection.toggleClass("d-none", !show);
+    }
+    $tow.prop("required", show);
+    if (!show) {
+      $tow.val("");
+      $tow.prop("disabled", true);
+      clearTowDesc();
+      clearFieldInvalid($tow[0]);
+    }
   }
 
   function syncDimVisibility() {
@@ -172,8 +194,9 @@ export function createWorkFields(ids) {
     $project.prop("disabled", !hasGroup || projectOptionCount <= 1);
     $item.prop("disabled", !hasProject || itemOptionCount <= 1);
     $job.prop("disabled", !hasItem || jobOptionCount <= 1);
-    $tow.prop("disabled", !hasJob || towOptionCount <= 1);
+    $tow.prop("disabled", !towVisible() || !hasJob || towOptionCount <= 1);
     syncHoursEnabled();
+    syncTowVisibility();
     syncDimVisibility();
   }
 
@@ -252,6 +275,7 @@ export function createWorkFields(ids) {
     );
     $project.prop("disabled", true);
     disableCascadeFrom(1);
+    syncTowVisibility();
     syncDimVisibility();
 
     if (!groupId || !groupAbbr || groupAbbr.toLowerCase().startsWith("select")) {
@@ -296,6 +320,7 @@ export function createWorkFields(ids) {
       $project.prop("disabled", true);
     }
     syncHoursEnabled();
+    syncTowVisibility();
     syncDimVisibility();
   }
 
@@ -304,6 +329,7 @@ export function createWorkFields(ids) {
     const projectId = Number($project.val() || 0);
     const groupId = Number($group.val() || 0);
     disableCascadeFrom(1);
+    syncTowVisibility();
     syncDimVisibility();
 
     if (projectId <= 0 || groupId <= 0) return;
@@ -326,7 +352,9 @@ export function createWorkFields(ids) {
     }
 
     syncHoursEnabled();
-    loadTow().catch(() => {});
+    if (towVisible()) {
+      loadTow().catch(() => {});
+    }
   }
 
   async function loadJobs() {
@@ -370,7 +398,7 @@ export function createWorkFields(ids) {
     $tow.prop("disabled", true);
     clearTowDesc();
 
-    if (projectId <= 0) return;
+    if (!towVisible() || projectId <= 0) return;
 
     try {
       const payload = await apiGet(apiUrl(`/work/tow?project_id=${projectId}`));
@@ -407,6 +435,12 @@ export function createWorkFields(ids) {
   }
 
   function enableTowIfReady() {
+    if (!towVisible()) {
+      $tow.val("").prop("disabled", true);
+      clearTowDesc();
+      syncDimControls();
+      return;
+    }
     const hasOptions = $tow.find("option").length > 1;
     const jobSelected = Boolean($job.val());
     $tow.prop("disabled", !jobSelected || !hasOptions);
@@ -424,6 +458,7 @@ export function createWorkFields(ids) {
   });
 
   $project.on("change", () => {
+    syncTowVisibility();
     syncDimVisibility();
     loadItems().catch(() => {});
   });
@@ -476,7 +511,7 @@ export function createWorkFields(ids) {
       minutes: minutesRaw === "" || minutesRaw === null ? 0 : Number(minutesRaw),
       item_id: Number($item.val() || 0),
       job_id: Number($job.val() || 0),
-      tow_id: Number($tow.val() || 0),
+      tow_id: towVisible() ? Number($tow.val() || 0) : 0,
       work_2d3d: showDim
         ? String($dimCards.find("input[type=radio]:checked").val() || "")
         : "",
@@ -530,7 +565,7 @@ export function createWorkFields(ids) {
       clearFieldInvalid($job[0]);
     }
 
-    if (!values.tow_id) {
+    if (towVisible() && !values.tow_id) {
       markFieldInvalid($tow[0], "Select a type of work.");
       valid = false;
     } else {
@@ -560,6 +595,8 @@ export function createWorkFields(ids) {
     $revision.prop("checked", false).prop("disabled", true);
     $dimSection.addClass("d-none").removeClass("is-invalid-block is-dim-disabled");
     $revSection.addClass("d-none");
+    if ($towSection.length) $towSection.addClass("d-none");
+    $tow.prop("required", false);
     clearTowDesc();
     syncHoursEnabled();
     syncDurationSummary();

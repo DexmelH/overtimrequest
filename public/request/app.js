@@ -43,6 +43,7 @@ const workFields = createWorkFields({
   jobId: "jobRequest",
   towId: "typeOfWork",
   towDescId: "typeOfWorkDesc",
+  towSectionId: "workTowSection",
   dimSectionId: "workDimSection",
   dimCardsId: "workDimCards",
   revisionSectionId: "workRevisionSection",
