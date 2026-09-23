@@ -361,24 +361,6 @@ class OvertimeRepository
         return (int) $lastId;
     }
 
-    /** @param array<int, array{project_id: int, hours: int}> $projects */
-    public function addProjectAllocations(int $requestId, array $projects): void
-    {
-        $sql = "INSERT INTO `overtime_request_projects`
-                    (`overtime_request_id`, `project_id`, `hours`, `sort_order`)
-                VALUES (:requestId, :projectId, :hours, :sortOrder)";
-        $stmt = $this->pdo->prepare($sql);
-
-        foreach ($projects as $index => $project) {
-            $stmt->execute([
-                ':requestId' => $requestId,
-                ':projectId' => $project['project_id'],
-                ':hours' => $project['hours'],
-                ':sortOrder' => $index,
-            ]);
-        }
-    }
-
     /**
      * Validate that projects are either:
      * - owned by selected group (active + not deleted), or
@@ -421,13 +403,15 @@ class OvertimeRepository
         }
 
         $placeholders = implode(',', array_fill(0, count($requestIds), '?'));
-        $sql = "SELECT orp.`overtime_request_id`, orp.`project_id`,
-                       COALESCE(pt.`fldProject`, CONCAT('Project #', orp.`project_id`)) AS `project_name`,
-                       orp.`hours`
-                FROM `overtime_request_projects` orp
-                LEFT JOIN `projectstable` pt ON pt.`fldID` = orp.`project_id`
-                WHERE orp.`overtime_request_id` IN ({$placeholders})
-                ORDER BY orp.`overtime_request_id`, orp.`sort_order`, orp.`id`";
+        $sql = "SELECT orq.`id` AS `overtime_request_id`, orq.`project_id`,
+                       COALESCE(pt.`fldProject`, CONCAT('Project #', orq.`project_id`)) AS `project_name`,
+                       orq.`duration` AS `hours`
+                FROM `overtime_request` orq
+                LEFT JOIN `projectstable` pt ON pt.`fldID` = orq.`project_id`
+                WHERE orq.`id` IN ({$placeholders})
+                  AND orq.`project_id` IS NOT NULL
+                  AND orq.`project_id` > 0
+                ORDER BY orq.`id`";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($requestIds);
 
@@ -905,15 +889,29 @@ class OvertimeRepository
         ]);
     }
 
-    public function addAcceptedRequestToDailyReport(int $overtimeID): void
+    public function addAcceptedRequestToDailyReport(int $overtimeID, int $actorUserId = 0): void
     {
         $sql = "SELECT orq.`id`, orq.`user_id`, orq.`group_id`, orq.`location_id`,
                        orq.`request_date`, orq.`remarks`, orq.`project_id`,
                        orq.`item_id`, orq.`job_id`, orq.`tow_id`, orq.`work_2d3d`, orq.`revision`,
                        orq.`duration`, orq.`duration_minutes`,
-                       gl.`abbreviation`
+                       gl.`abbreviation`,
+                       l.`fldLocation` AS `location_name`,
+                       pt.`fldProject` AS `project_name`,
+                       iow.`fldItem` AS `item_name`,
+                       dr.`fldJob` AS `job_name`,
+                       tow.`fldTOW` AS `tow_name`,
+                       TRIM(CONCAT(COALESCE(el.`firstname`, ''), ' ', COALESCE(el.`surname`, ''))) AS `employee_name`,
+                       dl.`name` AS `employee_role`
                 FROM `overtime_request` orq
                 INNER JOIN kdtphdb_new.`group_list` gl ON gl.`id` = orq.`group_id`
+                LEFT JOIN `dispatch_locations` l ON l.`fldID` = orq.`location_id`
+                LEFT JOIN `projectstable` pt ON pt.`fldID` = orq.`project_id`
+                LEFT JOIN `itemofworkstable` iow ON iow.`fldID` = orq.`item_id`
+                LEFT JOIN `drawingreference` dr ON dr.`fldID` = orq.`job_id`
+                LEFT JOIN `typesofworktable` tow ON tow.`fldID` = orq.`tow_id`
+                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = orq.`user_id`
+                LEFT JOIN kdtphdb_new.`designation_list` dl ON dl.`id` = el.`designation`
                 WHERE orq.`id` = :overtimeID
                 LIMIT 1";
         $stmt = $this->pdo->prepare($sql);
@@ -923,10 +921,23 @@ class OvertimeRepository
             throw new \RuntimeException('Accepted overtime request was not found.');
         }
 
-        $projects = $this->findProjectsByRequestIds([$overtimeID])[$overtimeID] ?? [];
-        if (!$projects) {
-            throw new \RuntimeException('Accepted overtime request has no project allocations.');
+        $projectId = (int) ($request['project_id'] ?? 0);
+        if ($projectId <= 0) {
+            throw new \RuntimeException('Accepted overtime request has no project.');
         }
+
+        $durationMinutes = ((int) ($request['duration'] ?? 0)) * 60
+            + (int) ($request['duration_minutes'] ?? 0);
+        if ($durationMinutes <= 0) {
+            throw new \RuntimeException('Accepted overtime request has no duration.');
+        }
+
+        $itemId = (int) ($request['item_id'] ?? 0);
+        $jobId = (int) ($request['job_id'] ?? 0);
+        $towId = (int) ($request['tow_id'] ?? 0);
+        $work2d3d = $request['work_2d3d'] !== null && $request['work_2d3d'] !== ''
+            ? (string) $request['work_2d3d']
+            : null;
 
         $insertStmt = $this->pdo->prepare(
             "INSERT INTO `dailyreport`
@@ -938,42 +949,147 @@ class OvertimeRepository
                  :projectId, :itemId, :jobId, :work2d3d, :revision,
                  :towId, :durationMinutes, 1, :remarks, :changeLog)"
         );
-        $changeLog = date('YmdHis') . '_' . (int) $request['user_id'];
-        $itemId = (int) ($request['item_id'] ?? 0);
-        $jobId = (int) ($request['job_id'] ?? 0);
-        $towId = (int) ($request['tow_id'] ?? 0);
-        $work2d3d = $request['work_2d3d'] !== null && $request['work_2d3d'] !== ''
-            ? (string) $request['work_2d3d']
-            : null;
-        $revision = (int) ($request['revision'] ?? 0);
-        $requestMinutes = ((int) ($request['duration'] ?? 0)) * 60
-            + (int) ($request['duration_minutes'] ?? 0);
+        $insertStmt->execute([
+            ':employeeId' => (int) $request['user_id'],
+            ':groupAbbr' => (string) $request['abbreviation'],
+            ':groupId' => (int) $request['group_id'],
+            ':reportDate' => (string) $request['request_date'],
+            ':locationId' => (int) $request['location_id'],
+            ':projectId' => $projectId,
+            ':itemId' => $itemId,
+            ':jobId' => $jobId > 0 ? $jobId : null,
+            ':work2d3d' => $work2d3d,
+            ':revision' => (int) ($request['revision'] ?? 0),
+            ':towId' => $towId > 0 ? $towId : null,
+            ':durationMinutes' => $durationMinutes,
+            ':remarks' => $request['remarks'] !== '' ? $request['remarks'] : null,
+            ':changeLog' => date('YmdHis') . '_' . (int) $request['user_id'],
+        ]);
 
-        foreach ($projects as $project) {
-            $allocationMinutes = (int) $project['hours'] * 60;
-            // Prefer the request's HH:MM total when this is the single allocation row.
-            $durationMinutes = $requestMinutes > 0 ? $requestMinutes : $allocationMinutes;
-            if ($durationMinutes <= 0) {
-                $durationMinutes = $allocationMinutes;
-            }
-
-            $insertStmt->execute([
-                ':employeeId' => (int) $request['user_id'],
-                ':groupAbbr' => (string) $request['abbreviation'],
-                ':groupId' => (int) $request['group_id'],
-                ':reportDate' => (string) $request['request_date'],
-                ':locationId' => (int) $request['location_id'],
-                ':projectId' => (int) $project['project_id'],
-                ':itemId' => $itemId,
-                ':jobId' => $jobId > 0 ? $jobId : null,
-                ':work2d3d' => $work2d3d,
-                ':revision' => $revision,
-                ':towId' => $towId > 0 ? $towId : null,
-                ':durationMinutes' => $durationMinutes,
-                ':remarks' => $request['remarks'] !== '' ? $request['remarks'] : null,
-                ':changeLog' => $changeLog,
-            ]);
+        $dailyReportId = (int) $this->pdo->lastInsertId();
+        if ($dailyReportId <= 0) {
+            throw new \RuntimeException('Accepted overtime request was not posted to Daily Report.');
         }
+
+        $this->addDailyReportCreatedHistory(
+            $dailyReportId,
+            $request,
+            $durationMinutes,
+            $work2d3d,
+            $actorUserId
+        );
+    }
+
+    /**
+     * Daily Report history row for an overtime-posted entry (action: approved).
+     *
+     * @param array<string, mixed> $request
+     */
+    private function addDailyReportCreatedHistory(
+        int $dailyReportId,
+        array $request,
+        int $durationMinutes,
+        ?string $work2d3d,
+        int $actorUserId
+    ): void {
+        $employeeId = (int) ($request['user_id'] ?? 0);
+        $actor = $this->findDailyReportHistoryActor(
+            $actorUserId > 0 ? $actorUserId : $employeeId,
+            $request
+        );
+
+        $hoursValue = sprintf(
+            '%02d:%02d',
+            intdiv($durationMinutes, 60),
+            $durationMinutes % 60
+        );
+        $revisionYes = ((int) ($request['revision'] ?? 0)) === 1;
+
+        $newValues = [
+            'group' => $this->dailyReportHistoryField('Group', (string) ($request['abbreviation'] ?? '')),
+            'location' => $this->dailyReportHistoryField('Location', (string) ($request['location_name'] ?? '')),
+            'project' => $this->dailyReportHistoryField('Project', (string) ($request['project_name'] ?? '')),
+            'item' => $this->dailyReportHistoryField('Item of Works', (string) ($request['item_name'] ?? '')),
+            'job' => $this->dailyReportHistoryField('Job Request Description', (string) ($request['job_name'] ?? '')),
+            'twoThree' => $this->dailyReportHistoryField('2D/3D', (string) ($work2d3d ?? '')),
+            'revision' => $this->dailyReportHistoryField('Revision', $revisionYes ? 'Yes' : 'No'),
+            'tow' => $this->dailyReportHistoryField('Type of Work', (string) ($request['tow_name'] ?? '')),
+            'checker' => $this->dailyReportHistoryField('Checking', ''),
+            'hours' => $this->dailyReportHistoryField('No. of Hours', $hoursValue),
+            'mhType' => $this->dailyReportHistoryField('Manhour Type', 'Overtime'),
+            'remarks' => $this->dailyReportHistoryField('Remarks', (string) ($request['remarks'] ?? '')),
+            'trGroup' => $this->dailyReportHistoryField('Group of Trainees', ''),
+            'reportDate' => $this->dailyReportHistoryField('Report Date', (string) ($request['request_date'] ?? '')),
+        ];
+        $changedFields = array_keys($newValues);
+
+        $stmt = $this->pdo->prepare(
+            "INSERT INTO `dailyreport_history`
+                (`daily_report_id`, `employee_num`, `actor_num`, `actor_name`, `actor_role`,
+                 `report_date`, `action`, `is_override`, `override_reason`,
+                 `previous_values`, `new_values`, `changed_fields`, `created_at`)
+             VALUES
+                (:dailyReportId, :employeeNum, :actorNum, :actorName, :actorRole,
+                 :reportDate, 'approved', 0, NULL,
+                 :previousValues, :newValues, :changedFields, NOW())"
+        );
+        $stmt->execute([
+            ':dailyReportId' => $dailyReportId,
+            ':employeeNum' => $employeeId,
+            ':actorNum' => (int) $actor['id'],
+            ':actorName' => $actor['name'] !== '' ? $actor['name'] : null,
+            ':actorRole' => $actor['role'] !== '' ? $actor['role'] : null,
+            ':reportDate' => (string) $request['request_date'],
+            ':previousValues' => '{}',
+            ':newValues' => json_encode($newValues, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ':changedFields' => json_encode($changedFields, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        ]);
+    }
+
+    /** @return array{label: string, value: string} */
+    private function dailyReportHistoryField(string $label, string $value): array
+    {
+        return ['label' => $label, 'value' => $value];
+    }
+
+    /**
+     * @param array<string, mixed> $request
+     * @return array{id: int, name: string, role: string}
+     */
+    private function findDailyReportHistoryActor(int $actorUserId, array $request): array
+    {
+        $employeeId = (int) ($request['user_id'] ?? 0);
+        if ($actorUserId <= 0 || $actorUserId === $employeeId) {
+            return [
+                'id' => $employeeId,
+                'name' => trim((string) ($request['employee_name'] ?? '')),
+                'role' => trim((string) ($request['employee_role'] ?? '')),
+            ];
+        }
+
+        $sql = "SELECT el.`id`,
+                       TRIM(CONCAT(COALESCE(el.`firstname`, ''), ' ', COALESCE(el.`surname`, ''))) AS `name`,
+                       dl.`name` AS `role`
+                FROM kdtphdb_new.`employee_list` el
+                LEFT JOIN kdtphdb_new.`designation_list` dl ON dl.`id` = el.`designation`
+                WHERE el.`id` = :id
+                LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':id' => $actorUserId]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            return [
+                'id' => $employeeId,
+                'name' => trim((string) ($request['employee_name'] ?? '')),
+                'role' => trim((string) ($request['employee_role'] ?? '')),
+            ];
+        }
+
+        return [
+            'id' => (int) $row['id'],
+            'name' => trim((string) ($row['name'] ?? '')),
+            'role' => trim((string) ($row['role'] ?? '')),
+        ];
     }
 
     /**

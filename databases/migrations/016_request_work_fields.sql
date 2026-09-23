@@ -1,5 +1,5 @@
 -- Single-project work fields on overtime_request (item / job / TOW / 2D3D / revision).
--- One overtime_request_projects row is still written for hours + notify compatibility.
+-- Project / item / job / TOW live on overtime_request (see 018 for dropping overtime_request_projects).
 
 ALTER TABLE `overtime_request`
   ADD COLUMN `project_id` INT NULL AFTER `group_id`,

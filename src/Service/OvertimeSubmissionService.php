@@ -116,12 +116,11 @@ class OvertimeSubmissionService
             $pdo->beginTransaction();
 
             $id = (int) $this->overtimeRepo->addOvertime($payload);
-            $this->overtimeRepo->addProjectAllocations($id, $projects);
 
             if ($selfAutoApprove) {
                 // L3+ approvers do not enter an approval chain: accept immediately.
                 $this->overtimeRepo->updateOvertimeStatus($id, '1');
-                $this->overtimeRepo->addAcceptedRequestToDailyReport($id);
+                $this->overtimeRepo->addAcceptedRequestToDailyReport($id, $userID);
                 $this->overtimeRepo->queueRequestorStatusEmail(
                     $id,
                     1,
@@ -301,7 +300,6 @@ class OvertimeSubmissionService
             $pdo->beginTransaction();
 
             $id = (int) $this->overtimeRepo->addOvertime($payload);
-            $this->overtimeRepo->addProjectAllocations($id, $projects);
 
             // Only the filing approver is recorded. The rest of the main group's
             // chain is resolved purely to snapshot this approver's own level.
@@ -327,7 +325,7 @@ class OvertimeSubmissionService
             );
 
             $this->overtimeRepo->updateOvertimeStatus($id, 1);
-            $this->overtimeRepo->addAcceptedRequestToDailyReport($id);
+            $this->overtimeRepo->addAcceptedRequestToDailyReport($id, $approverId);
             $this->overtimeRepo->queueRequestorStatusEmail(
                 $id,
                 1,
@@ -411,14 +409,9 @@ class OvertimeSubmissionService
             return ['success' => false, 'message' => 'This request has already been re-submitted.'];
         }
 
-        $projects = $this->overtimeRepo->findProjectsByRequestIds([$overtimeId])[$overtimeId] ?? [];
-        if (!$projects) {
-            return ['success' => false, 'message' => 'The original request has no projects to copy.'];
-        }
-
-        $hours = (int) ($original['duration'] ?? $projects[0]['hours'] ?? 0);
+        $hours = (int) ($original['duration'] ?? 0);
         $minutes = (int) ($original['duration_minutes'] ?? 0);
-        $projectId = (int) ($original['project_id'] ?? $projects[0]['project_id'] ?? 0);
+        $projectId = (int) ($original['project_id'] ?? 0);
         if ($projectId <= 0 || ($hours <= 0 && $minutes <= 0)) {
             return ['success' => false, 'message' => 'The original request is missing project or hours.'];
         }

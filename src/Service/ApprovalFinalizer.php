@@ -225,7 +225,7 @@ class ApprovalFinalizer
 
             $this->overtimeRepo->updateOvertimeStatus($overtimeId, (string) $decision);
             if ($decision === 1) {
-                $this->overtimeRepo->addAcceptedRequestToDailyReport($overtimeId);
+                $this->overtimeRepo->addAcceptedRequestToDailyReport($overtimeId, (int) ($actorUserId ?? 0));
             }
             $this->overtimeRepo->queueRequestorStatusEmail($overtimeId, $decision, $actorName);
 

@@ -5,7 +5,6 @@
 
 SET FOREIGN_KEY_CHECKS = 0;
 
-DELETE FROM `overtime_request_projects`;
 DELETE FROM `overtime_accept`;
 DELETE FROM `overtime_request`;
 DELETE FROM `email_queue` WHERE `overtime_id` IS NOT NULL AND `overtime_id` > 0;

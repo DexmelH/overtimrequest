@@ -12,7 +12,6 @@ declare(strict_types=1);
  *   php scripts/reset_overtime_data.php --dry-run
  *
  * Default clears:
- *   - overtime_request_projects
  *   - overtime_accept
  *   - overtime_request
  *   - email_queue rows tied to overtime_id
@@ -83,12 +82,6 @@ $count = static function (PDO $pdo, string $sql, array $params = []): int {
 };
 
 $plan = [
-    [
-        'label' => 'overtime_request_projects',
-        'count_sql' => 'SELECT COUNT(*) FROM `overtime_request_projects`',
-        'delete_sql' => 'DELETE FROM `overtime_request_projects`',
-        'enabled' => true,
-    ],
     [
         'label' => 'overtime_accept',
         'count_sql' => 'SELECT COUNT(*) FROM `overtime_accept`',
