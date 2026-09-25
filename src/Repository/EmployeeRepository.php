@@ -34,7 +34,8 @@ class EmployeeRepository
                        gl.`abbreviation` AS group_abbr
                 FROM `employee_list` el
                 LEFT JOIN `group_list` gl ON gl.`id` = el.`group_id`
-                WHERE el.`emp_status` = 1
+                LEFT JOIN kdtphdb.`emp_prof` ep ON ep.`fldEmployeeNum` = el.`id`
+                WHERE {$this->activeResignSql()}
                   AND el.`group_id` = :groupId
                 ORDER BY el.`surname` ASC, el.`firstname` ASC";
         $stmt = $this->pdo->prepare($sql);
@@ -84,7 +85,8 @@ class EmployeeRepository
                        gl.`abbreviation` AS group_abbr
                 FROM `employee_list` el
                 LEFT JOIN `group_list` gl ON gl.`id` = el.`group_id`
-                WHERE el.`emp_status` = 1";
+                LEFT JOIN kdtphdb.`emp_prof` ep ON ep.`fldEmployeeNum` = el.`id`
+                WHERE {$this->activeResignSql()}";
         $params = [];
 
         $excludeIds = array_values(array_unique(array_filter(
@@ -204,7 +206,8 @@ class EmployeeRepository
                        gl.`abbreviation` AS `group_abbr`
                 FROM `employee_list` el
                 LEFT JOIN `group_list` gl ON gl.`id` = el.`group_id`
-                WHERE el.`emp_status` = 1
+                LEFT JOIN kdtphdb.`emp_prof` ep ON ep.`fldEmployeeNum` = el.`id`
+                WHERE {$this->activeResignSql()}
                   AND el.`group_id` IN ({$placeholders})
                 ORDER BY el.`surname` ASC, el.`firstname` ASC";
         $params = array_merge($groupIds);
@@ -317,8 +320,9 @@ class EmployeeRepository
         $sql = "SELECT COUNT(*)
                 FROM `employee_list` el
                 LEFT JOIN `employee_group` eg ON eg.`employee_number` = el.`id`
+                LEFT JOIN kdtphdb.`emp_prof` ep ON ep.`fldEmployeeNum` = el.`id`
                 WHERE el.`id` = ?
-                  AND el.`emp_status` = 1
+                  AND {$this->activeResignSql()}
                   AND (el.`group_id` IN ({$placeholders}) OR eg.`group_id` IN ({$placeholders}))";
         $params = array_merge([$employeeId], $groupIds, $groupIds);
         $stmt = $this->pdo->prepare($sql);
@@ -339,8 +343,9 @@ class EmployeeRepository
         $sql = "SELECT COUNT(*)
                 FROM `employee_group` eg
                 INNER JOIN `employee_list` el ON el.`id` = eg.`employee_number`
+                LEFT JOIN kdtphdb.`emp_prof` ep ON ep.`fldEmployeeNum` = el.`id`
                 WHERE eg.`employee_number` = ?
-                  AND el.`emp_status` = 1
+                  AND {$this->activeResignSql()}
                   AND eg.`group_id` IN ({$placeholders})";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute(array_merge([$employeeId], $groupIds));
@@ -367,7 +372,8 @@ class EmployeeRepository
                 FROM `employee_group` eg
                 INNER JOIN `employee_list` el ON el.`id` = eg.`employee_number`
                 LEFT JOIN `group_list` gl ON gl.`id` = el.`group_id`
-                WHERE el.`emp_status` = 1
+                LEFT JOIN kdtphdb.`emp_prof` ep ON ep.`fldEmployeeNum` = el.`id`
+                WHERE {$this->activeResignSql()}
                   AND eg.`group_id` IN ({$placeholders})";
         $params = $groupIds;
 
@@ -392,5 +398,16 @@ class EmployeeRepository
         $stmt->execute($params);
 
         return $stmt->fetchAll() ?: [];
+    }
+
+    /**
+     * Active when kdtphdb.emp_prof.fldResignDate is empty, or still today/future.
+     * Past resign dates are treated as resigned.
+     */
+    private function activeResignSql(string $alias = 'ep'): string
+    {
+        return "({$alias}.`fldResignDate` IS NULL
+            OR {$alias}.`fldResignDate` = '0000-00-00'
+            OR {$alias}.`fldResignDate` >= CURDATE())";
     }
 }
