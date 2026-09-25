@@ -1,5 +1,6 @@
 import { apiUrl } from "./api.js";
 import { apiGet } from "./http.js";
+import { initTabSleep } from "./tabSleep.js";
 
 const THEME_KEY = "ot-theme";
 const SIDEBAR_OPEN_CLASS = "ot-sidebar-open";
@@ -203,6 +204,7 @@ export function initShell() {
   ensureUserGreeting();
   initSidebarDrawer();
   loadSession(currentPage);
+  initTabSleep();
   staggerCards();
 
   requestAnimationFrame(() => {

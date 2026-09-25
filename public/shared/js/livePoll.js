@@ -85,7 +85,7 @@ export function createLivePoll({
    * into a single request. Never rejects.
    */
   async function refreshNow({ force = false } = {}) {
-    if (!running || inFlight || isPaused()) return false;
+    if (!running || inFlight || isPaused() || document.hidden) return false;
     if (!force && Date.now() - lastRunAt < minGap) return false;
 
     try {

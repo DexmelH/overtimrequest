@@ -15,6 +15,7 @@ header('Expires: 0');
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <title>Overtime Approval</title>
+<?= ot_favicon_links() ?>
     <script src="<?= htmlspecialchars(ot_asset('../shared/js/theme-init.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
 
     <link

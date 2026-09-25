@@ -9,6 +9,17 @@ function ot_public_root(): string
     return dirname(__DIR__, 2);
 }
 
+/** Favicon URL for the browser tab. */
+function ot_favicon_links(): string
+{
+    $active = htmlspecialchars(ot_asset(ot_web_base() . '/shared/img/favicon.svg'), ENT_QUOTES, 'UTF-8');
+
+    return <<<HTML
+    <link rel="icon" type="image/svg+xml" href="{$active}" id="otFavicon" />
+    <meta name="ot-favicon-active" content="{$active}" />
+HTML;
+}
+
 /** Browser base path, e.g. "/overtime". */
 function ot_web_base(): string
 {

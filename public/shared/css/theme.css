@@ -581,6 +581,12 @@ body.ot-sidebar-open {
   }
 }
 
+body.ot-tab-asleep .ot-live-dot {
+  animation: none;
+  background: var(--ot-muted);
+  opacity: 0.45;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ot-live-dot {
     animation: none;
