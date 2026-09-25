@@ -681,11 +681,13 @@ class OvertimeRepository
             WHERE fu.`origin_request_id` = orq.`id`
         )";
 
+        // CAST avoids MySQL treating status 0 (rejected) as ''.
+        $pendingStatusSql = "(orq.`status` IS NULL OR CAST(orq.`status` AS CHAR) = '')";
         $baseWhere = [
             'oa.`approver_id` = :approverID',
             '(orq.`status` != 2 OR orq.`status` IS NULL)',
-            '((orq.`request_date` >= :fromDate AND orq.`request_date` <= :toDate)
-              OR (oa.`status` IS NULL AND (orq.`status` IS NULL OR orq.`status` = \'\')))',
+            "((orq.`request_date` >= :fromDate AND orq.`request_date` <= :toDate)
+              OR (oa.`status` IS NULL AND {$pendingStatusSql}))",
         ];
         $params = [
             ':approverID' => $approverID,
@@ -693,8 +695,8 @@ class OvertimeRepository
             ':toDate' => $to,
         ];
 
-        $openSql = '(oa.`status` IS NULL AND (orq.`status` IS NULL OR orq.`status` = \'\'))';
-        $actedSql = '(oa.`status` IS NOT NULL OR (orq.`status` IS NOT NULL AND orq.`status` != \'\'))';
+        $openSql = "(oa.`status` IS NULL AND {$pendingStatusSql})";
+        $actedSql = "(oa.`status` IS NOT NULL OR NOT {$pendingStatusSql})";
 
         $viewWhere = [];
         if ($view === 'action') {
