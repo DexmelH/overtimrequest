@@ -286,4 +286,74 @@ class OvertimeApprovalService
                 : sprintf('Updated %d request(s), %d failed.', $ok, $failed),
         ];
     }
+
+    /**
+     * Approved OT hours and request counts for groups this approver handles.
+     *
+     * @param array<int, array{id?: mixed, abbreviation?: mixed, name?: mixed}> $groups
+     * @return array{success: bool, month: string, month_label: string, from: string, to: string, groups: array<int, array{id: int, abbreviation: string, name: string, minutes: int, hours: int, duration_minutes: int, duration_label: string}>, total_minutes: int, total_label: string, counts: array{total: int, approved: int, rejected: int}}
+     */
+    public function getGroupOtForMonth(int $approverId, array $groups, ?string $month = null): array
+    {
+        $currentMonth = date('Y-m');
+        $month = $month && preg_match('/^\d{4}-\d{2}$/', $month) ? $month : $currentMonth;
+        if ($month > $currentMonth) {
+            $month = $currentMonth;
+        }
+        $from = $month . '-01';
+        $to = date('Y-m-t', strtotime($from) ?: time());
+        $monthLabel = date('M Y', strtotime($from) ?: time());
+
+        $normalized = [];
+        foreach ($groups as $group) {
+            $id = (int) ($group['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $normalized[$id] = [
+                'id' => $id,
+                'abbreviation' => (string) ($group['abbreviation'] ?? ''),
+                'name' => (string) ($group['name'] ?? ''),
+            ];
+        }
+
+        $minutesByGroup = $this->overtimeRepo->sumApprovedMinutesByGroupIds(
+            array_keys($normalized),
+            $from,
+            $to
+        );
+
+        $rows = [];
+        $totalMinutes = 0;
+        foreach ($normalized as $id => $group) {
+            $minutes = (int) ($minutesByGroup[$id] ?? 0);
+            $totalMinutes += $minutes;
+            $hours = intdiv($minutes, 60);
+            $mins = $minutes % 60;
+            $rows[] = [
+                'id' => $id,
+                'abbreviation' => $group['abbreviation'],
+                'name' => $group['name'],
+                'minutes' => $minutes,
+                'hours' => $hours,
+                'duration_minutes' => $mins,
+                'duration_label' => OvertimeRepository::formatDurationLabel($hours, $mins),
+            ];
+        }
+
+        $totalHours = intdiv($totalMinutes, 60);
+        $totalMins = $totalMinutes % 60;
+
+        return [
+            'success' => true,
+            'month' => $month,
+            'month_label' => $monthLabel,
+            'from' => $from,
+            'to' => $to,
+            'groups' => $rows,
+            'total_minutes' => $totalMinutes,
+            'total_label' => OvertimeRepository::formatDurationLabel($totalHours, $totalMins),
+            'counts' => $this->overtimeRepo->countApproverRequestsInRange($approverId, $from, $to),
+        ];
+    }
 }

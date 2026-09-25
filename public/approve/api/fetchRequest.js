@@ -9,7 +9,6 @@ import {
   setPagination,
 } from "../services/state.js";
 import { renderTable } from "../ui/renderOvertime.js";
-import { updateStats } from "../ui/stats.js";
 
 let lastSignature = null;
 
@@ -63,9 +62,6 @@ export async function fetchRequest({ silent = false } = {}) {
     setPagination(pagination);
     if (counts) {
       setListCounts(counts);
-      updateStats(counts);
-    } else {
-      updateStats(incoming);
     }
     renderTable();
     return true;
@@ -75,7 +71,6 @@ export async function fetchRequest({ silent = false } = {}) {
       lastSignature = null;
       setOvertime([]);
       setPagination({ page: 1, limit: listQuery.limit, total: 0, pages: 0 });
-      updateStats([]);
       renderTable();
     }
     throw error;

@@ -20,8 +20,8 @@ export let pagination = {
 };
 export let listCounts = {
   total: 0,
-  pending: 0,
-  acted: 0,
+  approved: 0,
+  rejected: 0,
 };
 
 export function setOvertime(data) {
@@ -69,8 +69,8 @@ export function setPagination(p) {
 export function setListCounts(counts) {
   listCounts = {
     total: Number(counts?.total || 0),
-    pending: Number(counts?.pending || 0),
-    acted: Number(counts?.acted || 0),
+    approved: Number(counts?.approved || 0),
+    rejected: Number(counts?.rejected || 0),
   };
 }
 

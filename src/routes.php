@@ -15,6 +15,7 @@ return function (RouteCollector $r): void {
     $r->addRoute('GET', '/api/holidays', ['App\Controller\OvertimeController', 'getHolidays']);
     $r->addRoute('GET', '/api/approve/employee-groups', ['App\Controller\OvertimeController', 'getEmployeeGroups']);
     $r->addRoute('GET', '/api/approve/approver-groups', ['App\Controller\OvertimeController', 'getApproverGroups']);
+    $r->addRoute('GET', '/api/approve/group-ot', ['App\Controller\OvertimeController', 'getApproverGroupOt']);
     $r->addRoute('GET', '/api/approve/employees', ['App\Controller\OvertimeController', 'searchApproverEmployees']);
     $r->addRoute('POST', '/api/approve/addovertime', ['App\Controller\OvertimeController', 'addOvertimeOnBehalf']);
     $r->addRoute('POST', '/api/approve/followup', ['App\Controller\OvertimeController', 'followUpRequest']);

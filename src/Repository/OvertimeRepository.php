@@ -729,21 +729,32 @@ class OvertimeRepository
         $countStmt->execute($params);
         $total = (int) $countStmt->fetchColumn();
 
-        // Stats ignore the status chip so the three counters stay meaningful.
+        // Dashboard cards are always the current calendar month, not the list date filter.
+        $monthFrom = date('Y-m-01');
+        $monthTo = date('Y-m-t');
+        $monthWhereSql = implode(' AND ', [
+            'oa.`approver_id` = :approverID',
+            '(orq.`status` != 2 OR orq.`status` IS NULL)',
+            'orq.`request_date` >= :monthFrom AND orq.`request_date` <= :monthTo',
+        ]);
+        // Re-submitted originals are excluded: the replacement request is the one that counts.
+        $resubmittedOriginalSql = "orq.`status` = 0 AND {$followUpExists}";
         $statsSql = "SELECT
-                        COUNT(*) AS total,
-                        SUM(CASE WHEN {$openSql} THEN 1 ELSE 0 END) AS pending
+                        SUM(CASE WHEN NOT ({$resubmittedOriginalSql}) THEN 1 ELSE 0 END) AS total,
+                        SUM(CASE WHEN orq.`status` = 1 THEN 1 ELSE 0 END) AS approved,
+                        SUM(CASE WHEN orq.`status` = 0 AND NOT {$followUpExists} THEN 1 ELSE 0 END) AS rejected
                      {$fromSql}
-                     WHERE {$baseWhereSql}";
+                     WHERE {$monthWhereSql}";
         $statsStmt = $this->pdo->prepare($statsSql);
         $statsStmt->execute([
             ':approverID' => $approverID,
-            ':fromDate' => $from,
-            ':toDate' => $to,
+            ':monthFrom' => $monthFrom,
+            ':monthTo' => $monthTo,
         ]);
-        $stats = $statsStmt->fetch() ?: ['total' => 0, 'pending' => 0];
+        $stats = $statsStmt->fetch() ?: ['total' => 0, 'approved' => 0, 'rejected' => 0];
         $statsTotal = (int) ($stats['total'] ?? 0);
-        $statsPending = (int) ($stats['pending'] ?? 0);
+        $statsApproved = (int) ($stats['approved'] ?? 0);
+        $statsRejected = (int) ($stats['rejected'] ?? 0);
 
         $sql = "SELECT orq.`id`, orq.`duration`, orq.`duration_minutes`, orq.`remarks`, orq.`request_date`, orq.`status`,
                        orq.`date_created`, orq.`submitted_by`, orq.`origin_request_id`,
@@ -783,9 +794,82 @@ class OvertimeRepository
             ],
             'counts' => [
                 'total' => $statsTotal,
-                'pending' => $statsPending,
-                'acted' => max(0, $statsTotal - $statsPending),
+                'approved' => $statsApproved,
+                'rejected' => $statsRejected,
             ],
+        ];
+    }
+
+    /**
+     * Approved OT minutes for the given groups in a date range.
+     *
+     * @param int[] $groupIds
+     * @return array<int, int> group_id => total minutes
+     */
+    public function sumApprovedMinutesByGroupIds(array $groupIds, string $fromDate, string $toDate): array
+    {
+        $groupIds = array_values(array_unique(array_filter(
+            array_map('intval', $groupIds),
+            static fn(int $id): bool => $id > 0
+        )));
+        if (!$groupIds) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($groupIds), '?'));
+        $sql = "SELECT orq.`group_id`,
+                       COALESCE(SUM((orq.`duration` * 60) + COALESCE(orq.`duration_minutes`, 0)), 0) AS total_minutes
+                FROM `overtime_request` orq
+                WHERE orq.`group_id` IN ({$placeholders})
+                  AND orq.`status` = 1
+                  AND orq.`request_date` >= ?
+                  AND orq.`request_date` <= ?
+                GROUP BY orq.`group_id`";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([...$groupIds, $fromDate, $toDate]);
+
+        $map = [];
+        foreach ($stmt->fetchAll() ?: [] as $row) {
+            $map[(int) $row['group_id']] = (int) $row['total_minutes'];
+        }
+
+        return $map;
+    }
+
+    /**
+     * Request totals for an approver in a date range. Re-submitted originals are excluded.
+     *
+     * @return array{total: int, approved: int, rejected: int}
+     */
+    public function countApproverRequestsInRange(int $approverID, string $fromDate, string $toDate): array
+    {
+        $followUpExists = "EXISTS (
+            SELECT 1 FROM `overtime_request` fu
+            WHERE fu.`origin_request_id` = orq.`id`
+        )";
+        $resubmittedOriginalSql = "orq.`status` = 0 AND {$followUpExists}";
+        $sql = "SELECT
+                    SUM(CASE WHEN NOT ({$resubmittedOriginalSql}) THEN 1 ELSE 0 END) AS total,
+                    SUM(CASE WHEN orq.`status` = 1 THEN 1 ELSE 0 END) AS approved,
+                    SUM(CASE WHEN orq.`status` = 0 AND NOT {$followUpExists} THEN 1 ELSE 0 END) AS rejected
+                FROM `overtime_accept` oa
+                INNER JOIN `overtime_request` orq ON oa.`overtime_id` = orq.`id`
+                WHERE oa.`approver_id` = :approverID
+                  AND (orq.`status` != 2 OR orq.`status` IS NULL)
+                  AND orq.`request_date` >= :fromDate
+                  AND orq.`request_date` <= :toDate";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':approverID' => $approverID,
+            ':fromDate' => $fromDate,
+            ':toDate' => $toDate,
+        ]);
+        $stats = $stmt->fetch() ?: ['total' => 0, 'approved' => 0, 'rejected' => 0];
+
+        return [
+            'total' => (int) ($stats['total'] ?? 0),
+            'approved' => (int) ($stats['approved'] ?? 0),
+            'rejected' => (int) ($stats['rejected'] ?? 0),
         ];
     }
 

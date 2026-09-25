@@ -95,30 +95,91 @@ header('Expires: 0');
         </header>
 
         <main class="container ot-main">
-          <div class="row g-3 mb-4">
-            <div class="col-sm-4">
+          <div class="dashboard-stats mb-4">
+            <div class="dashboard-period">
+              <button
+                type="button"
+                class="dashboard-period-nav"
+                id="dashboardMonthPrev"
+                aria-label="Previous month"
+              >
+                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+              </button>
+              <label class="dashboard-period-picker">
+                <span id="dashboardMonth"><?= htmlspecialchars(date('M Y'), ENT_QUOTES, 'UTF-8') ?></span>
+                <input
+                  type="month"
+                  id="dashboardMonthInput"
+                  max="<?= htmlspecialchars(date('Y-m'), ENT_QUOTES, 'UTF-8') ?>"
+                  value="<?= htmlspecialchars(date('Y-m'), ENT_QUOTES, 'UTF-8') ?>"
+                  aria-label="Dashboard month"
+                />
+              </label>
+              <button
+                type="button"
+                class="dashboard-period-nav"
+                id="dashboardMonthNext"
+                aria-label="Next month"
+                disabled
+              >
+                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="row g-3">
+            <div class="col-6 col-xl-3">
               <div class="ot-card stat-card ot-stagger-item">
                 <div class="ot-card-body py-3">
-                  <div class="stat-label">Total Assigned</div>
+                  <div class="stat-label">Total Request</div>
                   <div class="stat-value" id="statTotal">0</div>
                 </div>
               </div>
             </div>
-            <div class="col-sm-4">
-              <div class="ot-card stat-card stat-pending ot-stagger-item">
+            <div class="col-6 col-xl-3">
+              <div class="ot-card stat-card stat-done ot-stagger-item">
                 <div class="ot-card-body py-3">
-                  <div class="stat-label">Awaiting Your Action</div>
-                  <div class="stat-value" id="statPending">0</div>
+                  <div class="stat-label">Approved</div>
+                  <div class="stat-value" id="statApproved">0</div>
                 </div>
               </div>
             </div>
-            <div class="col-sm-4">
-              <div class="ot-card stat-card stat-done ot-stagger-item">
+            <div class="col-6 col-xl-3">
+              <div class="ot-card stat-card stat-pending ot-stagger-item">
                 <div class="ot-card-body py-3">
-                  <div class="stat-label">You Already Acted</div>
-                  <div class="stat-value" id="statDone">0</div>
+                  <div class="stat-label">Rejected</div>
+                  <div class="stat-value" id="statRejected">0</div>
                 </div>
               </div>
+            </div>
+            <div class="col-6 col-xl-3" id="statGroupOtWrap">
+              <div class="ot-card stat-card stat-ot ot-stagger-item">
+                <div class="ot-card-body py-3">
+                  <div class="stat-ot-head">
+                    <div class="stat-label">Total OT</div>
+                    <div class="stat-group-picker" id="statGroupOtPicker">
+                    <div class="stat-group-abbr" id="statGroupOtAbbr">—</div>
+                    <button
+                      type="button"
+                      class="stat-group-trigger d-none"
+                      id="statGroupOtTrigger"
+                      aria-haspopup="listbox"
+                      aria-expanded="false"
+                      aria-controls="statGroupOtMenu"
+                    >
+                      <span id="statGroupOtTriggerLabel">All groups</span>
+                      <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                    </button>
+                    <div
+                      class="stat-group-menu d-none"
+                      id="statGroupOtMenu"
+                      role="listbox"
+                      aria-label="Group overtime"
+                    ></div>
+                    </div>
+                  </div>
+                  <div class="stat-value" id="statGroupOtHours">0 min</div>
+                </div>
+              </div>
+            </div>
             </div>
           </div>
 
@@ -270,7 +331,7 @@ header('Expires: 0');
                         <th>Hours</th>
                         <th>Location</th>
                         <th>Approvals</th>
-                        <th>Your Status</th>
+                        <th>Status</th>
                       </tr>
                     </thead>
                     <tbody></tbody>

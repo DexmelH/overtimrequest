@@ -67,6 +67,25 @@ class OvertimeController
         ];
     }
 
+    public function getApproverGroupOt(): array
+    {
+        $user = $this->currentUser();
+        $approverId = (int) $user['id'];
+
+        if (!$this->approverDirectory->isApprover($approverId)) {
+            return ['success' => false, 'message' => 'You are not authorized to view group overtime totals.'];
+        }
+
+        $groups = $this->approverDirectory->findApproverGroupsForUser($approverId);
+        $month = trim((string) ($_GET['month'] ?? ''));
+
+        return $this->approvalService->getGroupOtForMonth(
+            $approverId,
+            $groups,
+            $month !== '' ? $month : null
+        );
+    }
+
     public function getEmployeeGroups(): array
     {
         $user = $this->currentUser();

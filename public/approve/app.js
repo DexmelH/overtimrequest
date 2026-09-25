@@ -1,6 +1,9 @@
 import { apiUrl } from "../shared/js/api.js";
 import { apiGet } from "../shared/js/http.js";
 import { fetchRequest, resetRequestSignature } from "./api/fetchRequest.js";
+import { fetchGroupOt } from "./api/fetchGroupOt.js";
+import { initDashboardPeriod } from "./ui/dashboardPeriod.js";
+import { initGroupOt } from "./ui/groupOt.js";
 import {
   approveOvertimeRequest,
   approveOvertimeRequestsBulk,
@@ -297,7 +300,10 @@ const listPoll = createLivePoll({
   idleInterval: 60000,
   isPaused: () => actionInProgress || !!document.querySelector(".modal.show"),
   fetcher: async () => {
-    const changed = await fetchRequest({ silent: true });
+    const [changed] = await Promise.all([
+      fetchRequest({ silent: true }),
+      fetchGroupOt().catch(() => null),
+    ]);
     markListUpdated();
     return changed;
   },
@@ -305,9 +311,10 @@ const listPoll = createLivePoll({
 
 function reloadList() {
   resetRequestSignature();
-  return fetchRequest()
-    .then(markListUpdated)
-    .catch(() => {});
+  return Promise.all([
+    fetchRequest().then(markListUpdated),
+    fetchGroupOt().catch(() => null),
+  ]).catch(() => {});
 }
 
 // Closing a modal lifts the pause above, so catch up right away instead of
@@ -354,14 +361,19 @@ async function bootstrapApprovePage() {
 
   initShell();
   initOnBehalf();
+  initDashboardPeriod(() => {
+    fetchGroupOt().catch(() => null);
+  });
+  initGroupOt();
   bindClearInvalidOnEdit("#detailsModal");
   bindClearInvalidOnEdit("#bulkRejectModal");
   $("#listFrom").val(listQuery.from);
   $("#listTo").val(listQuery.to);
 
-  await fetchRequest()
-    .then(markListUpdated)
-    .catch(() => {});
+  await Promise.all([
+    fetchRequest().then(markListUpdated).catch(() => {}),
+    fetchGroupOt().catch(() => null),
+  ]);
   listPoll.start();
 }
 
