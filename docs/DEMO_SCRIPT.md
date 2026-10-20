@@ -75,7 +75,7 @@ Use three browser profiles (or Incognito windows) so you can switch roles withou
 ### 1.5 Cutoff (mention even if unlocked)
 
 **Say:**  
-“After the daily cutoff — currently 3:00 PM — employees can’t submit for themselves. The form locks and they must ask an approver to submit on their behalf. That keeps late filing under manager control.”
+“After the daily cutoff — currently 3:00 PM — employees can’t submit for themselves. The form locks and they must ask an Approver to submit on their behalf. That keeps late filing under manager control. Pending requests for that date are finalized at cutoff. Weekend-dated overtime (Saturday and Sunday) is finalized on that week’s **Friday** cutoff, not on the weekend.”
 
 **Do:** If the lock banner is visible, point to it. If not, just say the rule.
 

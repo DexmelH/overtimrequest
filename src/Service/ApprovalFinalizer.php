@@ -32,6 +32,62 @@ class ApprovalFinalizer
     }
 
     /**
+     * Request dates to finalize when the daily job runs on $runDate.
+     * Friday also includes Saturday and Sunday of the same week.
+     *
+     * @return list<string> Y-m-d dates
+     */
+    public function datesToFinalizeOn(\DateTimeImmutable $runDate): array
+    {
+        $dates = [$runDate->format('Y-m-d')];
+
+        // ISO weekday: 5 = Friday. Weekend OT for this week is settled on Friday.
+        if ($runDate->format('N') === '5') {
+            $dates[] = $runDate->modify('+1 day')->format('Y-m-d');
+            $dates[] = $runDate->modify('+2 day')->format('Y-m-d');
+        }
+
+        return $dates;
+    }
+
+    /**
+     * Finalize pending requests for every request_date covered by this run day.
+     *
+     * @return array{
+     *   finalized: int,
+     *   approved: int,
+     *   rejected: int,
+     *   auto_rejected: int,
+     *   errors: string[],
+     *   dates: list<string>
+     * }
+     */
+    public function finalizePendingForRunDate(\DateTimeImmutable $runDate): array
+    {
+        $summary = [
+            'finalized' => 0,
+            'approved' => 0,
+            'rejected' => 0,
+            'auto_rejected' => 0,
+            'errors' => [],
+            'dates' => $this->datesToFinalizeOn($runDate),
+        ];
+
+        foreach ($summary['dates'] as $date) {
+            $day = $this->finalizePendingForDate($date);
+            $summary['finalized'] += $day['finalized'];
+            $summary['approved'] += $day['approved'];
+            $summary['rejected'] += $day['rejected'];
+            $summary['auto_rejected'] += $day['auto_rejected'];
+            foreach ($day['errors'] as $error) {
+                $summary['errors'][] = $error;
+            }
+        }
+
+        return $summary;
+    }
+
+    /**
      * Finalize all pending requests for a calendar date (request_date).
      *
      * @return array{finalized: int, approved: int, rejected: int, auto_rejected: int, errors: string[]}

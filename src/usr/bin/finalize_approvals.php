@@ -1,7 +1,11 @@
 <?php
 
 /**
- * Finalize pending overtime requests for today after the approval cutoff.
+ * Finalize pending overtime requests after the approval cutoff.
+ *
+ * On Friday, also finalizes Saturday- and Sunday-dated requests for that week
+ * so weekend OT is settled at Friday's cutoff instead of waiting for the weekend.
+ * Other days finalize that calendar date only (Sat/Sun runs remain a catch-up).
  *
  * Usage:
  *   php src/usr/bin/finalize_approvals.php
@@ -22,11 +26,13 @@ $finalizer = $container->get(ApprovalFinalizer::class);
 
 $now = new DateTimeImmutable('now');
 $today = $now->format('Y-m-d');
+$dates = $finalizer->datesToFinalizeOn($now);
 
 error_log(sprintf(
-    'Approval finalizer started [env=%s, date=%s, cutoff=%s, force=%s, tz=%s]',
+    'Approval finalizer started [env=%s, run_date=%s, request_dates=%s, cutoff=%s, force=%s, tz=%s]',
     $config['app']['env'] ?? 'unknown',
     $today,
+    implode(',', $dates),
     $finalizer->getCutoffTime(),
     $force ? 'yes' : 'no',
     $config['app']['timezone'] ?? date_default_timezone_get()
@@ -42,12 +48,12 @@ if (!$force && !$finalizer->isPastCutoff($now)) {
     exit(0);
 }
 
-$summary = $finalizer->finalizePendingForDate($today);
+$summary = $finalizer->finalizePendingForRunDate($now);
 
 fwrite(STDOUT, sprintf(
-    "Finalized %d request(s) for %s (approved=%d, rejected=%d, auto_rejected=%d).\n",
+    "Finalized %d request(s) for request_date(s) %s (approved=%d, rejected=%d, auto_rejected=%d).\n",
     $summary['finalized'],
-    $today,
+    implode(', ', $summary['dates']),
     $summary['approved'],
     $summary['rejected'],
     $summary['auto_rejected']
