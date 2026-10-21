@@ -89,8 +89,8 @@ class ApproverDirectoryService
 
     /**
      * Resolve approvers for a group (OGA first, then Form PIC fallback).
-     * Self-filed and on-behalf submit both pass the employee's main group, not
-     * the selected OT group.
+     * Callers pass the approver routing group: the project's group when the
+     * project has one, otherwise the employee's main-group fallback.
      *
      * @return array<int, array{id: int, surname: string, email: string, approval_level?: int}>
      */

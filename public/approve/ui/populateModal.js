@@ -110,10 +110,20 @@ export function populateModal(requestId) {
   $("#btnApproveRequest").prop("disabled", request.my_decision === 1);
   $("#btnRejectRequest").prop("disabled", request.my_decision === 0);
 
-  $("#followUpActions").toggleClass(
-    "d-none",
-    request.status_code !== "auto_rejected",
-  );
+  const requestMonth = String(request.request_date || "").slice(0, 7);
+  const currentMonth = new Date()
+    .toLocaleDateString("en-CA", {
+      timeZone: "Asia/Manila",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+    .slice(0, 7);
+  const canFollowUp =
+    request.status_code === "auto_rejected" &&
+    requestMonth !== "" &&
+    requestMonth === currentMonth;
+  $("#followUpActions").toggleClass("d-none", !canFollowUp);
 
   modal?.show();
 }

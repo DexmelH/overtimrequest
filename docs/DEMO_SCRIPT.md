@@ -95,7 +95,7 @@ Use three browser profiles (or Incognito windows) so you can switch roles withou
 ### 2.2 Filters
 
 **Say:**  
-“Filters help focus: Needs Action for what I still owe a decision; Acted for what I’ve already handled; Auto-approved and Auto-rejected for system outcomes — for example on-behalf submissions.”
+“Filters help focus: Needs Action for what I still owe a decision; Acted for what I’ve already handled; Auto-approved and Auto-rejected for system outcomes — for example on-behalf submissions. Auto-rejected requests can be **Re-submitted as approved**, but only when the request date is in the **current month**.”
 
 **Do:** Click **Needs Action**, then back to **All**.
 

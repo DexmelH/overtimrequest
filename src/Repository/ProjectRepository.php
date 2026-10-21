@@ -24,6 +24,21 @@ class ProjectRepository
         return $data ? $data : [];
     }
 
+    /** Trimmed projectstable.fldGroup for the project, or '' when unset. */
+    public function findGroupAbbreviationById(int $projectId): string
+    {
+        if ($projectId <= 0) {
+            return '';
+        }
+
+        $sql = "SELECT `fldGroup` FROM `projectstable` WHERE `fldID` = :id LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':id' => $projectId]);
+        $value = $stmt->fetchColumn();
+
+        return is_string($value) ? trim($value) : '';
+    }
+
     public function findProjectByUserID(string $userID): array
     {
         $sql = "SELECT pt.`fldID`, CONCAT(pt.`fldProject`, ' (', pt.`fldGroup`, ')') as `fldProject`,

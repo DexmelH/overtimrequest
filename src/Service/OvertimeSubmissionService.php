@@ -6,6 +6,7 @@ use App\Repository\HolidayRepository;
 use App\Repository\LeaveRepository;
 use App\Repository\OvertimeRepository;
 use App\Repository\ProjectNotifyRepository;
+use App\Repository\ProjectRepository;
 use App\Repository\WorkLookupRepository;
 
 class OvertimeSubmissionService
@@ -16,6 +17,7 @@ class OvertimeSubmissionService
     private LeaveRepository $leaveRepo;
     private ApproverDirectoryService $approverDirectory;
     private ProjectNotifyRepository $projectNotifyRepo;
+    private ProjectRepository $projectRepo;
     private WorkLookupRepository $workLookup;
     private ActivityLogger $logger;
     private ApprovalCutoff $cutoff;
@@ -30,6 +32,7 @@ class OvertimeSubmissionService
         LeaveRepository $leaveRepo,
         ApproverDirectoryService $approverDirectory,
         ProjectNotifyRepository $projectNotifyRepo,
+        ProjectRepository $projectRepo,
         WorkLookupRepository $workLookup,
         ActivityLogger $logger,
         string $approvalCutoffTime = '15:00'
@@ -40,6 +43,7 @@ class OvertimeSubmissionService
         $this->leaveRepo = $leaveRepo;
         $this->approverDirectory = $approverDirectory;
         $this->projectNotifyRepo = $projectNotifyRepo;
+        $this->projectRepo = $projectRepo;
         $this->workLookup = $workLookup;
         $this->logger = $logger;
         $this->cutoff = new ApprovalCutoff($approvalCutoffTime);
@@ -76,8 +80,8 @@ class OvertimeSubmissionService
             return ['success' => false, 'message' => 'Please complete all required fields.'];
         }
 
-        // Approvers come from the requestor's main group; the selected OT group is
-        // only stored on the request record and used for project allocation.
+        // Main group is required as the fallback when the project has no group.
+        // The selected OT group is stored on the request for allocation / Daily Report.
         $mainGroupId = (int) ($user['group_id'] ?? 0);
         $mainGroupAbbrev = trim((string) ($user['abbreviation'] ?? ''));
         if ($mainGroupId <= 0) {
@@ -93,6 +97,11 @@ class OvertimeSubmissionService
         $projects = [['project_id' => $work['project_id'], 'hours' => $work['hours']]];
         $duration = $work['hours'];
         $durationMinutes = $work['minutes'];
+        [$approverGroupId, $approverGroupAbbrev] = $this->resolveApproverRouting(
+            (int) $work['project_id'],
+            $mainGroupId,
+            $mainGroupAbbrev
+        );
 
         $payload = [
             "user_id" => $userID,
@@ -128,8 +137,8 @@ class OvertimeSubmissionService
                 );
             } else {
                 $approver = $this->approverDirectory->resolveApprovers(
-                    $mainGroupId,
-                    $mainGroupAbbrev,
+                    $approverGroupId,
+                    $approverGroupAbbrev,
                     $userID
                 );
                 $queuedEmails = [];
@@ -301,11 +310,16 @@ class OvertimeSubmissionService
 
             $id = (int) $this->overtimeRepo->addOvertime($payload);
 
-            // Only the filing approver is recorded. The rest of the main group's
-            // chain is resolved purely to snapshot this approver's own level.
-            $approvers = $this->approverDirectory->resolveApprovers(
+            // Only the filing approver is recorded. Resolve the project (or main-group
+            // fallback) chain only to snapshot this approver's level in that group.
+            [$approverGroupId, $approverGroupAbbrev] = $this->resolveApproverRouting(
+                (int) $work['project_id'],
                 $mainGroupId,
-                $mainGroupAbbrev,
+                $mainGroupAbbrev
+            );
+            $approvers = $this->approverDirectory->resolveApprovers(
+                $approverGroupId,
+                $approverGroupAbbrev,
                 $employeeId
             );
             $approverLevel = 1;
@@ -407,6 +421,15 @@ class OvertimeSubmissionService
 
         if ($this->overtimeRepo->hasFollowUp($overtimeId)) {
             return ['success' => false, 'message' => 'This request has already been re-submitted.'];
+        }
+
+        $requestDate = (string) ($original['request_date'] ?? '');
+        $monthStart = (new \DateTimeImmutable('now'))->format('Y-m-01');
+        if ($requestDate === '' || $requestDate < $monthStart) {
+            return [
+                'success' => false,
+                'message' => 'Re-submit is only available for auto-rejected requests dated in the current month.',
+            ];
         }
 
         $hours = (int) ($original['duration'] ?? 0);
@@ -574,6 +597,28 @@ class OvertimeSubmissionService
      *
      * @param array<string, mixed> $approver
      */
+    /**
+     * Approver routing group: project's fldGroup when set and known, else main group.
+     *
+     * @return array{0: int, 1: string}
+     */
+    private function resolveApproverRouting(int $projectId, int $mainGroupId, string $mainGroupAbbrev): array
+    {
+        $projectAbbrev = $this->projectRepo->findGroupAbbreviationById($projectId);
+        if ($projectAbbrev === '') {
+            return [$mainGroupId, $mainGroupAbbrev];
+        }
+
+        $groups = $this->employeeRepo->findGroupsByAbbreviations([$projectAbbrev]);
+        $group = $groups[0] ?? null;
+        $projectGroupId = (int) ($group['id'] ?? 0);
+        if ($projectGroupId <= 0) {
+            return [$mainGroupId, $mainGroupAbbrev];
+        }
+
+        return [$projectGroupId, (string) ($group['abbreviation'] ?? $projectAbbrev)];
+    }
+
     private function resolveApprovalLevel(array $approver): int
     {
         foreach (['approval_level', 'role'] as $key) {

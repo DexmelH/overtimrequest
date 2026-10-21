@@ -36,17 +36,18 @@ The group chosen on the request must be one the employee is assigned to in `empl
 
 **UI:** `GET /api/approve/employee-groups?employee_id=` returns all groups from `employee_group` for that employee (`findGroupsByEmployeeId()`). The dropdown is populated in `public/approve/onBehalf.js`.
 
-### 3. OGA / Form PIC approval chain (main group)
+### 3. OGA / Form PIC approval chain (project group, main-group fallback)
 
-After insert, approvers are resolved from the employee’s **main group**, not the selected OT group:
+After insert, the filing approver’s level is resolved from the **project’s group** (`projectstable.fldGroup`). If the project has no group (or the abbreviation is unknown), the employee’s **main group** is used. The selected OT `group_id` on the request is only for allocation / Daily Report.
 
 ```php
-resolveApprovers($mainGroupId, $mainGroupAbbrev, $employeeId)
+[$approverGroupId, $approverGroupAbbrev] = resolveApproverRouting($projectId, $mainGroupId, $mainGroupAbbrev);
+resolveApprovers($approverGroupId, $approverGroupAbbrev, $employeeId)
 ```
 
-Configured OGA rows are used first; Form PIC fallback applies when no OGA is configured for that group.
+Configured OGA rows are used first; Form PIC fallback applies when no OGA is configured for that routing group.
 
-**Enforced:** `OvertimeSubmissionService::addOvertimeOnBehalf()` — `resolveApprovers()` receives main group IDs/abbrs; payload `group_id` is only the OT group on the request record.
+**Enforced:** `OvertimeSubmissionService::addOvertimeOnBehalf()` (and the same helper on self-file `addOvertime()`).
 
 ### 4. Projects API (`GET /api/projects`)
 
@@ -94,7 +95,7 @@ Self-service submit (`addOvertime()`) uses `relaxed: false` — stricter rules a
 4. Verify selected OT group ∈ `employee_group`
 5. Validate projects belong to selected group (or shared to employee)
 6. Insert request with `user_id` = employee, `group_id` = selected OT group
-7. Resolve approvers from **main group**; pre-approve all acceptance rows
+7. Resolve approver level from **project group** (or **main group** fallback); record the filing approver and auto-approve
 8. Set request status approved, daily report + status email
 
 No approval cutoff lock on on-behalf (employees may be locked after cutoff; approvers are not).
@@ -116,7 +117,7 @@ No approval cutoff lock on on-behalf (employees may be locked after cutoff; appr
 | `isApprover()` | `OvertimeSubmissionService.php` | start of `addOvertimeOnBehalf()` |
 | Main group handled | `OvertimeSubmissionService.php` | `$mainGroupId` vs `$approverGroupIds` |
 | OT group membership | `OvertimeSubmissionService.php` | `isEmployeeInEmployeeGroup()` |
-| OGA / Form PIC from main group | `OvertimeSubmissionService.php` | `resolveApprovers($mainGroupId, …)` |
+| OGA / Form PIC from project group (main-group fallback) | `OvertimeSubmissionService.php` | `resolveApproverRouting()` → `resolveApprovers()` |
 | Approver directory | `ApproverDirectoryService.php` | `isApprover()`, `getApproverGroupIds()`, `resolveApprovers()` |
 | Projects auth + merge | `ProjectController.php` | `getProjects()`, `canLoadProjectsForEmployee()` |
 | On-behalf UI | `public/approve/onBehalf.js` | modal, employee search, relaxed date |

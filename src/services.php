@@ -86,6 +86,7 @@ return function (Container $c, array $config): void {
         $c->get(LeaveRepository::class),
         $c->get(ApproverDirectoryService::class),
         $c->get(ProjectNotifyRepository::class),
+        $c->get(ProjectRepository::class),
         $c->get(WorkLookupRepository::class),
         $c->get(ActivityLogger::class),
         $c->get('config.approval_cutoff_time')
