@@ -5,6 +5,8 @@ const initialRange = defaultDateRange();
 export let overtime = [];
 export let filter = "all";
 export let selectedIds = new Set();
+/** @type {Map<string, object>} Snapshots so bulk confirm can summarize across pages. */
+export let selectedMeta = new Map();
 export let listQuery = {
   from: initialRange.from,
   to: initialRange.to,
@@ -24,6 +26,24 @@ export let listCounts = {
   rejected: 0,
 };
 
+function snapshotRequest(req) {
+  if (!req) return null;
+  return {
+    id: req.id,
+    employee_id: req.employee_id,
+    employee_name: req.employee_name,
+    request_date: req.request_date,
+    duration: req.duration,
+    duration_minutes: req.duration_minutes,
+  };
+}
+
+function rememberSelected(req) {
+  const snap = snapshotRequest(req);
+  if (!snap) return;
+  selectedMeta.set(String(snap.id), snap);
+}
+
 export function setOvertime(data) {
   const rows = Array.isArray(data) ? data : [];
   // Needs-action first, then newest within each group (server already prefers this).
@@ -36,6 +56,14 @@ export function setOvertime(data) {
     const bDate = String(b.date_created || b.request_date || "");
     return bDate.localeCompare(aDate);
   });
+
+  // Refresh snapshots for selected rows still on this page.
+  for (const req of overtime) {
+    const key = String(req.id);
+    if (selectedIds.has(key)) {
+      rememberSelected(req);
+    }
+  }
   pruneSelection();
 }
 
@@ -87,23 +115,34 @@ export function isSelected(id) {
   return selectedIds.has(String(id));
 }
 
-export function toggleSelected(id, checked) {
+/**
+ * @param {number|string} id
+ * @param {boolean} checked
+ * @param {object} [request] Full row when available (keeps meta for bulk OT summary)
+ */
+export function toggleSelected(id, checked, request = null) {
   const key = String(id);
   if (checked) {
     selectedIds.add(key);
+    const req =
+      request || overtime.find((r) => String(r.id) === key) || null;
+    rememberSelected(req);
   } else {
     selectedIds.delete(key);
+    selectedMeta.delete(key);
   }
 }
 
 export function selectPendingInFilter() {
   getPendingFilteredOvertime().forEach((req) => {
     selectedIds.add(String(req.id));
+    rememberSelected(req);
   });
 }
 
 export function clearSelection() {
   selectedIds.clear();
+  selectedMeta.clear();
 }
 
 export function getSelectedIds() {
@@ -114,16 +153,62 @@ export function getSelectedCount() {
   return selectedIds.size;
 }
 
-/** Drop IDs that are no longer pending for this approver. */
+/**
+ * Selected request snapshots (works across pages).
+ * @returns {object[]}
+ */
+export function getSelectedRequests() {
+  return getSelectedIds()
+    .map((id) => {
+      const key = String(id);
+      return (
+        selectedMeta.get(key) ||
+        overtime.find((r) => String(r.id) === key) ||
+        null
+      );
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Deselect every selected request belonging to the given employee.
+ * @param {number|string} employeeId
+ * @returns {number} how many request IDs were removed
+ */
+export function removeEmployeeFromSelection(employeeId) {
+  const target = String(employeeId ?? "");
+  if (!target) return 0;
+
+  let removed = 0;
+  for (const id of Array.from(selectedIds)) {
+    const key = String(id);
+    const req =
+      selectedMeta.get(key) ||
+      overtime.find((r) => String(r.id) === key) ||
+      null;
+    if (!req || String(req.employee_id ?? "") !== target) continue;
+    selectedIds.delete(key);
+    selectedMeta.delete(key);
+    removed += 1;
+  }
+  return removed;
+}
+
+/**
+ * Drop selections that are on the current page and no longer pending.
+ * Off-page selections are kept (meta snapshots remain).
+ */
 export function pruneSelection() {
-  const pending = new Set(
-    overtime
-      .filter((req) => !req.is_approved)
-      .map((req) => String(req.id)),
+  const onPage = new Map(
+    overtime.map((req) => [String(req.id), req]),
   );
   for (const id of Array.from(selectedIds)) {
-    if (!pending.has(id)) {
-      selectedIds.delete(id);
+    const key = String(id);
+    const onPageReq = onPage.get(key);
+    if (!onPageReq) continue;
+    if (onPageReq.is_approved) {
+      selectedIds.delete(key);
+      selectedMeta.delete(key);
     }
   }
 }

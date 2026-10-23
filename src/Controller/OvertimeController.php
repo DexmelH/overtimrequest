@@ -238,6 +238,21 @@ class OvertimeController
         return $this->approvalService->approveOvertimeBulk($user, $ids, $approved, $remarks);
     }
 
+    public function getEmployeeMonthOt(): array
+    {
+        $user = $this->currentUser();
+        $items = $_POST['items'] ?? [];
+        if (is_string($items)) {
+            $decoded = json_decode($items, true);
+            $items = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($items)) {
+            $items = [];
+        }
+
+        return $this->approvalService->getEmployeeMonthOt((int) ($user['id'] ?? 0), $items);
+    }
+
     private function currentUser(): array
     {
         $userHash = isset($_COOKIE['userID']) ? $_COOKIE['userID'] : '';

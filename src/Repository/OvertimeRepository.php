@@ -839,6 +839,107 @@ class OvertimeRepository
     }
 
     /**
+     * Sum of Daily Report OT minutes (fldMHType = 1) for one employee in a calendar month.
+     */
+    public function sumDailyReportOtMinutes(int $employeeId, string $yearMonth): int
+    {
+        if ($employeeId <= 0 || !preg_match('/^\d{4}-\d{2}$/', $yearMonth)) {
+            return 0;
+        }
+
+        $from = $yearMonth . '-01';
+        $to = date('Y-m-t', strtotime($from) ?: time());
+
+        $sql = "SELECT COALESCE(SUM(`fldDuration`), 0) AS total_minutes
+                FROM `dailyreport`
+                WHERE `fldEmployeeNum` = :employeeId
+                  AND `fldMHType` = 1
+                  AND `fldDate` >= :fromDate
+                  AND `fldDate` <= :toDate";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':employeeId' => $employeeId,
+            ':fromDate' => $from,
+            ':toDate' => $to,
+        ]);
+
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * Batch Daily Report OT minute totals for employee + year-month pairs.
+     *
+     * @param array<int, array{employee_id?: mixed, year_month?: mixed}> $items
+     * @return array<int, array{employee_id: int, year_month: string, minutes: int}>
+     */
+    public function sumDailyReportOtMinutesBatch(array $items): array
+    {
+        $pairs = [];
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $employeeId = (int) ($item['employee_id'] ?? 0);
+            $yearMonth = trim((string) ($item['year_month'] ?? ''));
+            if ($employeeId <= 0 || !preg_match('/^\d{4}-\d{2}$/', $yearMonth)) {
+                continue;
+            }
+            $key = $employeeId . '|' . $yearMonth;
+            $pairs[$key] = [
+                'employee_id' => $employeeId,
+                'year_month' => $yearMonth,
+            ];
+        }
+
+        if (!$pairs) {
+            return [];
+        }
+
+        $byMonth = [];
+        foreach ($pairs as $pair) {
+            $byMonth[$pair['year_month']][] = $pair['employee_id'];
+        }
+
+        $minutesMap = [];
+        foreach ($byMonth as $yearMonth => $employeeIds) {
+            $employeeIds = array_values(array_unique(array_map('intval', $employeeIds)));
+            if (!$employeeIds) {
+                continue;
+            }
+
+            $from = $yearMonth . '-01';
+            $to = date('Y-m-t', strtotime($from) ?: time());
+            $placeholders = implode(',', array_fill(0, count($employeeIds), '?'));
+            $sql = "SELECT `fldEmployeeNum` AS employee_id,
+                           COALESCE(SUM(`fldDuration`), 0) AS total_minutes
+                    FROM `dailyreport`
+                    WHERE `fldEmployeeNum` IN ({$placeholders})
+                      AND `fldMHType` = 1
+                      AND `fldDate` >= ?
+                      AND `fldDate` <= ?
+                    GROUP BY `fldEmployeeNum`";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([...$employeeIds, $from, $to]);
+
+            foreach ($stmt->fetchAll() ?: [] as $row) {
+                $eid = (int) ($row['employee_id'] ?? 0);
+                $minutesMap[$eid . '|' . $yearMonth] = (int) ($row['total_minutes'] ?? 0);
+            }
+        }
+
+        $result = [];
+        foreach ($pairs as $key => $pair) {
+            $result[] = [
+                'employee_id' => $pair['employee_id'],
+                'year_month' => $pair['year_month'],
+                'minutes' => $minutesMap[$key] ?? 0,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
      * Request totals for an approver in a date range. Re-submitted originals are excluded.
      *
      * @return array{total: int, approved: int, rejected: int}

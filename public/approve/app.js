@@ -2,6 +2,7 @@ import { apiUrl } from "../shared/js/api.js";
 import { apiGet } from "../shared/js/http.js";
 import { fetchRequest, resetRequestSignature } from "./api/fetchRequest.js";
 import { fetchGroupOt } from "./api/fetchGroupOt.js";
+import { fetchEmployeeMonthOt } from "./api/fetchEmployeeMonthOt.js";
 import { initDashboardPeriod } from "./ui/dashboardPeriod.js";
 import { initGroupOt } from "./ui/groupOt.js";
 import {
@@ -14,16 +15,22 @@ import {
   clearSelection,
   getSelectedCount,
   getSelectedIds,
+  getSelectedRequests,
   listQuery,
   overtime,
   pagination,
+  removeEmployeeFromSelection,
   selectPendingInFilter,
   setFilter,
   setListDates,
   setListPage,
 } from "./services/state.js";
 import { showToast } from "../shared/js/toast.js";
-import { confirmAction } from "../shared/js/confirm.js";
+import {
+  closeConfirm,
+  confirmAction,
+  updateConfirmContent,
+} from "../shared/js/confirm.js";
 import { initShell } from "../shared/js/shell.js";
 import { createLivePoll } from "../shared/js/livePoll.js";
 import {
@@ -33,6 +40,164 @@ import {
   requireFilled,
 } from "../shared/js/formValidation.js";
 import { initOnBehalf } from "./onBehalf.js";
+import { escapeHtml } from "../shared/js/escapeHtml.js";
+import { formatDuration, toTotalMinutes } from "../shared/js/formatDuration.js";
+
+function yearMonthFromDate(requestDate) {
+  const ym = String(requestDate || "").slice(0, 7);
+  return /^\d{4}-\d{2}$/.test(ym) ? ym : "";
+}
+
+function formatMonthLabel(yearMonth) {
+  if (!/^\d{4}-\d{2}$/.test(yearMonth)) return yearMonth || "";
+  const d = new Date(`${yearMonth}-01T00:00:00`);
+  if (Number.isNaN(d.getTime())) return yearMonth;
+  return d.toLocaleString("en-US", { month: "short", year: "numeric" });
+}
+
+function labelFromMinutes(totalMinutes) {
+  const total = Math.max(0, Math.floor(Number(totalMinutes) || 0));
+  return formatDuration(Math.floor(total / 60), total % 60);
+}
+
+function employeeDisplayName(name, employeeId) {
+  const label = String(name || "Employee").trim() || "Employee";
+  const id = employeeId != null && employeeId !== "" ? String(employeeId) : "";
+  return id ? `${label} (${id})` : label;
+}
+
+/**
+ * One list item per employee. Multiple selected requests are summed per month.
+ *
+ * @param {Array<{
+ *   employeeId?: number|string,
+ *   name: string,
+ *   months: Array<{ yearMonth: string, monthMinutes: number, afterMinutes: number }>
+ * }>} rows
+ * @param {{ allowRemove?: boolean }} [options]
+ */
+function buildOtConfirmDetailHtml(rows, { allowRemove = false } = {}) {
+  if (!Array.isArray(rows) || !rows.length) return "";
+  const items = rows
+    .map((row) => {
+      const displayName = employeeDisplayName(row.name, row.employeeId);
+      const removeBtn =
+        allowRemove && row.employeeId != null && row.employeeId !== ""
+          ? `<button type="button" class="ot-confirm-detail-remove" data-ot-confirm-remove data-employee-id="${escapeHtml(String(row.employeeId))}">Remove</button>`
+          : "";
+      const monthLines = (row.months || [])
+        .map((m) => {
+          const monthLabel = formatMonthLabel(m.yearMonth);
+          return `<span class="ot-confirm-detail-meta">Total OT (${escapeHtml(monthLabel)}): <strong>${escapeHtml(labelFromMinutes(m.monthMinutes))}</strong></span>
+        <span class="ot-confirm-detail-meta">After approval: <strong>${escapeHtml(labelFromMinutes(m.afterMinutes))}</strong></span>`;
+        })
+        .join("");
+      return `<li class="ot-confirm-detail-item">
+        <div class="ot-confirm-detail-head">
+          <span class="ot-confirm-detail-name">${escapeHtml(displayName)}</span>
+          ${removeBtn}
+        </div>
+        ${monthLines}
+      </li>`;
+    })
+    .join("");
+  return `<ul class="ot-confirm-detail-list">${items}</ul>`;
+}
+
+/**
+ * Group selected requests by employee (one confirm row each), summing hours
+ * per calendar month for Total OT / After approval.
+ *
+ * @param {object[]} requests
+ * @param {{ allowRemove?: boolean }} [options]
+ */
+async function buildApproveOtDetailHtml(
+  requests,
+  { allowRemove = false } = {},
+) {
+  const list = Array.isArray(requests) ? requests.filter(Boolean) : [];
+  if (!list.length) return "";
+
+  /**
+   * @type {Map<number, {
+   *   employee_id: number,
+   *   name: string,
+   *   months: Map<string, number>
+   * }>}
+   */
+  const byEmployee = new Map();
+
+  for (const req of list) {
+    const employeeId = Number(req.employee_id) || 0;
+    const yearMonth = yearMonthFromDate(req.request_date);
+    if (employeeId <= 0 || !yearMonth) continue;
+
+    const selectedMinutes = toTotalMinutes(req.duration, req.duration_minutes);
+    let emp = byEmployee.get(employeeId);
+    if (!emp) {
+      emp = {
+        employee_id: employeeId,
+        name: String(req.employee_name || "Employee"),
+        months: new Map(),
+      };
+      byEmployee.set(employeeId, emp);
+    }
+    emp.months.set(
+      yearMonth,
+      (emp.months.get(yearMonth) || 0) + selectedMinutes,
+    );
+  }
+
+  if (!byEmployee.size) return "";
+
+  /** @type {Array<{employee_id: number, year_month: string}>} */
+  const lookupItems = [];
+  for (const emp of byEmployee.values()) {
+    for (const yearMonth of emp.months.keys()) {
+      lookupItems.push({
+        employee_id: emp.employee_id,
+        year_month: yearMonth,
+      });
+    }
+  }
+
+  let otItems = [];
+  try {
+    otItems = await fetchEmployeeMonthOt(lookupItems);
+  } catch (error) {
+    console.error("Failed to load employee month OT:", error);
+    return "";
+  }
+
+  const minutesByKey = new Map(
+    (otItems || []).map((item) => [
+      `${Number(item.employee_id)}|${item.year_month}`,
+      Number(item.minutes) || 0,
+    ]),
+  );
+
+  const rows = [...byEmployee.values()].map((emp) => {
+    const months = [...emp.months.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([yearMonth, selectedMinutes]) => {
+        const monthMinutes =
+          minutesByKey.get(`${emp.employee_id}|${yearMonth}`) ?? 0;
+        return {
+          yearMonth,
+          monthMinutes,
+          afterMinutes: monthMinutes + selectedMinutes,
+        };
+      });
+
+    return {
+      employeeId: emp.employee_id,
+      name: emp.name,
+      months,
+    };
+  });
+
+  return buildOtConfirmDetailHtml(rows, { allowRemove });
+}
 
 let actionInProgress = false;
 let bulkRejectModal = null;
@@ -69,6 +234,13 @@ async function handleApproval(status) {
   const current = overtime.find((r) => String(r.id) === String(requestId));
   const isChange = current?.my_decision === 0 || current?.my_decision === 1;
 
+  let detailHtml = "";
+  if (isApprove && current) {
+    detailHtml = await buildApproveOtDetailHtml([current], {
+      allowRemove: false,
+    });
+  }
+
   const confirmed = await confirmAction({
     title: isChange
       ? `Change your decision to ${isApprove ? "approve" : "reject"}?`
@@ -80,6 +252,8 @@ async function handleApproval(status) {
       : isApprove
         ? "Your decision will be recorded. Final status is set at cutoff (or immediately if you are Level 4)."
         : "Your rejection will be recorded. Final status is set at cutoff (or immediately if you are Level 4).",
+    detailHtml,
+    size: detailHtml ? "lg" : "default",
     confirmText: isChange
       ? `Change to ${isApprove ? "Approve" : "Reject"}`
       : isApprove
@@ -117,15 +291,14 @@ async function runBulkAction(status, remarks = "") {
   const count = ids.length;
 
   actionInProgress = true;
-  $("#btnBulkApprove, #btnBulkReject, #btnBulkClear, #btnBulkSelectPending").prop(
-    "disabled",
-    true,
-  );
+  $(
+    "#btnBulkApprove, #btnBulkReject, #btnBulkClear, #btnBulkSelectPending",
+  ).prop("disabled", true);
 
-  showToast(
-    `Updating ${count} request(s)…`,
-    { type: "default", duration: 2000 },
-  );
+  showToast(`Updating ${count} request(s)…`, {
+    type: "default",
+    duration: 2000,
+  });
 
   try {
     const { ok, failed } = await approveOvertimeRequestsBulk(
@@ -139,9 +312,7 @@ async function runBulkAction(status, remarks = "") {
 
     if (failed === 0) {
       showToast(
-        isApprove
-          ? `Approved ${ok} request(s).`
-          : `Rejected ${ok} request(s).`,
+        isApprove ? `Approved ${ok} request(s).` : `Rejected ${ok} request(s).`,
         { type: "success" },
       );
     } else {
@@ -164,14 +335,40 @@ async function handleBulkApprove() {
   const count = getSelectedCount();
   if (!count || actionInProgress) return;
 
+  const detailHtml = await buildApproveOtDetailHtml(getSelectedRequests(), {
+    allowRemove: true,
+  });
+
   const confirmed = await confirmAction({
     title: `Approve ${count} request(s)?`,
     message:
       "Each selected pending request will be approved with your decision. Final status still follows Level 4 / cutoff rules.",
+    detailHtml,
+    size: detailHtml ? "lg" : "default",
     confirmText: "Approve all",
     cancelText: "Go back",
     variant: "success",
     icon: "bi-check-circle-fill",
+    onRemoveEmployee: async (employeeId) => {
+      removeEmployeeFromSelection(employeeId);
+      renderTable();
+      syncBulkBar();
+
+      const remaining = getSelectedCount();
+      if (remaining <= 0) {
+        closeConfirm(false);
+        return;
+      }
+
+      const nextDetail = await buildApproveOtDetailHtml(getSelectedRequests(), {
+        allowRemove: true,
+      });
+      updateConfirmContent({
+        title: `Approve ${remaining} request(s)?`,
+        detailHtml: nextDetail,
+        size: nextDetail ? "lg" : "default",
+      });
+    },
   });
   if (!confirmed) return;
 
@@ -371,7 +568,9 @@ async function bootstrapApprovePage() {
   $("#listTo").val(listQuery.to);
 
   await Promise.all([
-    fetchRequest().then(markListUpdated).catch(() => {}),
+    fetchRequest()
+      .then(markListUpdated)
+      .catch(() => {}),
     fetchGroupOt().catch(() => null),
   ]);
   listPoll.start();

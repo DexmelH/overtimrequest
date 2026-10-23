@@ -356,4 +356,40 @@ class OvertimeApprovalService
             'counts' => $this->overtimeRepo->countApproverRequestsInRange($approverId, $from, $to),
         ];
     }
+
+    /**
+     * Month-to-date Daily Report OT (fldMHType = 1) for employee + year-month pairs.
+     *
+     * @param array<int, array{employee_id?: mixed, year_month?: mixed}> $items
+     * @return array{success: bool, message?: string, items: array<int, array{employee_id: int, year_month: string, minutes: int, label: string}>}
+     */
+    public function getEmployeeMonthOt(int $approverId, array $items): array
+    {
+        if ($approverId <= 0) {
+            return [
+                'success' => false,
+                'message' => 'Unauthorized.',
+                'items' => [],
+            ];
+        }
+
+        $rows = $this->overtimeRepo->sumDailyReportOtMinutesBatch($items);
+        $out = [];
+        foreach ($rows as $row) {
+            $minutes = (int) ($row['minutes'] ?? 0);
+            $hours = intdiv($minutes, 60);
+            $mins = $minutes % 60;
+            $out[] = [
+                'employee_id' => (int) ($row['employee_id'] ?? 0),
+                'year_month' => (string) ($row['year_month'] ?? ''),
+                'minutes' => $minutes,
+                'label' => OvertimeRepository::formatDurationLabel($hours, $mins),
+            ];
+        }
+
+        return [
+            'success' => true,
+            'items' => $out,
+        ];
+    }
 }

@@ -89,7 +89,7 @@ export function renderTable() {
       $check.on("click", (e) => e.stopPropagation());
       $check.on("change", function (e) {
         e.stopPropagation();
-        toggleSelected(req.id, this.checked);
+        toggleSelected(req.id, this.checked, req);
         $tr.toggleClass("row-selected", this.checked);
         syncBulkBar();
       });
