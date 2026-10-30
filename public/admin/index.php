@@ -172,7 +172,7 @@ header('Expires: 0');
                 <div class="ot-card official-approvers-card">
                   <div class="ot-card-header py-2">
                     <div>
-                      <h3 class="h6 mb-0">Official approvers</h3>
+                      <h3 class="h6 mb-0">Backup approvers</h3>
                       <p class="ot-muted small mb-0">From Forms PIC — fallback when no saved approvers</p>
                     </div>
                     <span class="status-badge status-approved">Active</span>
