@@ -25,9 +25,9 @@ class OvertimeRepository
                     el.`surname` AS requestor_name, el.`email` AS requestor_email,
                     gl.`abbreviation`, gl.`abbreviation` AS group_name,
                     l.`fldLocation` AS location_name
-                FROM `overtime_request` orq
-                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = orq.`user_id`
-                LEFT JOIN kdtphdb_new.`group_list` gl ON gl.`id` = orq.`group_id`
+                FROM `overtime_request` orq 
+                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = orq.`user_id` 
+                LEFT JOIN kdtphdb_new.`group_list` gl ON gl.`id` = orq.`group_id` 
                 LEFT JOIN `dispatch_locations` l ON l.`fldID` = orq.`location_id`
                 WHERE orq.`id` = :requestID";
         $stmt = $this->pdo->prepare($sql);
@@ -1002,10 +1002,10 @@ class OvertimeRepository
                     COALESCE(oa.`approval_level`, oga.`approval_level`) AS `approval_level`
                 FROM `overtime_accept` oa
                 LEFT JOIN `overtime_request` orq ON orq.`id` = oa.`overtime_id`
-                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = oa.`approver_id`
+                LEFT JOIN kdtphdb_new.`employee_list` el ON el.`id` = oa.`approver_id` 
                 LEFT JOIN `overtime_group_approvers` oga
                     ON oga.`approver_id` = oa.`approver_id` AND oga.`group_id` = orq.`group_id`
-                LEFT JOIN kdtphdb_new.`designation_list` dl ON dl.`id` = el.`designation`
+                LEFT JOIN kdtphdb_new.`designation_list` dl ON dl.`id` = el.`designation` 
                 WHERE oa.`overtime_id` IN ({$placeholders})
                 ORDER BY oa.`overtime_id` ASC,
                          COALESCE(oa.`approval_level`, oga.`approval_level`) ASC,

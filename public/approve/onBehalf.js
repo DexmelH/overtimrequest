@@ -65,7 +65,7 @@ function bindDateField() {
 
 async function reloadDateRules() {
   await loadBlockedHolidays();
-  setDefaultRequestDate();
+  // setDefaultRequestDate();
 }
 
 function renderEmployeeGroupSelect(groups) {
@@ -108,10 +108,14 @@ async function loadEmployeeGroups(employeeId) {
 
   try {
     const json = await apiGet(
-      apiUrl("/approve/employee-groups") + "?employee_id=" + encodeURIComponent(String(employeeId)),
+      apiUrl("/approve/employee-groups") +
+        "?employee_id=" +
+        encodeURIComponent(String(employeeId)),
     );
     if (!json?.success) {
-      showToast(json?.message || "Unable to load assigned groups.", { type: "error" });
+      showToast(json?.message || "Unable to load assigned groups.", {
+        type: "error",
+      });
       renderEmployeeGroupSelect([]);
       return [];
     }
@@ -140,7 +144,9 @@ function showEmployeeSuggestions(employees) {
   employeeResults = employees;
   const $box = $("#obEmployeeSuggestions").empty().removeClass("d-none");
   if (!employees.length) {
-    $box.append('<div class="suggestion-empty">No matching employees found</div>');
+    $box.append(
+      '<div class="suggestion-empty">No matching employees found</div>',
+    );
     return;
   }
 
@@ -157,7 +163,9 @@ function showEmployeeSuggestions(employees) {
 async function selectEmployee(employee) {
   if (!employee) return;
   $("#obEmployeeId").val(employee.id);
-  $("#obEmployeeSearch").val(`${employee.surname || ""}, ${employee.firstname || ""}`.trim());
+  $("#obEmployeeSearch").val(
+    `${employee.surname || ""}, ${employee.firstname || ""}`.trim(),
+  );
   clearFieldInvalid("#obEmployeeSearch");
   workFields.reset();
   await loadEmployeeGroups(employee.id);
@@ -217,10 +225,16 @@ export function initOnBehalf() {
     }, 280);
   });
 
-  $(document).on("click", "#obEmployeeSuggestions .suggestion-item", function () {
-    const employee = employeeResults.find((emp) => String(emp.id) === String($(this).data("id")));
-    selectEmployee(employee).catch(() => {});
-  });
+  $(document).on(
+    "click",
+    "#obEmployeeSuggestions .suggestion-item",
+    function () {
+      const employee = employeeResults.find(
+        (emp) => String(emp.id) === String($(this).data("id")),
+      );
+      selectEmployee(employee).catch(() => {});
+    },
+  );
 
   $("#obResetBtn").on("click", () => {
     clearEmployeeSuggestions();
@@ -236,7 +250,7 @@ export function initOnBehalf() {
       if (employeeId) {
         loadEmployeeGroups(employeeId).catch(() => {});
       }
-        reloadDateRules().catch(() => {});
+      reloadDateRules().catch(() => {});
     });
   }
 
@@ -294,14 +308,21 @@ export function initOnBehalf() {
     try {
       const json = await apiPost(apiUrl("/approve/addovertime"), body);
       if (!json?.success) {
-        showToast(json?.message || "Unable to submit the overtime request.", { type: "error" });
+        showToast(json?.message || "Unable to submit the overtime request.", {
+          type: "error",
+        });
         return;
       }
-      showToast(json.message || "The overtime request has been submitted and approved.", {
-        type: "success",
-        duration: 3500,
-      });
-      bootstrap.Modal.getInstance(document.getElementById("onBehalfModal"))?.hide();
+      showToast(
+        json.message || "The overtime request has been submitted and approved.",
+        {
+          type: "success",
+          duration: 3500,
+        },
+      );
+      bootstrap.Modal.getInstance(
+        document.getElementById("onBehalfModal"),
+      )?.hide();
       fetchRequest().catch(() => {});
     } catch {
       showToast("Unable to submit the overtime request.", { type: "error" });
@@ -313,7 +334,9 @@ export function initOnBehalf() {
   bindClearInvalidOnEdit("#onBehalfModal");
 
   $(document).on("click", function (e) {
-    if (!$(e.target).closest("#obEmployeeSearch, #obEmployeeSuggestions").length) {
+    if (
+      !$(e.target).closest("#obEmployeeSearch, #obEmployeeSuggestions").length
+    ) {
       clearEmployeeSuggestions();
     }
   });
