@@ -150,6 +150,7 @@ class OvertimeController
             'tow_id' => $_POST['tow_id'] ?? 0,
             'work_2d3d' => $_POST['work_2d3d'] ?? '',
             'revision' => $_POST['revision'] ?? 0,
+            'trainee_group' => $_POST['trainee_group'] ?? '',
         ]);
     }
 
@@ -192,6 +193,7 @@ class OvertimeController
             'tow_id' => $_POST['tow_id'] ?? 0,
             'work_2d3d' => $_POST['work_2d3d'] ?? '',
             'revision' => $_POST['revision'] ?? 0,
+            'trainee_group' => $_POST['trainee_group'] ?? '',
         ]);
     }
 

@@ -163,6 +163,14 @@ header('Expires: 0');
                           <option value="">Select project first</option>
                         </select>
                       </div>
+                      <div class="col-12 d-none" id="traineeGroupSection">
+                        <label class="form-label" for="traineeGroup"
+                          >Group of Trainees</label
+                        >
+                        <select class="form-select" id="traineeGroup" disabled>
+                          <option value="">Select Group to Train</option>
+                        </select>
+                      </div>
                       <div class="col-12">
                         <label class="form-label" for="jobRequest"
                           >Job Request Description</label

@@ -8,6 +8,10 @@ use PDO;
  */
 class WorkLookupRepository
 {
+    /** Project 3 shares one job list across items, except item 24646. */
+    private const SHARED_JOB_PROJECT_ID = 3;
+    private const SHARED_JOB_EXCLUDED_ITEM_ID = 24646;
+
     private PDO $pdo;
     private ?int $leaveProjectId = null;
 
@@ -80,18 +84,26 @@ class WorkLookupRepository
             return [];
         }
 
+        $condition = '`fldProject` = :projectId AND `fldItem` = :itemId';
+        $params = [
+            ':projectId' => $projectId,
+            ':itemId' => $itemId,
+        ];
+        if ($this->usesSharedProjectJobs($projectId, $itemId)) {
+            $condition = '`fldProject` = :projectId';
+            $params = [
+                ':projectId' => $projectId,
+            ];
+        }
+
         $sql = "SELECT `fldID` AS `id`, `fldJob` AS `name`
                 FROM `drawingreference`
-                WHERE `fldProject` = :projectId
-                  AND `fldItem` = :itemId
+                WHERE {$condition}
                   AND `fldActive` = 1
                   AND `fldDelete` = 0
                 ORDER BY `fldPriority`, `fldJob`";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
-            ':projectId' => $projectId,
-            ':itemId' => $itemId,
-        ]);
+        $stmt->execute($params);
 
         return $this->mapIdNameRows($stmt->fetchAll() ?: []);
     }
@@ -161,21 +173,36 @@ class WorkLookupRepository
             return false;
         }
 
+        $itemFilter = '';
+        $params = [
+            ':jobId' => $jobId,
+            ':projectId' => $projectId,
+        ];
+        if (!$this->usesSharedProjectJobs($projectId, $itemId)) {
+            $itemFilter = ' AND `fldItem` = :itemId';
+            $params[':itemId'] = $itemId;
+        }
+
         $sql = "SELECT 1 FROM `drawingreference`
                 WHERE `fldID` = :jobId
                   AND `fldProject` = :projectId
-                  AND `fldItem` = :itemId
+                  {$itemFilter}
                   AND `fldActive` = 1
                   AND `fldDelete` = 0
                 LIMIT 1";
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
-            ':jobId' => $jobId,
-            ':projectId' => $projectId,
-            ':itemId' => $itemId,
-        ]);
+        $stmt->execute($params);
 
         return (bool) $stmt->fetchColumn();
+    }
+
+    /**
+     * Project 3 shows every active job on the project, except when the item is 24646.
+     */
+    private function usesSharedProjectJobs(int $projectId, int $itemId): bool
+    {
+        return $projectId === self::SHARED_JOB_PROJECT_ID
+            && $itemId !== self::SHARED_JOB_EXCLUDED_ITEM_ID;
     }
 
     public function towIsValidForProject(int $towId, int $projectId): bool

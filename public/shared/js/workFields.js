@@ -4,6 +4,7 @@ import { markFieldInvalid, clearFieldInvalid } from "./formValidation.js";
 import { formatDuration, toTotalMinutes } from "./formatDuration.js";
 
 const DIM_EXCLUDED_GROUPS = new Set([10, 16]);
+const TRAINEE_ITEM_ID = "14";
 const WORK_2D3D_OPTIONS = [
   { value: "2D", title: "2D", subtitle: "AutoCad" },
   { value: "3D", title: "3D", subtitle: "Navis, Video" },
@@ -21,6 +22,8 @@ const WORK_2D3D_OPTIONS = [
  *   minutesId?: string,
  *   durationSummaryId?: string,
  *   itemId: string,
+ *   traineeSectionId?: string,
+ *   traineeGroupId?: string,
  *   jobId: string,
  *   towId: string,
  *   towDescId?: string,
@@ -41,6 +44,10 @@ export function createWorkFields(ids) {
     ? $(`#${ids.durationSummaryId}`)
     : $();
   const $item = $(`#${ids.itemId}`);
+  const $traineeSection = ids.traineeSectionId
+    ? $(`#${ids.traineeSectionId}`)
+    : $();
+  const $traineeGroup = ids.traineeGroupId ? $(`#${ids.traineeGroupId}`) : $();
   const $job = $(`#${ids.jobId}`);
   const $tow = $(`#${ids.towId}`);
   const $towDesc = ids.towDescId ? $(`#${ids.towDescId}`) : $();
@@ -57,6 +64,8 @@ export function createWorkFields(ids) {
   let projectDirect = new Map();
   let loadToken = 0;
   let towToken = 0;
+  let traineeGroupsLoaded = false;
+  let traineeGroupsLoading = null;
 
   renderDimCards();
 
@@ -198,6 +207,67 @@ export function createWorkFields(ids) {
     syncHoursEnabled();
     syncTowVisibility();
     syncDimVisibility();
+    syncTraineeGroup();
+  }
+
+  function traineeVisible() {
+    return String($item.val() || "") === TRAINEE_ITEM_ID;
+  }
+
+  function hideTraineeGroup() {
+    if (!$traineeSection.length) return;
+    $traineeSection.addClass("d-none");
+    $traineeGroup.prop("required", false).val("");
+    if ($traineeGroup[0]) clearFieldInvalid($traineeGroup[0]);
+  }
+
+  async function ensureTraineeGroups() {
+    if (!$traineeGroup.length || traineeGroupsLoaded) return;
+    if (traineeGroupsLoading) {
+      await traineeGroupsLoading;
+      return;
+    }
+
+    traineeGroupsLoading = (async () => {
+      const payload = await apiGet(apiUrl("/groups/all"));
+      const list = Array.isArray(payload?.data) ? payload.data : [];
+      const rows = list
+        .map((group) => {
+          const abbreviation = String(group.abbreviation || "").trim();
+          if (!abbreviation) return null;
+          return { id: abbreviation, name: abbreviation };
+        })
+        .filter(Boolean);
+      fillSelect($traineeGroup, rows, "Select Group to Train");
+      traineeGroupsLoaded = true;
+    })();
+
+    try {
+      await traineeGroupsLoading;
+    } finally {
+      traineeGroupsLoading = null;
+    }
+  }
+
+  function syncTraineeGroup() {
+    if (!$traineeSection.length) return;
+    const show = traineeVisible();
+    $traineeSection.toggleClass("d-none", !show);
+    $traineeGroup.prop("required", show);
+    if (!show) {
+      hideTraineeGroup();
+      return;
+    }
+    ensureTraineeGroups()
+      .then(() => {
+        if (!traineeVisible()) return;
+        $traineeGroup.prop("disabled", false);
+      })
+      .catch(() => {
+        if (!traineeVisible()) return;
+        fillSelect($traineeGroup, [], "Failed to load groups");
+        $traineeGroup.prop("disabled", true);
+      });
   }
 
   function fillSelect($el, rows, placeholder) {
@@ -248,6 +318,9 @@ export function createWorkFields(ids) {
     } else if (level <= 3) {
       $tow.val("").prop("disabled", true);
       clearTowDesc();
+    }
+    if (level <= 1) {
+      hideTraineeGroup();
     }
     syncHoursEnabled();
     syncDimControls();
@@ -352,6 +425,7 @@ export function createWorkFields(ids) {
     }
 
     syncHoursEnabled();
+    syncTraineeGroup();
     if (towVisible()) {
       loadTow().catch(() => {});
     }
@@ -464,6 +538,7 @@ export function createWorkFields(ids) {
   });
 
   $item.on("change", () => {
+    syncTraineeGroup();
     loadJobs().catch(() => {});
   });
 
@@ -516,6 +591,7 @@ export function createWorkFields(ids) {
         ? String($dimCards.find("input[type=radio]:checked").val() || "")
         : "",
       revision: showDim && $revision.is(":checked") ? 1 : 0,
+      trainee_group: traineeVisible() ? String($traineeGroup.val() || "") : "",
     };
   }
 
@@ -558,6 +634,13 @@ export function createWorkFields(ids) {
       clearFieldInvalid($item[0]);
     }
 
+    if (traineeVisible() && !values.trainee_group) {
+      markFieldInvalid($traineeGroup[0], "Select a group to train.");
+      valid = false;
+    } else if ($traineeGroup[0]) {
+      clearFieldInvalid($traineeGroup[0]);
+    }
+
     if (!values.job_id) {
       markFieldInvalid($job[0], "Select a job request description.");
       valid = false;
@@ -597,6 +680,7 @@ export function createWorkFields(ids) {
     $revSection.addClass("d-none");
     if ($towSection.length) $towSection.addClass("d-none");
     $tow.prop("required", false);
+    hideTraineeGroup();
     clearTowDesc();
     syncHoursEnabled();
     syncDurationSummary();

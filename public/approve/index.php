@@ -670,6 +670,14 @@ header('Expires: 0');
                     <option value="">Select project first</option>
                   </select>
                 </div>
+                <div class="col-12 d-none" id="obTraineeGroupSection">
+                  <label class="form-label" for="obTraineeGroup"
+                    >Group of Trainees</label
+                  >
+                  <select class="form-select" id="obTraineeGroup" disabled>
+                    <option value="">Select Group to Train</option>
+                  </select>
+                </div>
                 <div class="col-12">
                   <label class="form-label" for="obJobRequest"
                     >Job Request Description</label

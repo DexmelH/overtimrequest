@@ -7,6 +7,7 @@ return function (RouteCollector $r): void {
     $r->addRoute('GET', '/api/csrf', ['App\Controller\SecurityController', 'csrfToken']);
     $r->addRoute('GET', '/api/session', ['App\Controller\UserController', 'getSession']);
     $r->addRoute('GET', '/api/groups', ['App\Controller\GroupController', 'getGroupsByUserId']);
+    $r->addRoute('GET', '/api/groups/all', ['App\Controller\GroupController', 'getAllGroups']);
     $r->addRoute('GET', '/api/locations', ['App\Controller\LocationController', 'getLocations']);
     $r->addRoute('GET', '/api/projects', ['App\Controller\ProjectController', 'getProjects']);
     $r->addRoute('GET', '/api/work/items', ['App\Controller\WorkController', 'getItems']);

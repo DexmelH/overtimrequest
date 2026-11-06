@@ -333,11 +333,11 @@ class OvertimeRepository
         $sql = "INSERT INTO `overtime_request`
                     (`user_id`, `submitted_by`, `origin_request_id`, `location_id`, `group_id`,
                      `project_id`, `item_id`, `job_id`, `tow_id`, `work_2d3d`, `revision`,
-                     `duration`, `duration_minutes`, `remarks`, `request_date`)
+                     `trainee_group`, `duration`, `duration_minutes`, `remarks`, `request_date`)
                 VALUES
                     (:userID, :submittedBy, :originRequestID, :locationID, :groupID,
                      :projectID, :itemID, :jobID, :towID, :work2d3d, :revision,
-                     :duration, :durationMinutes, :remarks, :requestDate)";
+                     :traineeGroup, :duration, :durationMinutes, :remarks, :requestDate)";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([
             ":userID" => $payload["user_id"],
@@ -351,6 +351,7 @@ class OvertimeRepository
             ":towID" => $payload["tow_id"] ?? null,
             ":work2d3d" => $payload["work_2d3d"] ?? null,
             ":revision" => (int) ($payload["revision"] ?? 0),
+            ":traineeGroup" => $payload["trainee_group"] ?? null,
             ":duration" => $payload["duration"],
             ":durationMinutes" => (int) ($payload["duration_minutes"] ?? 0),
             ":remarks" => $payload["remarks"],
@@ -1081,7 +1082,7 @@ class OvertimeRepository
         $sql = "SELECT orq.`id`, orq.`user_id`, orq.`group_id`, orq.`location_id`,
                        orq.`request_date`, orq.`remarks`, orq.`project_id`,
                        orq.`item_id`, orq.`job_id`, orq.`tow_id`, orq.`work_2d3d`, orq.`revision`,
-                       orq.`duration`, orq.`duration_minutes`,
+                       orq.`trainee_group`, orq.`duration`, orq.`duration_minutes`,
                        gl.`abbreviation`,
                        l.`fldLocation` AS `location_name`,
                        pt.`fldProject` AS `project_name`,
@@ -1126,15 +1127,21 @@ class OvertimeRepository
             ? (string) $request['work_2d3d']
             : null;
 
+        $traineeGroup = null;
+        if ($itemId === 14) {
+            $stored = trim((string) ($request['trainee_group'] ?? ''));
+            $traineeGroup = $stored !== '' ? $stored : null;
+        }
+
         $insertStmt = $this->pdo->prepare(
             "INSERT INTO `dailyreport`
                 (`fldEmployeeNum`, `fldGroup`, `fldGroupID`, `fldDate`, `fldLocation`,
                  `fldProject`, `fldItem`, `fldJobRequestDescription`, `fld2D3D`, `fldRevision`,
-                 `fldTOW`, `fldDuration`, `fldMHType`, `fldRemarks`, `fldChangeLog`)
+                 `fldTOW`, `fldDuration`, `fldMHType`, `fldRemarks`, `fldTrGroup`, `fldChangeLog`)
              VALUES
                 (:employeeId, :groupAbbr, :groupId, :reportDate, :locationId,
                  :projectId, :itemId, :jobId, :work2d3d, :revision,
-                 :towId, :durationMinutes, 1, :remarks, :changeLog)"
+                 :towId, :durationMinutes, 1, :remarks, :traineeGroup, :changeLog)"
         );
         $insertStmt->execute([
             ':employeeId' => (int) $request['user_id'],
@@ -1150,6 +1157,7 @@ class OvertimeRepository
             ':towId' => $towId > 0 ? $towId : null,
             ':durationMinutes' => $durationMinutes,
             ':remarks' => $request['remarks'] !== '' ? $request['remarks'] : null,
+            ':traineeGroup' => $traineeGroup,
             ':changeLog' => date('YmdHis') . '_' . (int) $request['user_id'],
         ]);
 
@@ -1205,7 +1213,10 @@ class OvertimeRepository
             'hours' => $this->dailyReportHistoryField('No. of Hours', $hoursValue),
             'mhType' => $this->dailyReportHistoryField('Manhour Type', 'Overtime'),
             'remarks' => $this->dailyReportHistoryField('Remarks', (string) ($request['remarks'] ?? '')),
-            'trGroup' => $this->dailyReportHistoryField('Group of Trainees', ''),
+            'trGroup' => $this->dailyReportHistoryField(
+                'Group of Trainees',
+                (string) ($request['trainee_group'] ?? '')
+            ),
             'reportDate' => $this->dailyReportHistoryField('Report Date', (string) ($request['request_date'] ?? '')),
         ];
         $changedFields = array_keys($newValues);
@@ -1290,7 +1301,7 @@ class OvertimeRepository
         $sql = "SELECT orq.`id`, orq.`user_id`, orq.`group_id`, orq.`location_id`,
                        orq.`remarks`, orq.`request_date`, orq.`status`,
                        orq.`project_id`, orq.`item_id`, orq.`job_id`, orq.`tow_id`,
-                       orq.`work_2d3d`, orq.`revision`,
+                       orq.`work_2d3d`, orq.`revision`, orq.`trainee_group`,
                        orq.`duration`, orq.`duration_minutes`,
                        (SELECT COUNT(*) FROM `overtime_accept` oa
                          WHERE oa.`overtime_id` = orq.`id` AND oa.`status` IS NOT NULL) AS `acted_count`

@@ -24,6 +24,7 @@ class OvertimeSubmissionService
 
     private const WORK_2D3D_VALUES = ['2D', '3D', '2D3D', '3D2D'];
     private const DIM_EXCLUDED_GROUP_IDS = [10, 16];
+    private const TRAINEE_ITEM_ID = 14;
 
     public function __construct(
         OvertimeRepository $overtimeRepo,
@@ -113,6 +114,7 @@ class OvertimeSubmissionService
             "tow_id" => $work['tow_id'],
             "work_2d3d" => $work['work_2d3d'],
             "revision" => $work['revision'],
+            "trainee_group" => $work['trainee_group'],
             "remarks" => $remarks,
             "duration" => $duration,
             "duration_minutes" => $durationMinutes,
@@ -297,6 +299,7 @@ class OvertimeSubmissionService
             'tow_id' => $work['tow_id'],
             'work_2d3d' => $work['work_2d3d'],
             'revision' => $work['revision'],
+            'trainee_group' => $work['trainee_group'],
             'remarks' => $remarks,
             'duration' => $duration,
             'duration_minutes' => $durationMinutes,
@@ -453,6 +456,7 @@ class OvertimeSubmissionService
             'tow_id' => (int) ($original['tow_id'] ?? 0),
             'work_2d3d' => $original['work_2d3d'] ?? null,
             'revision' => (int) ($original['revision'] ?? 0),
+            'trainee_group' => $original['trainee_group'] ?? null,
             'origin_request_id' => $overtimeId,
         ]);
     }
@@ -634,7 +638,7 @@ class OvertimeSubmissionService
      * @param array<string, mixed> $input
      * @return array{0: array{
      *   project_id: int, hours: int, minutes: int, item_id: int, job_id: int, tow_id: int,
-     *   work_2d3d: ?string, revision: int
+     *   work_2d3d: ?string, revision: int, trainee_group: ?string
      * }|null, 1: ?string}
      */
     private function parseWorkFields(array $input, int $groupId, string $groupAbbreviation, int $actorUserId = 0): array
@@ -704,6 +708,22 @@ class OvertimeSubmissionService
             $revision = 0;
         }
 
+        $traineeGroup = null;
+        if ($itemId === self::TRAINEE_ITEM_ID) {
+            $traineeGroup = trim((string) ($input['trainee_group'] ?? ''));
+            if ($traineeGroup === '' || strlen($traineeGroup) > 5) {
+                return [null, 'Please select a group to train.'];
+            }
+            $groupRow = $this->employeeRepo->findGroupByAbbreviation($traineeGroup);
+            if ($groupRow === null) {
+                return [null, 'The selected group of trainees is not valid.'];
+            }
+            $traineeGroup = trim((string) ($groupRow['abbreviation'] ?? ''));
+            if ($traineeGroup === '') {
+                return [null, 'The selected group of trainees is not valid.'];
+            }
+        }
+
         return [[
             'project_id' => $projectId,
             'hours' => $hours,
@@ -713,6 +733,7 @@ class OvertimeSubmissionService
             'tow_id' => $requiresTow ? $towId : null,
             'work_2d3d' => $work2d3d,
             'revision' => $revision,
+            'trainee_group' => $traineeGroup,
         ], null];
     }
 

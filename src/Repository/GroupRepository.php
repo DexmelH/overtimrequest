@@ -24,4 +24,18 @@ class GroupRepository
         
         return $data ? $data : [];
     }
+
+    /**
+     * @return array<int, array{id: int|string, abbreviation: string, name: string}>
+     */
+    public function findAll(): array
+    {
+        $sql = "SELECT `id`, `abbreviation`, `name`
+                FROM `group_list`
+                WHERE TRIM(`abbreviation`) <> ''
+                ORDER BY `abbreviation` ASC";
+        $stmt = $this->pdo->query($sql);
+
+        return $stmt ? ($stmt->fetchAll() ?: []) : [];
+    }
 }

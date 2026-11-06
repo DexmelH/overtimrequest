@@ -40,6 +40,8 @@ const workFields = createWorkFields({
   minutesId: "minutes",
   durationSummaryId: "durationSummary",
   itemId: "itemOfWork",
+  traineeSectionId: "traineeGroupSection",
+  traineeGroupId: "traineeGroup",
   jobId: "jobRequest",
   towId: "typeOfWork",
   towDescId: "typeOfWorkDesc",

@@ -24,4 +24,15 @@ class GroupController
 
         return $this->groupRepo->findByUserId($userID);
     }
+
+    public function getAllGroups(): array
+    {
+        $userHash = $_COOKIE['userID'] ?? '';
+        $this->userRepo->findIdByHash($userHash);
+
+        return [
+            'success' => true,
+            'data' => $this->groupRepo->findAll(),
+        ];
+    }
 }

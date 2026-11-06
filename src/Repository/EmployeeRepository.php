@@ -54,6 +54,24 @@ class EmployeeRepository
         return $row ?: null;
     }
 
+    public function findGroupByAbbreviation(string $abbreviation): ?array
+    {
+        $abbreviation = trim($abbreviation);
+        if ($abbreviation === '') {
+            return null;
+        }
+
+        $sql = "SELECT `id`, `abbreviation`, `name`
+                FROM `group_list`
+                WHERE UPPER(`abbreviation`) = UPPER(:abbreviation)
+                LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([':abbreviation' => $abbreviation]);
+        $row = $stmt->fetch();
+
+        return $row ?: null;
+    }
+
     /** @return array<int, string> id => abbreviation */
     public function findAbbreviationsByIds(array $ids): array
     {

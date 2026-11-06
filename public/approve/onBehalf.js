@@ -36,6 +36,8 @@ const workFields = createWorkFields({
   minutesId: "obMinutes",
   durationSummaryId: "obDurationSummary",
   itemId: "obItemOfWork",
+  traineeSectionId: "obTraineeGroupSection",
+  traineeGroupId: "obTraineeGroup",
   jobId: "obJobRequest",
   towId: "obTypeOfWork",
   towDescId: "obTypeOfWorkDesc",
